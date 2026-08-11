@@ -1,0 +1,24 @@
+{
+  "name": "@taskome/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@taskome/db": "workspace:*",
+    "@taskome/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@taskome/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
