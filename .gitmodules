@@ -1,0 +1,20 @@
+[submodule "references/galaxy-mcp"]
+	path = references/galaxy-mcp
+	url = https://github.com/galaxyproject/galaxy-mcp.git
+	branch = main
+	shallow = true
+[submodule "references/galaxy"]
+	path = references/galaxy
+	url = https://github.com/galaxyproject/galaxy.git
+	branch = dev
+	shallow = true
+[submodule "references/mcp-spec"]
+	path = references/mcp-spec
+	url = https://github.com/modelcontextprotocol/modelcontextprotocol.git
+	branch = main
+	shallow = true
+[submodule "references/biomcp"]
+	path = references/biomcp
+	url = https://github.com/genomoncology/biomcp.git
+	branch = main
+	shallow = true

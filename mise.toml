@@ -1,0 +1,24 @@
+[tools]
+node = "24"
+python = "3.14"
+pnpm = "11"
+uv = "latest"
+
+[settings]
+lockfile = true
+lockfile_platforms = ["macos-arm64", "linux-x64"]
+python.uv_venv_auto = "source"
+
+[env]
+UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
+
+[tasks."ref:sync"]
+description = "Sync submodule config and checkout the pinned reference revisions"
+run = [
+  "git submodule sync --recursive",
+  "git submodule update --init --recursive --recommend-shallow",
+]
+
+[tasks."ref:status"]
+description = "Show the current reference submodule revisions"
+run = "git submodule status --recursive"
