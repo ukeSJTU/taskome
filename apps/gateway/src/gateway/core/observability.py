@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -31,7 +31,10 @@ class Observability:
         await asyncio.to_thread(self.tracer_provider.shutdown)
 
 
-def _otlp_endpoint(settings: Settings, signal: str) -> str | None:
+type OtelSignal = Literal["traces", "logs"]
+
+
+def _otlp_endpoint(settings: Settings, signal: OtelSignal) -> str | None:
     signal_endpoint = getattr(settings, f"otel_exporter_otlp_{signal}_endpoint")
     if signal_endpoint is not None:
         return signal_endpoint
@@ -40,7 +43,7 @@ def _otlp_endpoint(settings: Settings, signal: str) -> str | None:
     return f"{settings.otel_exporter_otlp_endpoint.rstrip('/')}/v1/{signal}"
 
 
-def _otlp_headers(settings: Settings, signal: str) -> dict[str, str] | None:
+def _otlp_headers(settings: Settings, signal: OtelSignal) -> dict[str, str] | None:
     raw_headers = (
         getattr(settings, f"otel_exporter_otlp_{signal}_headers")
         or settings.otel_exporter_otlp_headers

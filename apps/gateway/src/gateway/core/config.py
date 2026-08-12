@@ -1,5 +1,7 @@
 from enum import StrEnum
+from importlib.metadata import version
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +19,10 @@ class LogLevel(StrEnum):
     CRITICAL = "CRITICAL"
 
 
+def distribution_version() -> str:
+    return version("gateway")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -26,7 +32,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "taskome-gateway"
-    app_version: str = "0.1.0"
+    app_version: str = Field(default_factory=distribution_version)
     environment: Environment = Environment.DEVELOPMENT
     log_level: LogLevel = LogLevel.INFO
     docs_enabled: bool | None = None

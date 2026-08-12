@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import Path
+from fastapi import HTTPException, Path
 from fastapi.testclient import TestClient
 from gateway.core.config import Environment, Settings
 from gateway.core.errors import AppError
@@ -118,3 +118,37 @@ def test_unhandled_errors_are_logged_with_request_context(
     error_event = next(event for event in events if event["event"] == "unhandled_error")
     assert error_event["request_id"] == response.headers["X-Request-ID"]
     assert "diagnostic-detail" in error_event["exception"]
+
+
+def test_http_errors_preserve_protocol_headers() -> None:
+    app = create_app(Settings(environment=Environment.TEST))
+
+    @app.get("/rate-limited")
+    def rate_limited() -> None:
+        raise HTTPException(
+            status_code=429,
+            detail="Try again later.",
+            headers={"Retry-After": "30"},
+        )
+
+    with TestClient(app) as client:
+        response = client.get("/rate-limited")
+
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "30"
+    assert response.headers["Content-Type"] == "application/problem+json"
+
+
+def test_nonstandard_http_status_still_uses_problem_details() -> None:
+    app = create_app(Settings(environment=Environment.TEST))
+
+    @app.get("/custom-status")
+    def custom_status() -> None:
+        raise HTTPException(status_code=499, detail="Client closed request.")
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/custom-status")
+
+    assert response.status_code == 499
+    assert response.headers["Content-Type"] == "application/problem+json"
+    assert response.json()["detail"] == "Client closed request."

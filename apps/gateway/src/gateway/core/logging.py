@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import logging
 import sys
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import structlog
@@ -11,6 +13,19 @@ from gateway.core.config import Environment, Settings
 
 if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        event: dict[str, object] = {
+            "event": record.getMessage(),
+            "level": record.levelname.lower(),
+            "logger": record.name,
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
+        }
+        if record.exc_info:
+            event["exception"] = self.formatException(record.exc_info)
+        return json.dumps(event)
 
 
 def configure_logging(settings: Settings, logger_provider: LoggerProvider) -> None:

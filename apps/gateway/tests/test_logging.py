@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging.config
 import re
 from typing import TYPE_CHECKING
 
@@ -9,6 +10,8 @@ from gateway.core.config import Environment, Settings
 from gateway.main import create_app
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import pytest
 
 
@@ -57,3 +60,34 @@ def test_access_log_uses_route_template_and_trace_context(
     access_event = next(event for event in events if event["event"] == "http_request")
     assert access_event["path"] == "/items/{item_id}"
     assert re.fullmatch(r"[0-9a-f]{32}", access_event["trace_id"])
+
+
+def test_production_server_logs_are_json(
+    tmp_path: Path,
+) -> None:
+    log_config = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {"json": {"()": "gateway.core.logging.JsonFormatter"}},
+        "handlers": {
+            "default": {
+                "class": "logging.FileHandler",
+                "filename": str(tmp_path / "server.log"),
+                "formatter": "json",
+            },
+        },
+        "loggers": {
+            "uvicorn": {
+                "handlers": ["default"],
+                "level": "INFO",
+                "propagate": False,
+            },
+        },
+    }
+    logging.config.dictConfig(log_config)
+
+    logging.getLogger("uvicorn.error").info("Application startup complete.")
+
+    event = json.loads((tmp_path / "server.log").read_text())
+    assert event["event"] == "Application startup complete."
+    assert event["level"] == "info"

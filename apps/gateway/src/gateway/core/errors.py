@@ -63,23 +63,30 @@ def http_exception_handler(
 ) -> JSONResponse:
     http_error = cast("StarletteHTTPException", exc)
     if http_error.status_code == HTTPStatus.NOT_FOUND:
-        return problem_response(
+        response = problem_response(
             request,
             error_type="not-found",
             title="Not Found",
             status_code=HTTPStatus.NOT_FOUND,
             detail="The requested resource was not found.",
         )
+        response.headers.update(http_error.headers or {})
+        return response
 
-    status_phrase = HTTPStatus(http_error.status_code).phrase
+    try:
+        status_phrase = HTTPStatus(http_error.status_code).phrase
+    except ValueError:
+        status_phrase = "HTTP Error"
     detail = http_error.detail if isinstance(http_error.detail, str) else status_phrase
-    return problem_response(
+    response = problem_response(
         request,
         error_type=status_phrase.lower().replace(" ", "-"),
         title=status_phrase,
         status_code=http_error.status_code,
         detail=detail,
     )
+    response.headers.update(http_error.headers or {})
+    return response
 
 
 def request_validation_handler(
