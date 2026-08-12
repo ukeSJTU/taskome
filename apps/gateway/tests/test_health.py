@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from gateway.core.config import Environment, Settings
 from gateway.main import create_app
+
 from tests.helpers import available_database
 
 
