@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging.config
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi.testclient import TestClient
@@ -10,8 +11,6 @@ from gateway.core.config import Environment, Settings
 from gateway.main import create_app
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     import pytest
 
 
@@ -65,25 +64,12 @@ def test_access_log_uses_route_template_and_trace_context(
 def test_production_server_logs_are_json(
     tmp_path: Path,
 ) -> None:
-    log_config = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {"json": {"()": "gateway.core.logging.JsonFormatter"}},
-        "handlers": {
-            "default": {
-                "class": "logging.FileHandler",
-                "filename": str(tmp_path / "server.log"),
-                "formatter": "json",
-            },
-        },
-        "loggers": {
-            "uvicorn": {
-                "handlers": ["default"],
-                "level": "INFO",
-                "propagate": False,
-            },
-        },
-    }
+    config_path = Path(__file__).parents[1] / "logging.prod.json"
+    log_config = json.loads(config_path.read_text())
+    default_handler = log_config["handlers"]["default"]
+    default_handler["class"] = "logging.FileHandler"
+    default_handler["filename"] = str(tmp_path / "server.log")
+    default_handler.pop("stream")
     logging.config.dictConfig(log_config)
 
     logging.getLogger("uvicorn.error").info("Application startup complete.")
