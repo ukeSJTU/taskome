@@ -19,8 +19,9 @@ python.uv_venv_auto = "source"
 [env]
 UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
 
-[hooks]
-postinstall = "lefthook install"
+[tasks.setup]
+description = "Install locked project dependencies and Git hooks"
+run = ["pnpm install --frozen-lockfile", "uv sync --locked", "lefthook install"]
 
 [tasks.dev]
 description = "Start all apps in development mode"
@@ -96,7 +97,8 @@ if [[ ! "$usage_slug" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
   exit 1
 fi
 
-repo_root="$(git rev-parse --show-toplevel)"
+common_git_dir="$(git rev-parse --path-format=absolute --git-common-dir)"
+repo_root="${common_git_dir%/.git}"
 cd "$repo_root"
 branch="$usage_type/$usage_slug"
 worktree=".worktrees/$usage_slug"
@@ -135,7 +137,8 @@ if [[ ! "$usage_slug" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
   exit 1
 fi
 
-repo_root="$(git rev-parse --show-toplevel)"
+common_git_dir="$(git rev-parse --path-format=absolute --git-common-dir)"
+repo_root="${common_git_dir%/.git}"
 cd "$repo_root"
 branch="$usage_type/$usage_slug"
 worktree=".worktrees/$usage_slug"
@@ -145,13 +148,46 @@ if [[ ! -d "$worktree" ]]; then
   exit 1
 fi
 
+if ! git show-ref --verify --quiet "refs/heads/$branch"; then
+  echo "Local branch does not exist: $branch" >&2
+  exit 1
+fi
+
 if [[ -n "$(git -C "$worktree" status --porcelain)" ]]; then
   echo "Worktree has uncommitted changes: $worktree" >&2
   exit 1
 fi
 
+if ! submodule_status="$(git -C "$worktree" submodule status --recursive)"; then
+  echo "Could not inspect worktree submodules: $worktree" >&2
+  exit 1
+fi
+
+if grep -qv '^-' <<< "$submodule_status"; then
+  echo "Worktree has initialized submodules; handle them separately before cleanup: $worktree" >&2
+  exit 1
+fi
+
+git fetch origin main
+
+integrated=false
+if git merge-base --is-ancestor "$branch" origin/main; then
+  integrated=true
+elif command -v gh >/dev/null 2>&1; then
+  local_head="$(git rev-parse "$branch")"
+  if merged_pr_head="$(gh pr list --state merged --head "$branch" --base main --limit 1 --json headRefOid --jq '.[0].headRefOid // ""')" &&
+    [[ -n "$merged_pr_head" && "$merged_pr_head" == "$local_head" ]]; then
+    integrated=true
+  fi
+fi
+
+if [[ "$integrated" != true ]]; then
+  echo "Branch is not integrated into origin/main and no merged PR could be confirmed: $branch" >&2
+  exit 1
+fi
+
 git worktree remove "$worktree"
-git branch -d "$branch"
+git branch -D "$branch"
 '''
 
 [tasks."ref:sync"]

@@ -19,3 +19,7 @@ _Vendored code_ means our own editable copy (free to modify or trim), not the re
 
 **Gateway**:
 The front door service. Authenticates both callers (web app on behalf of a logged-in user, external Agents via OAuth), routes/aggregates requests to Task Servers, and owns the `jobs` store as the single source of truth for Job state across both REST and MCP.
+
+**Input File**:
+A user-supplied file (e.g. a PDB structure) uploaded independently of any Job and referenced by id across one or more Jobs. Ownership is tracked as a database record, never encoded in where it's stored; its bytes live under the gateway's own SeaweedFS prefix, separate from any Task Server's output storage.
+_Avoid_: Upload (names the action, not the persisted entity), Structure (too narrow — Input File also covers future non-structure input types), Asset (ambiguous with frontend build assets).
