@@ -1,0 +1,12 @@
+# Ray, in cluster mode, for GPU/CPU scheduling shared across all Task Servers
+
+Each Task Server's Taskiq worker submits the actual compute execution (the subprocess call into its `compute/` conda environment) as a Ray remote task (`@ray.remote(num_gpus=1)` or `num_cpus=N`, matching that Task's fixed resource profile) to **one shared Ray cluster spanning the whole machine**, not an isolated `ray.init()` per container. A Ray head node is its own docker-compose service; every Task Server container runs Ray workers connecting to it.
+
+This requires every Task Server container to have Docker-level GPU passthrough to _all_ physical GPUs, not a static per-container subset — which GPU a given execution actually pins to (`CUDA_VISIBLE_DEVICES`) is decided at runtime by Ray's cluster-wide scheduler, not fixed at container startup. This doesn't weaken the isolation from ADR-0001: Python dependency isolation (conda per Task Server, never shared) is untouched: only GPU _device visibility_ becomes shared infrastructure, arbitrated by Ray rather than by docker-compose's static device reservation. Taskiq's own `--max-async-tasks` is no longer the binding resource gate — it's set generously high (matching total system resources) since Ray's scheduler is now what actually prevents oversubscription.
+
+We reconsidered this after realizing a static per-Task-Server GPU partition (e.g. bindcraft pinned to GPUs 0-3, pepmimic to 4-7) wastes hardware under real multi-tenant load: if bindcraft has no jobs queued while pepmimic has a backlog, pepmimic's jobs wait on its 4 GPUs while bindcraft's 4 sit idle. A shared pool that dynamically allocates based on actual demand is required for production, not just a nice-to-have.
+
+Considered alternatives:
+
+- **DIY shared GPU-index pool via Redis** (a set of free GPU indices, `SPOP`/`SADD`, reusing the Redis we already run for Taskiq) — rejected because we'd own the crash-recovery correctness ourselves (a worker dying mid-job while holding a GPU index needs its own heartbeat/reclaim logic), duplicating what Ray already provides as a mature, battle-tested mechanism.
+- **Slurm** — the most singularly purpose-built tool for exactly this problem (shared multi-tenant GPU pool, fair-share scheduling), and still worth revisiting if Ray ever proves insufficient, but rejected for now on operational weight (its own scheduler daemon, `munge` auth, and likely Apptainer/Singularity instead of Docker for the compute layer) relative to Ray's lighter single-cluster footprint.

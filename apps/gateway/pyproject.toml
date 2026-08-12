@@ -1,0 +1,25 @@
+[project]
+name = "gateway"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "ukeSJTU", email = "uke_sjtu@sjtu.edu.cn" }]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+gateway = "gateway:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--cov=gateway", "--cov-report=term-missing", "--strict-markers"]
+
+[tool.coverage.run]
+source = ["src/gateway"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "if __name__ == .__main__.:"]

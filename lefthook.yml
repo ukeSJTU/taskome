@@ -10,3 +10,21 @@ pre-commit:
     - name: oxfmt
       run: pnpm oxfmt --write {staged_files}
       stage_fixed: true
+    - name: ruff-check
+      glob: "*.py"
+      run: uv run ruff check --fix {staged_files}
+      stage_fixed: true
+    - name: ruff-format
+      glob: "*.py"
+      run: uv run ruff format {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - name: quality
+      run: mise run check && mise run test

@@ -6,7 +6,10 @@
     "dev": "next dev --port 3001",
     "build": "next build",
     "check-types": "tsc --noEmit",
-    "start": "next start"
+    "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@swc/helpers": "^0.5.23",
@@ -28,10 +31,16 @@
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:",
     "@taskome/config": "workspace:*",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20.19.43",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react-swc": "^4.3.3",
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsdom": "^30.0.1",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "^4.1.10"
   }
 }

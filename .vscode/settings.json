@@ -1,0 +1,76 @@
+{
+  // Performance and indexing
+  "files.watcherExclude": {
+    "**/references/**": true,
+    "**/.next/**": true,
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/.pytest_cache/**": true,
+    "**/coverage/**": true
+  },
+  "search.exclude": {
+    "**/.next/**": true,
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/.pytest_cache/**": true,
+    "**/coverage/**": true
+  },
+  "git.detectSubmodules": false,
+
+  // Package management and TypeScript
+  "npm.packageManager": "pnpm",
+  "npm.scriptRunner": "pnpm",
+  "npm.exclude": ["**/references/**"],
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "js/ts.updateImportsOnFileMove.enabled": "always",
+  "js/ts.preferences.preferTypeOnlyAutoImports": true,
+  "js/ts.preferences.autoImportFileExcludePatterns": ["**/references/**"],
+
+  // Python
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+  "python.analysis.exclude": [
+    "**/references/**",
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "**/.venv"
+  ],
+  "python.testing.cwd": "${workspaceFolder}/apps/gateway",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "python.testing.unittestEnabled": false,
+
+  // Other language services
+  "rust-analyzer.files.exclude": ["references"],
+
+  // Project tooling
+  "oxc.requireConfig": true,
+  "biome.enabled": false,
+  "eslint.enable": false,
+  "prettier.enable": false,
+
+  // Formatting and save actions
+  "[javascript][javascriptreact][typescript][typescriptreact]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": false,
+    "editor.codeActionsOnSave": {
+      "source.format.oxc": "explicit",
+      "source.fixAll.oxc": "explicit"
+    }
+  },
+  "[css][scss][html][json][jsonc][yaml][markdown][mdx][toml]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  }
+}

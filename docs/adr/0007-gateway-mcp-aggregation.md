@@ -1,0 +1,7 @@
+# Gateway aggregates Task Servers into one MCP endpoint via mount+proxy, routes REST via the same static address list
+
+The gateway maintains a small static config mapping each Task type to its Task Server's network address (e.g. `{"pepmimic": "http://task-pepmimic:8001", "bindcraft": "http://task-bindcraft:8002"}`). This one list drives two things: (1) the gateway's own fastmcp instance calls `mcp.mount(create_proxy(f"{url}/mcp"), namespace=name)` for each entry, composing every independently-deployed Task Server's MCP server into the single external MCP endpoint Agents connect to; (2) the gateway's REST layer looks up the same map to know which Task Server to call for a given Task's REST dispatch (sync Tasks) or internal status lookups (reconciliation sweep, ADR-0005).
+
+Because Task Servers are isolated containers (ADR-0001), `mount()` always runs in `create_proxy()`'s remote/HTTP mode (~300-400ms overhead per fastmcp's own docs), never its near-zero-latency in-process mode — an accepted cost of the isolation decision, not a bug to fix.
+
+We considered self-registration (Task Servers announcing themselves to the gateway on startup, with heartbeat/health-check machinery) and rejected it: at our current scale — a handful of Task Server types, not dynamically scaling or churning — that infrastructure is pure overhead over hand-maintaining a config entry. Revisit if the number of Task Servers or their churn rate makes the static list impractical.

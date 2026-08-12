@@ -1,3 +1,7 @@
 {
-  "extends": "@taskome/config/tsconfig.base.json"
+  "extends": "@taskome/config/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "exclude": ["node_modules", "references"]
 }

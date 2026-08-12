@@ -1,0 +1,15 @@
+[tasks.lint]
+description = "Lint gateway (safe autofixes)"
+run = "uv run ruff check --fix"
+
+[tasks.format]
+description = "Format gateway"
+run = "uv run ruff format"
+
+[tasks.check]
+description = "Read-only check: lint, format, types"
+run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check"]
+
+[tasks.test]
+description = "Run gateway tests"
+run = "uv run pytest"

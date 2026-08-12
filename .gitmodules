@@ -18,3 +18,13 @@
 	url = https://github.com/genomoncology/biomcp.git
 	branch = main
 	shallow = true
+[submodule "references/pepmimic"]
+	path = references/pepmimic
+	url = https://github.com/kxz18/PepMimic.git
+	branch = main
+	shallow = true
+[submodule "references/bindcraft"]
+	path = references/bindcraft
+	url = https://github.com/martinpacesa/BindCraft.git
+	branch = main
+	shallow = true

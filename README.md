@@ -28,16 +28,17 @@ This project uses PostgreSQL with Drizzle ORM.
 1. Make sure you have a PostgreSQL database set up.
 2. Update your `apps/web/.env` file with your PostgreSQL connection details.
 
-3. Apply the schema to your database:
+3. Start postgres, then apply the schema to your database:
 
 ```bash
+mise run db:start
 pnpm run db:push
 ```
 
 Then, run the development server:
 
 ```bash
-pnpm run dev
+mise run dev
 ```
 
 Open [http://localhost:3001](http://localhost:3001) in your browser to see the fullstack application.
@@ -72,12 +73,12 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 
 ### Docker Compose
 
-- Target: web + server
+- Target: web
 - Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: pnpm run docker:build
-- Start: pnpm run docker:up
-- Logs: pnpm run docker:logs
-- Stop: pnpm run docker:down
+- Build images: mise run docker:build
+- Start: mise run docker:up
+- Logs: mise run docker:logs
+- Stop: mise run docker:down
 
 Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
 
@@ -85,7 +86,9 @@ For more details, see the guide on [Deploying with Docker Compose](https://www.b
 
 ## Git Hooks and Formatting
 
-- Run checks: `pnpm run check`
+- Run checks (TS + Python, read-only): `mise run check`
+- Lint everything with safe autofixes: `mise run lint`
+- Format everything: `mise run format`
 
 ## Project Structure
 
@@ -101,7 +104,12 @@ taskome/
 
 ## Available Scripts
 
-- `pnpm run dev`: Start all applications in development mode
+`mise run <task>` is the primary entry point across the whole repo (TS + Python). `pnpm run <script>` still works underneath for TS-only scripts.
+
+- `mise run dev`: Start all applications in development mode
+- `mise run lint`: Lint the whole repo (TS + Python) with safe autofixes
+- `mise run format`: Format the whole repo (TS + Python)
+- `mise run check`: Read-only lint + format + type check across the whole repo
 - `pnpm run build`: Build all applications
 - `pnpm run dev:web`: Start only the web application
 - `pnpm run check-types`: Check TypeScript types across all apps
@@ -109,8 +117,8 @@ taskome/
 - `pnpm run db:generate`: Generate database client/types
 - `pnpm run db:migrate`: Run database migrations
 - `pnpm run db:studio`: Open database studio UI
-- `pnpm run check`: Run Oxlint and Oxfmt
-- `pnpm run docker:build`: Build the Docker Compose images
-- `pnpm run docker:up`: Build and start the Docker Compose stack
-- `pnpm run docker:logs`: Tail logs from the Docker Compose stack
-- `pnpm run docker:down`: Stop the Docker Compose stack
+- `mise run db:start`: Start the postgres container in the background
+- `mise run docker:build`: Build the Docker Compose images
+- `mise run docker:up`: Build and start the Docker Compose stack
+- `mise run docker:logs`: Tail logs from the Docker Compose stack
+- `mise run docker:down`: Stop the Docker Compose stack

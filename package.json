@@ -1,28 +1,16 @@
 {
   "name": "taskome",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "type": "module",
   "scripts": {
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
     "check-types": "pnpm -r check-types",
-    "dev:web": "pnpm --filter web dev",
+    "test": "pnpm -r test",
     "db:push": "pnpm --filter @taskome/db db:push",
     "db:studio": "pnpm --filter @taskome/db db:studio",
     "db:generate": "pnpm --filter @taskome/db db:generate",
     "db:migrate": "pnpm --filter @taskome/db db:migrate",
-    "db:start": "docker compose up -d postgres",
-    "db:watch": "docker compose up postgres",
-    "db:stop": "docker compose stop postgres",
-    "db:down": "docker compose down postgres",
-    "docker:build": "docker compose build",
-    "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f",
     "lint": "oxlint --fix",
     "format": "oxfmt --write",
     "check": "oxlint && oxfmt --check && pnpm check-types"
@@ -33,9 +21,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
     "@taskome/config": "workspace:*",
     "@types/node": "^22.20.1",
-    "lefthook": "^2.1.10",
     "oxfmt": "^0.61.0",
     "oxlint": "^1.76.0",
     "typescript": "catalog:"

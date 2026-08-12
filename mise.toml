@@ -1,8 +1,15 @@
+# Remeber to run `mise lock` after changing this file to update the lockfile.
+monorepo_root = true
+
+[monorepo]
+config_roots = ["apps/gateway"]
+
 [tools]
 node = "24"
 python = "3.14"
 pnpm = "11"
 uv = "latest"
+lefthook = "2"
 
 [settings]
 lockfile = true
@@ -11,6 +18,63 @@ python.uv_venv_auto = "source"
 
 [env]
 UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
+
+[hooks]
+postinstall = "lefthook install"
+
+[tasks.dev]
+description = "Start all apps in development mode"
+run = "pnpm run dev"
+output = "prefix"
+
+[tasks."ts:lint"]
+run = "pnpm run lint"
+
+[tasks."ts:format"]
+run = "pnpm run format"
+
+[tasks."ts:check"]
+run = "pnpm run check"
+
+[tasks."ts:test"]
+run = "pnpm run test"
+
+[tasks.lint]
+description = "Lint the whole repo (TS + Python), safe autofixes"
+depends = ["ts:lint", "//apps/gateway:lint"]
+
+[tasks.format]
+description = "Format the whole repo (TS + Python)"
+depends = ["ts:format", "//apps/gateway:format"]
+
+[tasks.check]
+description = "Read-only check across the whole repo (lint + format + types)"
+depends = ["ts:check", "//apps/gateway:check"]
+
+[tasks.test]
+description = "Run tests across the repo"
+depends = ["ts:test", "//apps/gateway:test"]
+output = "prefix"
+
+[tasks."db:start"]
+description = "Start the postgres container in the background"
+run = "docker compose up -d postgres"
+
+[tasks."docker:build"]
+description = "Build the Docker Compose images"
+run = "docker compose build"
+
+[tasks."docker:up"]
+description = "Build and start the Docker Compose stack"
+run = "docker compose up -d --build"
+
+[tasks."docker:down"]
+description = "Stop the Docker Compose stack"
+run = "docker compose down"
+
+[tasks."docker:logs"]
+description = "Tail logs from the Docker Compose stack"
+run = "docker compose logs -f"
 
 [tasks."ref:sync"]
 description = "Sync submodule config and checkout the pinned reference revisions"
@@ -22,3 +86,7 @@ run = [
 [tasks."ref:status"]
 description = "Show the current reference submodule revisions"
 run = "git submodule status --recursive"
+
+[tasks."ref:reset"]
+description = "Discard all local changes in reference submodules, restoring them to read-only pinned state"
+run = "git submodule foreach --recursive 'git clean -fdx && git checkout -- .'"
