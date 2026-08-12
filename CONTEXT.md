@@ -13,7 +13,7 @@ One invocation of a Task, created every time a Task is called — analogous to a
 _Avoid_: Run, Submission (use Job consistently).
 
 **Task Server**:
-Not a proxy in front of a compute service — it _is_ the compute service. One deployable process/container holding two separate Python environments: a conda environment running the vendored upstream compute code (e.g. PepMimic, BindCraft) as-is, and a uv-managed environment running the thin adapter layer we write (REST + MCP). The adapter calls into the vendored code via subprocess, within the same container — never over the network. REST and MCP are both thin adapters over that same subprocess-backed core, not clients of each other.
+Not a proxy in front of a compute service — it _is_ the compute service. One deployable process/container. The adapter layer we write (REST + MCP over one shared core) is always a single uv-managed Python project at the Task Server's root. The vendored upstream compute code lives alongside it in `compute/`, using whatever environment it actually needs (nothing extra, a system toolchain, or a separate conda environment when the tool depends on packages unavailable via PyPI, e.g. PepMimic) — resolved in the Dockerfile build, not by nesting Python projects. The adapter calls into the vendored code via subprocess, within the same container — never over the network. REST and MCP are both thin adapters over that same subprocess-backed core, not clients of each other.
 
 _Vendored code_ means our own editable copy (free to modify or trim), not the read-only `references/*` submodules — those stay pinned for research only.
 

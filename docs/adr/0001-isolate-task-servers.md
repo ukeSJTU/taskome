@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0015 (directory shape only — no `server/` subdirectory, `compute/`'s conda need is per-tool and resolved in the Dockerfile; subprocess bridging within one container, `apps/` placement, vendored-code-is-editable, `<name>-server` naming, and non-membership in the root uv workspace all still stand)
+---
+
 # Isolate each Task Server in its own environment
 
 Each Task Server is its own process/container with two separate Python environments inside, bridged by subprocess rather than sharing an interpreter:
