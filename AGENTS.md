@@ -2,39 +2,27 @@
 
 ## Project direction
 
-做一个类似 [tamarind.bio](https://app.tamarind.bio/app) 和 [subseq.bio](https://subseq.bio/) 这样的网站
+Internal platform for XDenovo's own binder/de novo protein design work — not an external product, no billing. Modeled after two references, each contributing a different piece:
 
-## Parallel AI development
+- [tamarind.bio](https://app.tamarind.bio/app) — GPU-backed compute tools behind one platform, reachable from a web UI.
+- [subseq.bio](https://subseq.bio/) — power-user posture: expose a tool's real configuration surface rather than tamarind's no-code abstraction.
 
-Each AI owns one task at a time. Use a dedicated Git worktree for feature work so
-parallel tasks never edit or commit from the same checkout.
+Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as useful tools appear, no fixed catalog boundary.
 
-- Before making changes, decide whether the task qualifies for the direct-edit
-  exception below. Otherwise, create and work only in a feature worktree.
-- Branches use `<type>/<feature-slug>` and worktrees use
-  `.worktrees/<feature-slug>` at the workspace root. Use lowercase kebab-case
-  slugs. Valid types include `feat`, `fix`, and `chore`.
-- Create a feature worktree from the current remote `main` branch with:
+- **Users**: multiple internal teams share one instance. Accounts are flat and individual for now — no team-scoped sharing/visibility yet; that's a later feature, not a storage-layer concern (ADR-0011's ownership-agnostic storage keys already support it whenever it lands).
+- **Interfaces**: MCP (for AI agents) and REST (for the web app) are both required for every Task — neither ships alone as "done."
+- **Parameters**: each Task's MCP/REST parameters are a curated subset of the underlying tool's real config, not a full passthrough — designed per tool, including vendored-code changes where needed to expose what's worth exposing. No CLI is offered.
+- **Job chaining** (piping one Job's output into the next Job's input): out of scope for now, on the roadmap — design it when it's picked up, don't build around its absence.
 
-    ```bash
-    mise run //:worktree:create -- feat <feature-slug>
-    ```
+## AI development
 
-    The task validates the type and slug, fetches `origin/main`, and refuses to
-    overwrite an existing branch or worktree. Then change into that worktree
-    before reading, modifying, testing, or committing task files. Do not make
-    feature changes in the main checkout.
+Each AI owns one task at a time.
 
-- Direct edits in the main checkout are allowed only for a single-purpose,
-  low-risk change touching at most three source or configuration files, with no
-  dependency change or database migration. Single-topic documentation-only
-  changes may also be made there regardless of file count.
-- After the feature is merged and its worktree is clean, remove the worktree
-  and delete its local branch:
-
-    ```bash
-    mise run //:worktree:remove -- feat <feature-slug>
-    ```
+- **Worktrees:** Before changing repository files, use the `using-git-worktrees` skill to select the direct-edit exception or prepare an isolated worktree.
+- **Tests:** When designing or writing tests, use the `tdd` skill so tests exercise behavior through agreed public seams.
+- **Review:** Before opening a feature PR, use the `code-review` skill to review the diff against project standards and its specification.
+- **Conflicts:** When an in-progress merge or rebase has conflicts, use the `resolving-merge-conflicts` skill to resolve them by intent.
+- **Commits:** Write Conventional Commits messages (`type(scope?): subject`); the `commit-msg` hook enforces them with commitlint.
 
 ## Engineering principles
 
@@ -56,4 +44,16 @@ parallel tasks never edit or commit from the same checkout.
 
 - **Licensing:** Treat third-party licensing as a release gate owned by Legal and Compliance, not as a reason to avoid the best-fit tool during development. Use only licenses or evaluation access currently authorized for the development context, record the dependency, and require Legal and Compliance approval before production use, external access, redistribution, or commercial release.
 
-- **Commit messages:** Follow Conventional Commits (`type(scope?): subject`), enforced by the `commit-msg` git hook via commitlint.
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (ukeSJTU/taskome), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five canonical labels (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
