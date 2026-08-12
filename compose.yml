@@ -1,0 +1,29 @@
+name: taskome
+
+include:
+  - infra/seaweedfs.yml
+  - infra/otel-gui.yml
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: taskome-postgres
+    environment:
+      POSTGRES_DB: taskome
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      - "127.0.0.1:5432:5432" # dev-only: host tools (psql, Drizzle Studio) reach it locally
+    volumes:
+      - taskome_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  taskome_postgres_data:

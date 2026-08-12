@@ -1,0 +1,29 @@
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    command: >
+      server
+      -dir=/data
+      -s3
+      -s3.config=/etc/seaweedfs/s3-config.json
+    ports:
+      - "127.0.0.1:9333:9333" # master, dev-only
+      - "127.0.0.1:8888:8888" # filer, dev-only
+      - "127.0.0.1:8333:8333" # S3 gateway, dev-only
+    volumes:
+      - taskome_seaweedfs_data:/data
+      - ./seaweedfs-s3-config.json:/etc/seaweedfs/s3-config.json:ro
+    healthcheck:
+      # 127.0.0.1, not localhost: this image's busybox wget resolves localhost to ::1
+      # first and doesn't fall back to IPv4, but the master only binds 127.0.0.1
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:9333/cluster/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  taskome_seaweedfs_data:

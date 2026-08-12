@@ -57,25 +57,25 @@ description = "Run tests across the repo"
 depends = ["ts:test", "//apps/gateway:test"]
 output = "prefix"
 
-[tasks."db:start"]
-description = "Start the postgres container in the background"
-run = "docker compose up -d postgres"
+[tasks."dev:up"]
+description = "Start dev-support services in the background (postgres, SeaweedFS, otel-gui)"
+run = "docker compose up -d"
 
-[tasks."docker:build"]
-description = "Build the Docker Compose images"
-run = "docker compose build"
+[tasks."prod:build"]
+description = "Build the production-shaped stack's images (web, gateway)"
+run = "docker compose -f compose.yml -f compose.prod.yml build"
 
-[tasks."docker:up"]
-description = "Build and start the Docker Compose stack"
-run = "docker compose up -d --build"
+[tasks."prod:up"]
+description = "Build and start the full production-shaped stack (web, gateway, postgres, infra)"
+run = "docker compose -f compose.yml -f compose.prod.yml up -d --build"
 
-[tasks."docker:down"]
-description = "Stop the Docker Compose stack"
-run = "docker compose down"
+[tasks."prod:down"]
+description = "Stop the production-shaped stack"
+run = "docker compose -f compose.yml -f compose.prod.yml down"
 
-[tasks."docker:logs"]
-description = "Tail logs from the Docker Compose stack"
-run = "docker compose logs -f"
+[tasks."prod:logs"]
+description = "Tail logs from the production-shaped stack"
+run = "docker compose -f compose.yml -f compose.prod.yml logs -f"
 
 [tasks."worktree:create"]
 description = "Create a feature worktree from origin/main"

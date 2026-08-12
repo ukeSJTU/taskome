@@ -1,5 +1,8 @@
 name: taskome
 
+include:
+  - infra/ray.yml
+
 services:
   web:
     build:
@@ -30,25 +33,43 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
     restart: unless-stopped
 
-  postgres:
-    image: postgres:18
-    container_name: taskome-postgres
-    environment:
-      POSTGRES_DB: taskome
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
     ports:
-      - "5432:5432"
-    volumes:
-      - taskome_postgres_data:/var/lib/postgresql
+      - "8000:8000"
+    env_file:
+      - path: apps/gateway/.env
+        required: false
+    environment:
+      ENVIRONMENT: production
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
     restart: unless-stopped
-
-volumes:
-  taskome_postgres_data:

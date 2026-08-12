@@ -1,0 +1,11 @@
+services:
+  otel-gui:
+    image: ghcr.io/metafab/otel-gui:latest
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4318
+    ports:
+      - "127.0.0.1:4318:4318" # dev-only
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

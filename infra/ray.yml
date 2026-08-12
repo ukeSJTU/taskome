@@ -1,0 +1,19 @@
+services:
+  ray-head:
+    image: rayproject/ray:latest-gpu
+    command: >
+      ray start --head --block
+      --port=6379
+      --dashboard-host=0.0.0.0
+      --dashboard-port=8265
+    ports:
+      - "127.0.0.1:8265:8265" # dashboard has no built-in auth — host-local only
+      # GCS (6379) isn't published: Task Servers reach ray-head by service name over
+      # the compose network, which needs no host port mapping at all.
+    shm_size: "4gb"
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    # GPU device passthrough (`deploy.resources.reservations.devices`, ADR-0006/ADR-0008)
+    # belongs on each Task Server service once one exists — not on the head node itself,
+    # which only schedules.

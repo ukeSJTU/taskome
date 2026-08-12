@@ -31,7 +31,7 @@ This project uses PostgreSQL with Drizzle ORM.
 3. Start postgres, then apply the schema to your database:
 
 ```bash
-mise run db:start
+mise run dev:up
 pnpm run db:push
 ```
 
@@ -73,14 +73,21 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 
 ### Docker Compose
 
-- Target: web
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: mise run docker:build
-- Start: mise run docker:up
-- Logs: mise run docker:logs
-- Stop: mise run docker:down
+Two files, not one — see [ADR-0013](docs/adr/0013-dev-support-base-and-prod-overlay-compose.md):
 
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
+- `compose.yml` — dev-support services only (postgres, SeaweedFS, a local otel-gui trace/log viewer). `web` and `gateway` run natively in development (`mise run dev`), not in containers.
+- `compose.prod.yml` — overlay adding the containerized app stack (`web`, `gateway`) on top of `compose.yml`. App Dockerfiles live in `apps/*/Dockerfile`.
+- `infra/` — shared infrastructure compose fragments (`include:`-d from one of the files above), plus placeholders for the eventual reverse proxy and GPU server provisioning. See `infra/README.md`.
+
+Commands:
+
+- Start dev-support services: `mise run dev:up`
+- Build prod images: `mise run prod:build`
+- Start the full prod-shaped stack: `mise run prod:up`
+- Logs: `mise run prod:logs`
+- Stop: `mise run prod:down`
+
+Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in the compose files for container networking.
 
 For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
 
@@ -117,8 +124,8 @@ taskome/
 - `pnpm run db:generate`: Generate database client/types
 - `pnpm run db:migrate`: Run database migrations
 - `pnpm run db:studio`: Open database studio UI
-- `mise run db:start`: Start the postgres container in the background
-- `mise run docker:build`: Build the Docker Compose images
-- `mise run docker:up`: Build and start the Docker Compose stack
-- `mise run docker:logs`: Tail logs from the Docker Compose stack
-- `mise run docker:down`: Stop the Docker Compose stack
+- `mise run dev:up`: Start dev-support services in the background (postgres, SeaweedFS, otel-gui)
+- `mise run prod:build`: Build the production-shaped stack's images (web, gateway)
+- `mise run prod:up`: Build and start the full production-shaped stack
+- `mise run prod:logs`: Tail logs from the production-shaped stack
+- `mise run prod:down`: Stop the production-shaped stack
