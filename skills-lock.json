@@ -61,6 +61,18 @@
       "skillPath": "better-auth/emailAndPassword/SKILL.md",
       "computedHash": "747d7f73bd9e2ec5317b8ef88dc70f97df716d00e3d02de4051feebaa48b062d"
     },
+    "fastapi": {
+      "source": "fastapi/fastapi",
+      "sourceType": "github",
+      "skillPath": "fastapi/.agents/skills/fastapi/SKILL.md",
+      "computedHash": "e85d9e223fbc3183b1a599bbe8b02d2edf275d046ff5bcfd14352c92cdff52b3"
+    },
+    "fastapi-templates": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/api-scaffolding/skills/fastapi-templates/SKILL.md",
+      "computedHash": "629e7e404a3627790138127508b889bf38de3e7fad3647f2bb4367e5bfd19bd1"
+    },
     "github-actions-hardening": {
       "source": "github/awesome-copilot",
       "sourceType": "github",
@@ -144,6 +156,12 @@
       "sourceType": "github",
       "skillPath": "skills/pnpm/SKILL.md",
       "computedHash": "2ec08c851c6f901d4ed72c21b826416ed074a487db65662b36249418afd728bf"
+    },
+    "production-fastapi": {
+      "source": "vstorm-co/production-stack-skills",
+      "sourceType": "github",
+      "skillPath": "skills/production-fastapi/SKILL.md",
+      "computedHash": "8677b964c40607d45eb83f18ec3e2688ee707748d3be9d3e314b35bbf9745cec"
     },
     "prototype": {
       "source": "mattpocock/skills",
