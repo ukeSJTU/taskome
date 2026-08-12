@@ -13,12 +13,13 @@ def liveness() -> HealthResponse:
 
 
 @router.get("/ready")
-def readiness(request: Request, response: Response) -> ReadinessResponse:
+async def readiness(request: Request, response: Response) -> ReadinessResponse:
     is_ready = getattr(request.app.state, "ready", False)
-    if not is_ready:
+    database_ok = is_ready and await request.app.state.database.is_available()
+    if not database_ok:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return ReadinessResponse(
-        status="ready" if is_ready else "not_ready",
+        status="ready" if database_ok else "not_ready",
         timestamp=datetime.now(UTC),
-        checks={},
+        checks={"database": {"status": "ok" if database_ok else "error"}},
     )

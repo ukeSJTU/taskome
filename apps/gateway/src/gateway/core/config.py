@@ -1,7 +1,7 @@
 from enum import StrEnum
 from importlib.metadata import version
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     environment: Environment = Environment.DEVELOPMENT
     log_level: LogLevel = LogLevel.INFO
     docs_enabled: bool | None = None
+    database_url: SecretStr
     otel_service_name: str | None = None
     otel_exporter_otlp_endpoint: str | None = None
     # Signal-specific endpoints and headers are read reflectively by

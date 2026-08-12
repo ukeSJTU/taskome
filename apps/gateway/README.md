@@ -38,6 +38,9 @@ vertical slices are implemented.
 ## Configuration
 
 Application-local settings use `ENVIRONMENT`, `LOG_LEVEL`, and `DOCS_ENABLED`.
+`DATABASE_URL` is required and uses the explicit `postgresql+psycopg` dialect.
+Gateway owns only the `gateway` schema; Web/Auth's Drizzle-managed tables remain in
+`public`.
 OpenTelemetry keeps its standard `OTEL_*` names; setting
 `OTEL_EXPORTER_OTLP_ENDPOINT` enables OTLP/HTTP traces and logs. See
 `.env.example` for the local template.
@@ -48,6 +51,16 @@ OpenTelemetry keeps its standard `OTEL_*` names; setting
 mise run //apps/gateway:test
 mise run //apps/gateway:check
 ```
+
+Start the supporting PostgreSQL service with `mise run dev:up`, then rebuild the
+disposable development schema with `mise run //apps/gateway:db:push`. Generate a
+review candidate with `mise run //apps/gateway:db:revision`; it uses a disposable
+PostgreSQL 18 container and creates no revision when metadata matches the existing
+head. Production uses reviewed revisions through `mise run //apps/gateway:db:migrate`;
+the production Compose stack runs that command once before Gateway starts. Metadata
+push does not write Alembic history. Native development uses `localhost` in the URL;
+containers use the `postgres` host. Liveness is process-only; readiness makes a
+short, live database check and returns only `database: ok` or `database: error`.
 
 The source tree separates transport (`api`), operational concerns (`core`),
 contracts (`schemas`), persistence (`models` and `repositories`), and business

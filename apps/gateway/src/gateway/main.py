@@ -18,6 +18,7 @@ from gateway.core.middleware import (
     SecurityHeadersMiddleware,
 )
 from gateway.core.observability import create_observability
+from gateway.db.database import Database
 
 if TYPE_CHECKING:
     from opentelemetry.sdk._logs.export import LogRecordExporter
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 def create_app(
     settings: Settings | None = None,
     *,
+    database: Database | None = None,
     span_exporter: SpanExporter | None = None,
     log_exporter: LogRecordExporter | None = None,
 ) -> FastAPI:
@@ -50,6 +52,7 @@ def create_app(
         lifespan=combine_lifespans(lifespan, mcp_app.lifespan),
     )
     application.state.settings = app_settings
+    application.state.database = database or Database(app_settings.database_url.get_secret_value())
     application.state.mcp = mcp_server
     application.state.observability = observability
     register_error_handlers(application)

@@ -21,3 +21,15 @@ run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check"]
 [tasks.test]
 description = "Run gateway tests"
 run = "uv run pytest"
+
+[tasks."db:push"]
+description = "Rebuild the development Gateway schema from SQLAlchemy metadata"
+run = "uv run python -m gateway.db.commands push"
+
+[tasks."db:migrate"]
+description = "Upgrade the Gateway schema through checked-in Alembic revisions"
+run = "uv run python -m gateway.db.commands migrate"
+
+[tasks."db:revision"]
+description = "Generate a reviewed Gateway Alembic revision in disposable PostgreSQL"
+run = "uv run python -m gateway.db.commands revision"

@@ -4,6 +4,8 @@ from fastapi.testclient import TestClient
 from gateway.core.config import Environment, Settings
 from gateway.main import create_app
 
+from tests.helpers import available_database
+
 
 def test_gateway_generates_its_own_request_id() -> None:
     app = create_app(Settings(environment=Environment.TEST))
@@ -42,7 +44,10 @@ def test_gateway_adds_baseline_security_headers() -> None:
 
 
 def test_production_gateway_adds_hsts() -> None:
-    app = create_app(Settings(environment=Environment.PRODUCTION))
+    app = create_app(
+        Settings(environment=Environment.PRODUCTION),
+        database=available_database,
+    )
 
     with TestClient(app) as client:
         response = client.get("/health/live")
