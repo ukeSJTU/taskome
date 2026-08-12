@@ -21,4 +21,4 @@ apps/web and apps/gateway are the only two deployables in this repo — there is
 
 - `packages/api-client` needs a script (and a reminder in its README, or a CI check) to keep the checked-in `openapi.json` in sync with apps/gateway's actual routes — not enforced by this ADR, just noted as the cost of the static-spec choice.
 - `packages/auth`'s `betterAuth()` config needs the `jwt` plugin added — it isn't there yet.
-- apps/gateway still has no Postgres dependency, Dockerfile, or docker-compose entry; this ADR doesn't change that timeline, only the shape the data layer takes once it lands.
+- apps/gateway owns the fixed `gateway` schema through SQLAlchemy and Alembic. Its migration history is independent of Drizzle's `public` schema history, and the production Compose migration job applies Gateway revisions before the application starts.

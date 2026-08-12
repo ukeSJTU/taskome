@@ -53,13 +53,17 @@ services:
         required: false
     environment:
       ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
+    depends_on:
+      gateway-migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')",
         ]
       interval: 10s
       timeout: 5s
@@ -73,3 +77,22 @@ services:
     tmpfs:
       - /tmp
     restart: unless-stopped
+
+  gateway-migrate:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "-m", "gateway.db.commands", "migrate"]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp

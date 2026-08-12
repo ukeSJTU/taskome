@@ -1,7 +1,7 @@
 [dependency-groups]
 dev = [{ include-group = "lint" }, { include-group = "test" }]
 lint = ["ruff", "ty"]
-test = ["pytest", "pytest-cov"]
+test = ["pytest", "pytest-cov", "testcontainers[postgres]>=4,<5"]
 
 [tool.uv]
 default-groups = ["dev"]
