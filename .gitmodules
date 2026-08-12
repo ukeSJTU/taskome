@@ -28,3 +28,13 @@
 	url = https://github.com/martinpacesa/BindCraft.git
 	branch = main
 	shallow = true
+[submodule "references/fpocket"]
+	path = references/fpocket
+	url = https://github.com/Discngine/fpocket.git
+	branch = master
+	shallow = true
+[submodule "references/pdb-tools"]
+	path = references/pdb-tools
+	url = https://github.com/haddocking/pdb-tools.git
+	branch = master
+	shallow = true
