@@ -14,6 +14,12 @@ Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as 
 - **Parameters**: each Task's MCP/REST parameters are a curated subset of the underlying tool's real config, not a full passthrough — designed per tool, including vendored-code changes where needed to expose what's worth exposing. No CLI is offered.
 - **Job chaining** (piping one Job's output into the next Job's input): out of scope for now, on the roadmap — design it when it's picked up, don't build around its absence.
 
+## Architecture
+
+- **Components**: `apps/web` (Next.js) is the only user-facing deployable — there is no separate frontend/backend split. Its own API routes are the BFF: they aggregate calls to `apps/gateway` (FastAPI + MCP) into responses shaped for the frontend, rather than exposing gateway's endpoints raw.
+- **Data ownership**: each service reads and writes only the Postgres data it owns — `apps/web` owns auth, `apps/gateway` owns everything else (jobs, input files, …). Cross-service access always goes through gateway's REST API, never direct SQL against the other's tables. One shared Postgres instance, split by schema per owner; migrations stay per-owner too (`packages/db`/Drizzle for web, SQLAlchemy/Alembic for gateway).
+- **Web → gateway calls**: server-side only (never the browser), authenticated with a better-auth-minted JWT, through the generated client in `packages/api-client` (orval, from gateway's checked-in OpenAPI spec). See ADR-0012 for the full reasoning.
+
 ## AI development
 
 Each AI owns one task at a time.
