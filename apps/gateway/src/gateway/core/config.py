@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     docs_enabled: bool | None = None
     otel_service_name: str | None = None
     otel_exporter_otlp_endpoint: str | None = None
+    # Signal-specific endpoints and headers are read reflectively by
+    # observability.py's _otlp_endpoint/_otlp_headers helpers, parameterized by
+    # OtelSignal. Keep these fields even though direct references are not grep-visible.
     otel_exporter_otlp_traces_endpoint: str | None = None
     otel_exporter_otlp_logs_endpoint: str | None = None
     otel_exporter_otlp_headers: str | None = None
