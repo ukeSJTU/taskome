@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from gateway.core.config import Environment, Settings
 from pydantic import ValidationError
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_settings_use_application_local_environment_names(
@@ -49,3 +46,17 @@ def test_standard_otel_names_are_loaded_from_dotenv(tmp_path: Path) -> None:
 
     assert settings.otel_service_name == "gateway-test"
     assert settings.otel_exporter_otlp_endpoint == "http://collector:4318"
+
+
+def test_checked_in_env_example_matches_gateway_settings() -> None:
+    env_example = Path(__file__).parents[1] / ".env.example"
+
+    settings = Settings(_env_file=env_example)
+    uncommented_keys = {
+        line.partition("=")[0]
+        for line in env_example.read_text().splitlines()
+        if line and not line.startswith("#") and "=" in line
+    }
+
+    assert settings.otel_exporter_otlp_endpoint == "http://localhost:4318"
+    assert {key.lower() for key in uncommented_keys} <= Settings.model_fields.keys()
