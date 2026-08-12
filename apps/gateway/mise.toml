@@ -1,3 +1,11 @@
+[tasks.dev]
+description = "Run gateway with development reload on port 8000"
+run = "uv run fastapi dev --port 8000"
+
+[tasks.start]
+description = "Run gateway in production mode on port 8000"
+run = "ENVIRONMENT=production uv run uvicorn gateway.main:app --host 0.0.0.0 --port 8000 --log-config logging.prod.json"
+
 [tasks.lint]
 description = "Lint gateway (safe autofixes)"
 run = "uv run ruff check --fix"
