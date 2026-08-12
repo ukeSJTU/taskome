@@ -1,5 +1,6 @@
 **/node_modules
 .git
+.worktrees
 
 **/dist
 **/build
@@ -17,9 +18,22 @@
 **/.vercel
 *.log
 
+**/.venv
+**/__pycache__
+**/*.py[codz]
+**/.pytest_cache
+**/.ruff_cache
+**/.coverage
+**/*.egg-info
+
+**/coverage
+**/tests
+**/README.md
+
 Dockerfile
 **/Dockerfile
-docker-compose.yml
+compose.yml
+compose.prod.yml
 
 # Secrets stay out of image layers; runtime env comes from compose env_file,
 # build-time public values come from compose build args

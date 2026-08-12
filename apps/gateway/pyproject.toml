@@ -2,7 +2,6 @@
 name = "gateway"
 version = "0.1.0"
 description = "Taskome computing platform REST and MCP gateway"
-readme = "README.md"
 authors = [{ name = "ukeSJTU", email = "uke_sjtu@sjtu.edu.cn" }]
 requires-python = ">=3.14"
 dependencies = [
