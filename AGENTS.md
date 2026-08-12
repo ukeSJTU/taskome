@@ -4,6 +4,38 @@
 
 做一个类似 [tamarind.bio](https://app.tamarind.bio/app) 和 [subseq.bio](https://subseq.bio/) 这样的网站
 
+## Parallel AI development
+
+Each AI owns one task at a time. Use a dedicated Git worktree for feature work so
+parallel tasks never edit or commit from the same checkout.
+
+- Before making changes, decide whether the task qualifies for the direct-edit
+  exception below. Otherwise, create and work only in a feature worktree.
+- Branches use `<type>/<feature-slug>` and worktrees use
+  `.worktrees/<feature-slug>` at the workspace root. Use lowercase kebab-case
+  slugs. Valid types include `feat`, `fix`, and `chore`.
+- Create a feature worktree from the current remote `main` branch with:
+
+    ```bash
+    mise run //:worktree:create -- feat <feature-slug>
+    ```
+
+    The task validates the type and slug, fetches `origin/main`, and refuses to
+    overwrite an existing branch or worktree. Then change into that worktree
+    before reading, modifying, testing, or committing task files. Do not make
+    feature changes in the main checkout.
+
+- Direct edits in the main checkout are allowed only for a single-purpose,
+  low-risk change touching at most three source or configuration files, with no
+  dependency change or database migration. Single-topic documentation-only
+  changes may also be made there regardless of file count.
+- After the feature is merged and its worktree is clean, remove the worktree
+  and delete its local branch:
+
+    ```bash
+    mise run //:worktree:remove -- feat <feature-slug>
+    ```
+
 ## Engineering principles
 
 - **Today's requirements:** Implement the least complex solution that satisfies today's requirements. Avoid abstractions, configuration, and indirection intended for hypothetical future needs.

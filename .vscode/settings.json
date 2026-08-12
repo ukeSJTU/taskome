@@ -1,7 +1,11 @@
 {
   // Performance and indexing
+  "files.exclude": {
+    "**/.worktrees": true
+  },
   "files.watcherExclude": {
     "**/references/**": true,
+    "**/.worktrees/**": true,
     "**/.next/**": true,
     "**/.venv/**": true,
     "**/__pycache__/**": true,
@@ -10,6 +14,7 @@
   },
   "search.exclude": {
     "**/.next/**": true,
+    "**/.worktrees/**": true,
     "**/.venv/**": true,
     "**/__pycache__/**": true,
     "**/.pytest_cache/**": true,
@@ -20,12 +25,12 @@
   // Package management and TypeScript
   "npm.packageManager": "pnpm",
   "npm.scriptRunner": "pnpm",
-  "npm.exclude": ["**/references/**"],
+  "npm.exclude": ["**/references/**", "**/.worktrees/**"],
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "js/ts.updateImportsOnFileMove.enabled": "always",
   "js/ts.preferences.preferTypeOnlyAutoImports": true,
-  "js/ts.preferences.autoImportFileExcludePatterns": ["**/references/**"],
+  "js/ts.preferences.autoImportFileExcludePatterns": ["**/references/**", "**/.worktrees/**"],
 
   // Python
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
@@ -42,7 +47,7 @@
   "python.testing.unittestEnabled": false,
 
   // Other language services
-  "rust-analyzer.files.exclude": ["references"],
+  "rust-analyzer.files.exclude": ["references", ".worktrees"],
 
   // Project tooling
   "oxc.requireConfig": true,

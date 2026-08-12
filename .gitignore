@@ -3,6 +3,9 @@ node_modules
 .pnp
 .pnp.js
 
+# Local feature worktrees
+.worktrees/
+
 # Build outputs
 dist
 build

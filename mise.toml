@@ -76,6 +76,84 @@ run = "docker compose down"
 description = "Tail logs from the Docker Compose stack"
 run = "docker compose logs -f"
 
+[tasks."worktree:create"]
+description = "Create a feature worktree from origin/main"
+usage = '''
+arg "<type>" help="Branch type: feat, fix, or chore"
+arg "<slug>" help="Lowercase kebab-case feature name"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "$usage_type" in
+  feat | fix | chore) ;;
+  *) echo "Invalid type: $usage_type. Use feat, fix, or chore." >&2; exit 1 ;;
+esac
+
+if [[ ! "$usage_slug" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  echo "Invalid slug: $usage_slug. Use lowercase kebab-case." >&2
+  exit 1
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+branch="$usage_type/$usage_slug"
+worktree=".worktrees/$usage_slug"
+
+if git show-ref --verify --quiet "refs/heads/$branch"; then
+  echo "Branch already exists: $branch" >&2
+  exit 1
+fi
+
+if [[ -e "$worktree" ]]; then
+  echo "Worktree path already exists: $worktree" >&2
+  exit 1
+fi
+
+git fetch origin main
+git worktree add -b "$branch" "$worktree" origin/main
+'''
+
+[tasks."worktree:remove"]
+description = "Remove a clean feature worktree and its local branch"
+usage = '''
+arg "<type>" help="Branch type: feat, fix, or chore"
+arg "<slug>" help="Lowercase kebab-case feature name"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "$usage_type" in
+  feat | fix | chore) ;;
+  *) echo "Invalid type: $usage_type. Use feat, fix, or chore." >&2; exit 1 ;;
+esac
+
+if [[ ! "$usage_slug" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  echo "Invalid slug: $usage_slug. Use lowercase kebab-case." >&2
+  exit 1
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+branch="$usage_type/$usage_slug"
+worktree=".worktrees/$usage_slug"
+
+if [[ ! -d "$worktree" ]]; then
+  echo "Worktree does not exist: $worktree" >&2
+  exit 1
+fi
+
+if [[ -n "$(git -C "$worktree" status --porcelain)" ]]; then
+  echo "Worktree has uncommitted changes: $worktree" >&2
+  exit 1
+fi
+
+git worktree remove "$worktree"
+git branch -d "$branch"
+'''
+
 [tasks."ref:sync"]
 description = "Sync submodule config and checkout the pinned reference revisions"
 run = [
