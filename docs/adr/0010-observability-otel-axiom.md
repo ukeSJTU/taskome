@@ -2,7 +2,7 @@
 
 This covers **engineering observability** only — traces and structured logs that help developers debug the running system. It's a distinct concern from **product observability** — the job lifecycle data (`queued`/`running`/`ok`/`error`, per ADR-0005) a future customer-facing dashboard would show for task status and runtime. The two intersect at exactly one point, noted below; conflating them further would mean debugging telemetry and durable product data compete for the same schema and retention tradeoffs.
 
-**Scope is dev + CI only for now.** No production deployment target is decided yet (`apps/gateway` has no Dockerfile, no hosting plan exists beyond ADR-0008's docker-compose-on-one-machine). We're instrumenting the SDKs and settling naming conventions now, since that's what's expensive to retrofit later, while leaving the exporter destination behind an environment variable so the production backend can be chosen — or changed — without touching instrumented code.
+**Scope includes the production Docker Compose deployment.** `apps/web` is built as a standalone Docker image and writes structured JSON to standard output in CI and production. OTLP export remains opt-in through standard OpenTelemetry environment variables, so the same image works without an external backend and a collector or SaaS destination can change without an instrumentation rewrite.
 
 **Traces and structured logs first; metrics deferred.** Metrics are only useful once you know which numbers matter, and we don't have that signal yet. Traces give end-to-end visibility across the web → gateway → Task Server hops; logs give the detail traces don't carry. Both are standard OTLP, so nothing here is Axiom-specific.
 
