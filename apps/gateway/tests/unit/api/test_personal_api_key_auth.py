@@ -144,3 +144,25 @@ def test_rest_rejects_ambiguous_credentials_without_verifying_either(
     assert response.status_code == 400
     assert response.json()["type"] == "urn:taskome:error:ambiguous-credentials"
     assert verifier.keys == []
+
+
+def test_rest_rejects_non_bearer_authorization_with_personal_api_key(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    verifier = FakePersonalApiKeyVerifier(
+        VerifiedPersonalApiKey(user_id="user-a", key_id="key-123")
+    )
+    app = create_test_app(personal_api_key_verifier=verifier)
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/v1/me",
+            headers={
+                "Authorization": "Basic malformed-credential",
+                "X-API-Key": "taskome_direct-secret",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["type"] == "urn:taskome:error:ambiguous-credentials"
+    assert verifier.keys == []

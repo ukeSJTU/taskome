@@ -113,7 +113,7 @@ async def current_principal(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     personal_api_key: Annotated[str | None, Depends(api_key_scheme)],
 ) -> Principal:
-    if credentials is not None and personal_api_key is not None:
+    if request.headers.get("authorization") is not None and personal_api_key is not None:
         raise AppError(
             error_type="ambiguous-credentials",
             title="Ambiguous Credentials",
