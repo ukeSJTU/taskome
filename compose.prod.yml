@@ -1,5 +1,6 @@
 name: taskome
 
+# Combined with compose.yml this is a local production-shape rehearsal, not a deployable production stack: it still inherits dev-support services and their loopback ports.
 include:
   - infra/ray.yml
 
