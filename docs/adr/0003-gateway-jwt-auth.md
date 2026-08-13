@@ -1,5 +1,7 @@
 # Gateway authenticates all callers with one JWT verifier against better-auth's JWKS
 
+> Partially superseded by ADR-0023: session and MCP callers still use JWKS-verifiable JWTs, now with REST- and MCP-specific audiences, while Direct API Clients use Personal API Keys verified through apps/web/Better Auth.
+
 Both the web app (via better-auth's `jwt` plugin, minted per logged-in session) and external MCP agents (via `@better-auth/oauth-provider`) present JWT-formatted, JWKS-verifiable access tokens signed by the same better-auth instance. The gateway validates both with a single `JWTVerifier` against `/api/auth/jwks` — one code path regardless of caller type.
 
 Better Auth 1.6.26 only issues a JWKS-verifiable OAuth access token when its token request contains a resource audience. The shared auth configuration supplies the fixed gateway audience internally; external MCP clients do not need to implement RFC 8707 resource binding or choose an audience. This avoids opaque tokens (and the `/oauth2/introspect` path, which currently has no Python client and a known bug when the introspecting client differs from the issuing client ([better-auth#8267](https://github.com/better-auth/better-auth/issues/8267))). The gateway accepts both the session JWT audience and this fixed OAuth audience, while both token types remain verifiable through the same JWKS endpoint.

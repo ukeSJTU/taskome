@@ -4,6 +4,8 @@ status: accepted
 
 # Docs site as a separate deployable (`apps/docs`), with a subdomain exception to ADR-0019
 
+> ADR-0023 retains the Docs subdomain but supersedes the temporary rejection of an API subdomain: Gateway REST and MCP now share `api.example.com`.
+
 The platform needs a public docs site (Getting Started + per-Task usage guides, modeled on tamarind.bio's `docs.tamarind.bio`) that ships on its own release cadence and doesn't touch gateway. We're adding `apps/docs` — a separate Fumadocs (Next.js) app in the monorepo — rather than a `(docs)` route group inside `apps/web`. This is a deliberate exception to AGENTS.md's "`apps/web` is the only user-facing deployable": that principle exists to stop a second frontend from bypassing the BFF and hitting `apps/gateway` directly, and `apps/docs` is static content with no gateway access, so the concern it guards against doesn't apply here.
 
 It's also an explicit exception to ADR-0019's single-domain, path-routed convention: `apps/docs` is routed on its own subdomain, `docs.taskome.com`, added as a new Caddyfile block (ADR-0019 already anticipated a third publicly-routed service needing manual Caddyfile config). Everything else — `apps/web`, `apps/gateway`/MCP — stays on the primary domain, path-routed, per ADR-0019; `mcp.taskome.com` and `api.taskome.com` were considered and explicitly rejected for now.

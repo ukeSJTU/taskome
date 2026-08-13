@@ -10,7 +10,7 @@ Internal platform for XDenovo's own binder/de novo protein design work — not a
 Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as useful tools appear, no fixed catalog boundary.
 
 - **Users**: multiple internal teams share one instance. Accounts are flat and individual for now — no team-scoped sharing/visibility yet; that's a later feature, not a storage-layer concern (ADR-0011's ownership-agnostic storage keys already support it whenever it lands).
-- **Interfaces**: MCP (for AI agents) and REST (for the web app) are both required for every Task — neither ships alone as "done."
+- **Interfaces**: MCP and REST are both required for every Task — neither ships alone as "done." Users reach them through three Access Channels: the Web App uses REST through its BFF, MCP Agents use MCP directly, and Direct API Clients use REST directly. See ADR-0023.
 - **Parameters**: each Task's MCP/REST parameters are a curated subset of the underlying tool's real config, not a full passthrough — designed per tool, including vendored-code changes where needed to expose what's worth exposing. No CLI is offered.
 - **Job chaining** (piping one Job's output into the next Job's input): out of scope for now, on the roadmap — design it when it's picked up, don't build around its absence.
 
@@ -20,7 +20,7 @@ Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as 
 
 ## Architecture
 
-- **Components**: `apps/web` (Next.js) is the only user-facing deployable for the authenticated product — there is no separate frontend/backend split. Its own API routes are the BFF: they aggregate calls to `apps/gateway` (FastAPI + MCP) into responses shaped for the frontend, rather than exposing gateway's endpoints raw. `apps/docs` (public docs site) is the one deliberate exception — it's static content with no gateway access, so it doesn't participate in the BFF boundary this principle protects. See ADR-0020.
+- **Components**: `apps/web` (Next.js) is the only browser application for the authenticated product — there is no separate frontend/backend split. Its own API routes are the BFF: they aggregate calls to `apps/gateway` (FastAPI + MCP) into responses shaped for the frontend. Browser code never bypasses that BFF; the separately deployed Gateway exposes MCP to Agents and the curated `/v1` REST contract to non-browser Direct API Clients. `apps/docs` is static public content with no Gateway access. See ADR-0020 and ADR-0023.
 - **Data ownership**: each service reads and writes only the Postgres data it owns — `apps/web` owns auth, `apps/gateway` owns everything else (jobs, input files, …). Cross-service access always goes through gateway's REST API, never direct SQL against the other's tables. One shared Postgres instance, split by schema per owner; migrations stay per-owner too (`packages/db`/Drizzle for web, SQLAlchemy/Alembic for gateway).
 - **Web → gateway calls**: server-side only (never the browser), authenticated with a better-auth-minted JWT, through the generated client in `packages/api-client` (orval, from gateway's checked-in OpenAPI spec). See ADR-0012 for the full reasoning.
 

@@ -1,6 +1,6 @@
 # taskome
 
-Wraps bioinformatics compute tools (PepMimic, BindCraft, …) and exposes them two ways: MCP for AI agents, REST for the web app. "taskome" = Task + -ome (the platform's full collection of Tasks).
+Wraps bioinformatics compute tools (PepMimic, BindCraft, …) behind two interfaces, REST and MCP. Users reach those interfaces through three Access Channels: the Web App, an MCP Agent, or a Direct API Client. "taskome" = Task + -ome (the platform's full collection of Tasks).
 
 ## Language
 
@@ -18,7 +18,19 @@ Not a proxy in front of a compute service — it _is_ the compute service. One d
 _Vendored code_ means our own editable copy (free to modify or trim), not the read-only `references/*` submodules — those stay pinned for research only.
 
 **Gateway**:
-The front door service. Authenticates both callers (web app on behalf of a logged-in user, external Agents via OAuth), routes/aggregates requests to Task Servers, and owns the `jobs` store as the single source of truth for Job state across both REST and MCP.
+The front door service. Authenticates callers, routes/aggregates requests to Task Servers, and owns the `jobs` store as the single source of truth for Job state across both REST and MCP.
+
+**Access Channel**:
+One of the three user journeys into the platform: the Web App, an MCP Agent, or a Direct API Client. An Access Channel is not an interface: the Web App and Direct API Client both ultimately use REST, while the MCP Agent uses MCP.
+_Avoid_: Interface (reserved here for REST or MCP), Authentication Method (a channel may involve more than one credential across its hops).
+
+**Direct API Client**:
+A user-controlled program, such as a script or `curl`, that calls the platform's REST interface without going through the Web App. It acts for a User; it is not an Agent and does not own Jobs or Input Files independently.
+_Avoid_: Agent, Script Client, API User
+
+**Personal API Key**:
+A named, revocable credential through which a Direct API Client acts for the User who created it. It is not accepted through the MCP Access Channel and does not own Jobs or Input Files independently; the first version carries the User's full permissions, with narrower scopes deferred until concrete permission boundaries are designed.
+_Avoid_: MCP Key, Service Account (a Personal API Key represents a User, not an independent identity)
 
 **Input File**:
 A user-supplied file (e.g. a PDB structure) uploaded independently of any Job and referenced by id across one or more Jobs. Ownership is tracked as a database record, never encoded in where it's stored; its bytes live under the gateway's own SeaweedFS prefix, separate from any Task Server's output storage. Immutable once uploaded — there is no re-upload-to-the-same-id operation, so a corrected file is always a new Input File with a new id. Deletable (soft delete: bytes removed, database record kept so Job history can still show it) but not yet garbage-collected automatically.
