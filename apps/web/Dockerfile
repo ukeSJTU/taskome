@@ -28,8 +28,8 @@ COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.nex
 COPY --from=builder --chown=node:node /app/apps/web/public ./apps/web/public
 
 ENV HOSTNAME=0.0.0.0
-ENV PORT=3001
-EXPOSE 3001
+ENV PORT=3000
+EXPOSE 3000
 USER node
 
 CMD ["node", "apps/web/server.js"]
