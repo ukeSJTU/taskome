@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 from fastmcp.utilities.lifespan import combine_lifespans
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
@@ -23,6 +24,7 @@ from gateway.core.middleware import (
 from gateway.core.observability import create_observability
 from gateway.db.database import Database
 from gateway.repositories.input_files import InputFileRepository
+from gateway.schemas.problem import ProblemDetails
 from gateway.services.input_files import InputFileService
 from gateway.services.storage import SeaweedFSStorage
 
@@ -103,7 +105,30 @@ def create_app(
         application,
         tracer_provider=observability.tracer_provider,
     )
+    _configure_openapi(application)
     return application
+
+
+def _configure_openapi(application: FastAPI) -> None:
+    def openapi() -> dict[str, object]:
+        if application.openapi_schema is not None:
+            return application.openapi_schema
+
+        schema = get_openapi(
+            title=application.title,
+            version=application.version,
+            routes=application.routes,
+        )
+        problem_schema = ProblemDetails.model_json_schema(
+            ref_template="#/components/schemas/{model}"
+        )
+        component_schemas = schema.setdefault("components", {}).setdefault("schemas", {})
+        component_schemas.update(problem_schema.pop("$defs", {}))
+        component_schemas["ProblemDetails"] = problem_schema
+        application.openapi_schema = schema
+        return schema
+
+    application.openapi = openapi
 
 
 app = create_app()

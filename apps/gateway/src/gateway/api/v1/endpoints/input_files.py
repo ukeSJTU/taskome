@@ -6,7 +6,7 @@ from uuid import UUID  # noqa: TC003
 from fastapi import APIRouter, Depends, Request, status
 
 from gateway.core.auth import current_user_id
-from gateway.core.errors import AppError
+from gateway.core.errors import AppError, problem_responses
 from gateway.schemas.input_files import (
     CreateInputFileRequest,
     DownloadUrlResponse,
@@ -30,7 +30,13 @@ def input_file_not_found() -> AppError:
     )
 
 
-@router.post("", response_model=UploadUrlResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=UploadUrlResponse,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="createInputFile",
+    responses=problem_responses(401, 422),
+)
 async def create_input_file(
     body: CreateInputFileRequest,
     owner_user_id: Annotated[str, Depends(current_user_id)],
@@ -44,6 +50,8 @@ async def create_input_file(
     "/{input_file_id}/download-url",
     response_model=DownloadUrlResponse,
     name="download_input_file_url",
+    operation_id="getInputFileDownloadUrl",
+    responses=problem_responses(401, 404, 422),
 )
 async def download_input_file(
     input_file_id: UUID,
@@ -57,7 +65,12 @@ async def download_input_file(
     return DownloadUrlResponse.model_validate(result, from_attributes=True)
 
 
-@router.delete("/{input_file_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{input_file_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="deleteInputFile",
+    responses=problem_responses(401, 404, 422),
+)
 async def delete_input_file(
     input_file_id: UUID,
     owner_user_id: Annotated[str, Depends(current_user_id)],

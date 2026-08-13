@@ -1,13 +1,13 @@
 import {
   GatewayAuthenticationError,
-  GatewayResponseError,
+  GatewayHttpError,
   getCurrentIdentity,
 } from "@taskome/api-client";
 
 export async function GET() {
   try {
     const identity = await getCurrentIdentity();
-    return Response.json({ authenticated: true, identity: identity.data });
+    return Response.json({ authenticated: true, identity });
   } catch (error) {
     if (error instanceof GatewayAuthenticationError) {
       return Response.json(
@@ -15,7 +15,7 @@ export async function GET() {
         { headers: { "WWW-Authenticate": "Bearer" }, status: 401 },
       );
     }
-    if (error instanceof GatewayResponseError && error.response.status === 401) {
+    if (error instanceof GatewayHttpError && error.status === 401) {
       return Response.json(
         { authenticated: false, error: "gateway_authentication_required", identity: null },
         { headers: { "WWW-Authenticate": "Bearer" }, status: 401 },

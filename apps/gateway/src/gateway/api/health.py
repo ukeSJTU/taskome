@@ -7,12 +7,12 @@ from gateway.schemas.health import HealthResponse, ReadinessResponse
 router = APIRouter(prefix="/health", tags=["health"])
 
 
-@router.get("/live")
+@router.get("/live", operation_id="getLiveness")
 def liveness() -> HealthResponse:
     return HealthResponse(status="alive", timestamp=datetime.now(UTC))
 
 
-@router.get("/ready")
+@router.get("/ready", operation_id="getReadiness")
 async def readiness(request: Request, response: Response) -> ReadinessResponse:
     is_ready = getattr(request.app.state, "ready", False)
     database_ok = is_ready and await request.app.state.database.is_available()

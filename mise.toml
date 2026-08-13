@@ -40,6 +40,17 @@ run = "pnpm run check"
 [tasks."ts:test"]
 run = "pnpm run test"
 
+[tasks."api-client:generate"]
+description = "Refresh the generated authenticated gateway client"
+run = ["mise run //apps/gateway:openapi:export", "pnpm --filter @taskome/api-client generate"]
+
+[tasks."api-client:check"]
+description = "Verify the checked-in gateway contract and generated client are current"
+run = [
+  "mise run //:api-client:generate",
+  "git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/generated",
+]
+
 [tasks.lint]
 description = "Lint the whole repo (TS + Python), safe autofixes"
 depends = ["ts:lint", "//apps/gateway:lint"]

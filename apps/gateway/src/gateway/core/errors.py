@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import structlog
 from fastapi.exceptions import RequestValidationError
@@ -30,6 +30,33 @@ class AppError(Exception):
         self.title = title
         self.status_code = status_code
         self.detail = detail
+
+
+def problem_responses(
+    *status_codes: int,
+    include_default: bool = True,
+) -> dict[int | str, dict[str, Any]]:
+    responses: dict[int | str, dict[str, Any]] = {
+        status_code: {
+            "description": HTTPStatus(status_code).phrase,
+            "content": {
+                "application/problem+json": {
+                    "schema": {"$ref": "#/components/schemas/ProblemDetails"}
+                }
+            },
+        }
+        for status_code in status_codes
+    }
+    if include_default:
+        responses["default"] = {
+            "description": "Unexpected problem response",
+            "content": {
+                "application/problem+json": {
+                    "schema": {"$ref": "#/components/schemas/ProblemDetails"}
+                }
+            },
+        }
+    return responses
 
 
 def problem_response(  # noqa: PLR0913

@@ -6,12 +6,12 @@ const getCurrentIdentity = vi.fn();
 
 vi.mock("@taskome/api-client", () => ({
   GatewayAuthenticationError: class GatewayAuthenticationError extends Error {},
-  GatewayResponseError: class GatewayResponseError extends Error {
-    response: Response;
+  GatewayHttpError: class GatewayHttpError extends Error {
+    status: number;
 
-    constructor(response: Response) {
+    constructor(status: number) {
       super();
-      this.response = response;
+      this.status = status;
     }
   },
   getCurrentIdentity,
@@ -22,7 +22,9 @@ const { GET } = await import("./route");
 describe("GET /api/gateway/auth", () => {
   it("shapes the gateway identity for the web BFF", async () => {
     getCurrentIdentity.mockResolvedValueOnce({
-      data: { aud: "http://localhost:3000", iss: "http://localhost:3000", sub: "user-1" },
+      aud: "http://localhost:3000",
+      iss: "http://localhost:3000",
+      sub: "user-1",
     });
 
     const response = await GET();
@@ -50,10 +52,8 @@ describe("GET /api/gateway/auth", () => {
   });
 
   it("maps a gateway 401 to the BFF authentication contract", async () => {
-    const GatewayResponseError = (await import("@taskome/api-client")).GatewayResponseError;
-    getCurrentIdentity.mockRejectedValueOnce(
-      new GatewayResponseError(new Response(null, { status: 401 })),
-    );
+    const GatewayHttpError = (await import("@taskome/api-client")).GatewayHttpError;
+    getCurrentIdentity.mockRejectedValueOnce(new GatewayHttpError(401));
 
     const response = await GET();
 

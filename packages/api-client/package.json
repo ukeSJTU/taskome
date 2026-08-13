@@ -10,7 +10,7 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "generate": "orval --config orval.config.ts && oxfmt --write src/generated/gateway.ts"
+    "generate": "orval --config orval.config.ts && oxfmt --write src/generated/gateway"
   },
   "dependencies": {
     "@taskome/auth": "workspace:*",
@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@taskome/config": "workspace:*",
-    "orval": "^7.15.0",
+    "orval": "^8.23.0",
     "typescript": "catalog:"
   }
 }
