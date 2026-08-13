@@ -2,6 +2,7 @@ import { createTestAuth } from "@taskome/auth/test";
 import { base32 } from "@better-auth/utils/base32";
 import { createLocalJWKSet, jwtVerify } from "jose";
 import { createHash, randomUUID } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 type TestAuth = ReturnType<typeof createTestAuth>;
@@ -245,7 +246,10 @@ describe("/api/auth", () => {
     expect(oauthResponse.status).toBe(200);
     expect(oauthMetadata).toMatchObject({
       authorization_endpoint: `${baseURL}/api/auth/oauth2/authorize`,
+      code_challenge_methods_supported: ["S256"],
+      grant_types_supported: ["authorization_code"],
       jwks_uri: `${baseURL}/api/auth/jwks`,
+      registration_endpoint: `${baseURL}/api/auth/oauth2/register`,
       token_endpoint: `${baseURL}/api/auth/oauth2/token`,
     });
 
@@ -292,17 +296,70 @@ describe("/api/auth", () => {
       context.test.createUser({ email: `oauth-${randomUUID()}@example.com`, name: "OAuth User" }),
     );
     const { headers } = await context.test.login({ userId: user.id });
-    const client = await auth.api.createOAuthClient({
-      body: {
-        grant_types: ["authorization_code"],
-        redirect_uris: ["http://localhost:4000/callback"],
-        response_types: ["code"],
-        scope: "taskome",
-        token_endpoint_auth_method: "none",
-        type: "native",
-      },
-      headers,
+    const registrationResponse = await POST(
+      new Request(`${baseURL}/api/auth/oauth2/register`, {
+        body: JSON.stringify({
+          client_name: "Test MCP Agent",
+          grant_types: ["authorization_code"],
+          redirect_uris: ["http://localhost:4000/callback"],
+          response_types: ["code"],
+          scope: "taskome",
+          token_endpoint_auth_method: "none",
+          type: "native",
+        }),
+        headers: new Headers({ "content-type": "application/json", origin: baseURL }),
+        method: "POST",
+      }),
+    );
+    expect(registrationResponse.status).toBe(200);
+    const client = await registrationResponse.json();
+    expect(client).toMatchObject({
+      grant_types: ["authorization_code"],
+      token_endpoint_auth_method: "none",
     });
+    expect(client.client_secret).toBeUndefined();
+
+    const machineClientResponse = await POST(
+      new Request(`${baseURL}/api/auth/oauth2/register`, {
+        body: JSON.stringify({
+          grant_types: ["client_credentials"],
+          redirect_uris: [],
+          token_endpoint_auth_method: "client_secret_post",
+        }),
+        headers: new Headers({ "content-type": "application/json", origin: baseURL }),
+        method: "POST",
+      }),
+    );
+    expect(machineClientResponse.status).toBe(400);
+
+    const unsupportedScopeResponse = await POST(
+      new Request(`${baseURL}/api/auth/oauth2/register`, {
+        body: JSON.stringify({
+          grant_types: ["authorization_code"],
+          redirect_uris: ["http://localhost:4001/callback"],
+          response_types: ["code"],
+          scope: "openid taskome",
+          token_endpoint_auth_method: "none",
+          type: "native",
+        }),
+        headers: new Headers({ "content-type": "application/json", origin: baseURL }),
+        method: "POST",
+      }),
+    );
+    expect(unsupportedScopeResponse.status).toBe(400);
+
+    const registeredClient = await context.adapter.findOne<Record<string, unknown>>({
+      model: "oauthClient",
+      where: [{ field: "clientId", value: client.client_id }],
+    });
+    expect(registeredClient).toMatchObject({
+      grantTypes: ["authorization_code"],
+      public: true,
+      scopes: ["taskome"],
+      tokenEndpointAuthMethod: "none",
+    });
+    expect(registeredClient?.skipConsent).not.toBe(true);
+    expect(registeredClient?.userId).toBeUndefined();
     const codeVerifier = "verifier-for-taskome-test-1234567890";
     const codeChallenge = createHash("sha256").update(codeVerifier).digest("base64url");
     const authorizationQuery = new URLSearchParams({
@@ -314,6 +371,39 @@ describe("/api/auth", () => {
       scope: "taskome",
       state: "state123",
     });
+
+    const loginResponse = await GET(
+      new Request(`${baseURL}/api/auth/oauth2/authorize?${authorizationQuery}`),
+    );
+    expect(loginResponse.status).toBe(302);
+    expect(new URL(loginResponse.headers.get("location") ?? baseURL, baseURL).pathname).toBe(
+      "/login",
+    );
+
+    const missingPKCEQuery = new URLSearchParams(authorizationQuery);
+    missingPKCEQuery.delete("code_challenge");
+    missingPKCEQuery.delete("code_challenge_method");
+    const missingPKCEResponse = await GET(
+      new Request(`${baseURL}/api/auth/oauth2/authorize?${missingPKCEQuery}`, {
+        headers: authHeaders(headers),
+      }),
+    );
+    expect(missingPKCEResponse.status).toBe(302);
+    expect(
+      new URL(missingPKCEResponse.headers.get("location") ?? baseURL).searchParams.get("error"),
+    ).toBe("invalid_request");
+
+    const wrongRedirectQuery = new URLSearchParams(authorizationQuery);
+    wrongRedirectQuery.set("redirect_uri", "http://localhost:4000/other-callback");
+    const wrongRedirectResponse = await GET(
+      new Request(`${baseURL}/api/auth/oauth2/authorize?${wrongRedirectQuery}`, {
+        headers: authHeaders(headers),
+      }),
+    );
+    expect(wrongRedirectResponse.status).toBe(302);
+    expect(
+      new URL(wrongRedirectResponse.headers.get("location") ?? baseURL).searchParams.get("error"),
+    ).toBe("invalid_redirect");
 
     const authorizationResponse = await GET(
       new Request(`${baseURL}/api/auth/oauth2/authorize?${authorizationQuery}`, {
@@ -365,12 +455,19 @@ describe("/api/auth", () => {
     const token = await tokenResponse.json();
     expect(token).toMatchObject({ scope: "taskome", token_type: "Bearer" });
     const jwksResponse = await GET(new Request(`${baseURL}/api/auth/jwks`));
-    const verified = await jwtVerify(
-      token.access_token,
-      createLocalJWKSet(await jwksResponse.json()),
-      { audience: gatewayMCPAudience, issuer: oauthIssuer },
-    );
+    const jwks = await jwksResponse.json();
+    const verified = await jwtVerify(token.access_token, createLocalJWKSet(jwks), {
+      audience: gatewayMCPAudience,
+      issuer: oauthIssuer,
+    });
     expect(verified.payload.sub).toBe(user.id);
+
+    const fixturePath = process.env.MCP_ONBOARDING_FIXTURE_PATH;
+    if (fixturePath) {
+      writeFileSync(fixturePath, JSON.stringify({ accessToken: token.access_token, jwks }), {
+        mode: 0o600,
+      });
+    }
   });
 
   it("enables TOTP, gates password sign-in, and accepts a backup code", async () => {

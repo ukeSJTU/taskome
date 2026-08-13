@@ -11,6 +11,7 @@ import httpx2
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from fastapi.testclient import TestClient
 from fastmcp.server.auth.providers.jwt import JWTVerifier, StaticTokenVerifier
 from fastmcp.utilities.asgi_transport import run_asgi_lifespan
 from fastmcp.utilities.tests import ASGIServer
@@ -151,6 +152,24 @@ def test_mcp_accepts_oauth_token_and_rejects_session_token_through_protocol(
         for event in access_events
     )
     assert oauth_token not in json.dumps(access_events)
+
+
+def test_mcp_publishes_protected_resource_metadata(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app(Settings(app_environment=Environment.TEST))
+
+    with TestClient(app) as client:
+        response = client.get("/.well-known/oauth-protected-resource/mcp")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "authorization_servers": ["http://localhost:3000/api/auth"],
+        "bearer_methods_supported": ["header"],
+        "resource": "http://localhost:8000/mcp",
+        "resource_name": "Taskome MCP",
+        "scopes_supported": ["taskome"],
+    }
 
 
 def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:

@@ -47,6 +47,16 @@ transfer bytes directly to or from SeaweedFS. The REST equivalent is
 `/v1` resource; MCP accepts OAuth access tokens bound to the public `/mcp`
 resource. `GET /v1/me` reports the normalized Principal identity for REST calls.
 
+MCP clients discover the protected resource at
+`/.well-known/oauth-protected-resource/mcp`; its metadata points to Web's public
+Better Auth issuer. Better Auth 1.6.26 cannot yet onboard clients through Client ID
+Metadata Documents, so Taskome temporarily exposes unauthenticated Dynamic Client
+Registration as a compatibility fallback. It creates only public authorization-code
+clients with the `taskome` scope. Login, explicit consent, exact redirect matching,
+and PKCE S256 remain mandatory; client credentials are unavailable. Client ID
+Metadata Documents remain the preferred mechanism once the pinned auth provider
+supports them.
+
 Upload callers must send `If-None-Match: *` with the PUT request. The condition
 is signed into the URL so an Input File's object cannot be overwritten after its
 first successful upload.

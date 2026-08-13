@@ -69,6 +69,8 @@ jobs:
           mise run ts:test
           mise run //apps/gateway:test:unit
           mise run //packages/task-kit:test
+      - name: Run MCP OAuth onboarding integration test
+        run: mise run test:mcp-oauth-onboarding
 
   test-integration:
     name: Test (integration)
