@@ -1,8 +1,11 @@
 from enum import StrEnum
 from importlib.metadata import version
 
-from pydantic import AnyHttpUrl, Field, SecretStr
+from pydantic import AnyHttpUrl, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_MIN_INTERNAL_SECRET_LENGTH = 32
+_HMAC_LENGTH_ERROR = "WEB_GATEWAY_HMAC_SECRET must be at least 32 characters"
 
 
 class Environment(StrEnum):
@@ -48,6 +51,7 @@ class Settings(BaseSettings):
     better_auth_url: AnyHttpUrl = AnyHttpUrl("http://localhost:3000")
     web_internal_url: AnyHttpUrl = AnyHttpUrl("http://localhost:3000")
     gateway_public_url: AnyHttpUrl = AnyHttpUrl("http://localhost:8000")
+    web_gateway_hmac_secret: SecretStr = SecretStr("unset")
     otel_service_name: str | None = None
     otel_exporter_otlp_endpoint: str | None = None
     # Signal-specific endpoints and headers are read reflectively by
@@ -58,6 +62,15 @@ class Settings(BaseSettings):
     otel_exporter_otlp_headers: str | None = None
     otel_exporter_otlp_traces_headers: str | None = None
     otel_exporter_otlp_logs_headers: str | None = None
+
+    @model_validator(mode="after")
+    def require_production_internal_secret(self) -> Settings:
+        if (
+            self.app_environment is Environment.PRODUCTION
+            and len(self.web_gateway_hmac_secret.get_secret_value()) < _MIN_INTERNAL_SECRET_LENGTH
+        ):
+            raise ValueError(_HMAC_LENGTH_ERROR)
+        return self
 
     @property
     def expose_docs(self) -> bool:
@@ -72,6 +85,10 @@ class Settings(BaseSettings):
     @property
     def auth_jwks_url(self) -> str:
         return f"{str(self.web_internal_url).rstrip('/')}/api/auth/jwks"
+
+    @property
+    def personal_api_key_verification_url(self) -> str:
+        return f"{str(self.web_internal_url).rstrip('/')}/api/internal/personal-api-keys/verify"
 
     @property
     def auth_session_issuer(self) -> str:

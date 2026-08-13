@@ -100,6 +100,11 @@ uses the documented example hosts:
 | Local Compose      | `http://localhost:3000` | `http://web:3000`       | `http://localhost:8000`   | `http://gateway:8000`   |
 | Production example | `https://example.com`   | `http://web:3000`       | `https://api.example.com` | `http://gateway:8000`   |
 
+Web and Gateway must also share a dedicated `WEB_GATEWAY_HMAC_SECRET` of at
+least 32 characters. Gateway uses it only to sign internal Personal API Key
+verification requests to Web; keep it distinct from `BETTER_AUTH_SECRET` and do
+not expose it to browsers or Direct API Clients.
+
 For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
 
 ## Git Hooks and Formatting

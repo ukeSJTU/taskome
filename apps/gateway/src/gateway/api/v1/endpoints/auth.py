@@ -13,7 +13,7 @@ router = APIRouter(tags=["auth"])
     "/me",
     operation_id="getCurrentIdentity",
     response_model=Identity,
-    responses=problem_responses(401),
+    responses=problem_responses(400, 401, 503),
 )
 async def current_identity(
     principal: Annotated[Principal, Depends(current_principal)],

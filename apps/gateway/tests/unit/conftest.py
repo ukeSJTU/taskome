@@ -37,6 +37,14 @@ class FakeRateLimitRedis:
         pass
 
 
+class FakePersonalApiKeyVerifier:
+    async def verify(self, key: str) -> None:  # noqa: ARG002
+        return None
+
+    async def aclose(self) -> None:
+        pass
+
+
 @pytest.fixture
 def create_test_app() -> Callable[..., FastAPI]:
     """Build a Gateway app wired to fakes, so `TestClient(app)` never needs real infra.
@@ -48,6 +56,7 @@ def create_test_app() -> Callable[..., FastAPI]:
     def _create(settings: Settings | None = None, **overrides: Any) -> FastAPI:  # noqa: ANN401
         overrides.setdefault("database", cast("Database", FakeDatabase()))
         overrides.setdefault("rate_limit_redis", cast("Redis", FakeRateLimitRedis()))
+        overrides.setdefault("personal_api_key_verifier", FakePersonalApiKeyVerifier())
         return create_app(settings or Settings(app_environment=Environment.TEST), **overrides)
 
     return _create

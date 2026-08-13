@@ -17,6 +17,7 @@ services:
       BETTER_AUTH_URL: http://localhost:3000
       GATEWAY_PUBLIC_URL: http://localhost:8000
       GATEWAY_INTERNAL_URL: http://gateway:8000
+      WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
       AUTH_TRUSTED_ORIGIN: http://localhost:3000
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
     depends_on:
@@ -55,6 +56,7 @@ services:
       BETTER_AUTH_URL: http://localhost:3000
       WEB_INTERNAL_URL: http://web:3000
       GATEWAY_PUBLIC_URL: http://localhost:8000
+      WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
       RATE_LIMIT_REDIS_URL: redis://redis-rate-limit:6379/0
     depends_on:
@@ -90,6 +92,7 @@ services:
     environment:
       APP_ENVIRONMENT: production
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
+      WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
     depends_on:
       postgres:
         condition: service_healthy

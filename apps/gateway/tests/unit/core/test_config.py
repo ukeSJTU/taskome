@@ -92,7 +92,19 @@ def test_auth_endpoints_and_resources_are_derived_from_canonical_origins() -> No
     )
 
     assert settings.auth_jwks_url == "http://web:3000/api/auth/jwks"
+    assert settings.personal_api_key_verification_url == (
+        "http://web:3000/api/internal/personal-api-keys/verify"
+    )
     assert settings.auth_session_issuer == "https://example.com"
     assert settings.auth_oauth_issuer == "https://example.com/api/auth"
     assert settings.rest_resource == "https://api.example.com/v1"
     assert settings.mcp_resource == "https://api.example.com/mcp"
+
+
+def test_production_requires_a_dedicated_web_gateway_secret() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            app_environment=Environment.PRODUCTION,
+            web_gateway_hmac_secret="unset",  # noqa: S106 - Invalid test canary.
+            _env_file=None,
+        )

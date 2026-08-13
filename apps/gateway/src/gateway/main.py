@@ -26,6 +26,7 @@ from gateway.core.middleware import (
     SecurityHeadersMiddleware,
 )
 from gateway.core.observability import create_observability
+from gateway.core.personal_api_keys import PersonalApiKeyVerifier, WebPersonalApiKeyVerifier
 from gateway.core.rate_limit import create_rate_limit_store
 from gateway.db.database import Database
 from gateway.repositories.input_files import InputFileRepository
@@ -51,6 +52,7 @@ def create_app(  # noqa: PLR0913
     mcp_token_verifier: TokenVerifier | None = None,
     rate_limit_redis: Redis | None = None,
     rate_limit_store: RedisStore | None = None,
+    personal_api_key_verifier: PersonalApiKeyVerifier | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
     openapi_url = "/openapi.json" if app_settings.expose_docs else None
@@ -74,6 +76,10 @@ def create_app(  # noqa: PLR0913
         MCPPrincipalVerifier(mcp_token_verifier)
         if mcp_token_verifier is not None
         else create_mcp_token_verifier(app_settings)
+    )
+    api_key_verifier = personal_api_key_verifier or WebPersonalApiKeyVerifier(
+        url=app_settings.personal_api_key_verification_url,
+        secret=app_settings.web_gateway_hmac_secret.get_secret_value(),
     )
     input_file_service = InputFileService(
         repository=InputFileRepository(app_database),
@@ -106,6 +112,7 @@ def create_app(  # noqa: PLR0913
     application.state.rate_limit_store = app_rate_limit_store
     application.state.input_file_service = input_file_service
     application.state.rest_token_verifier = rest_verifier
+    application.state.personal_api_key_verifier = api_key_verifier
     application.state.mcp = mcp_server
     application.state.observability = observability
     register_error_handlers(application)
