@@ -19,5 +19,9 @@ describe("AppSidebar", () => {
       "href",
       "/account/api-keys",
     );
+    expect(screen.getByRole("link", { name: "API reference" })).toHaveAttribute(
+      "href",
+      "/api-reference",
+    );
   });
 });

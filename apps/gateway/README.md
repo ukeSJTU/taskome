@@ -24,6 +24,12 @@ mode emits JSON logs, enables HSTS headers, and disables Scalar and OpenAPI unle
 `DOCS_ENABLED=true` is set explicitly. TLS termination is expected at the reverse
 proxy. Swagger UI and ReDoc are disabled in every environment.
 
+The always-on `/internal/openapi.json` endpoint serves the cached Public OpenAPI
+projection consumed by Web's authenticated API reference. It includes only the
+Direct API Client operations beneath `/v1`, publishes the configured public `/v1`
+server, and documents only `X-API-Key` authentication. The full `/openapi.json`
+schema remains the development and Orval source when docs are enabled.
+
 ## Interfaces
 
 - `/v1` — versioned business REST API namespace

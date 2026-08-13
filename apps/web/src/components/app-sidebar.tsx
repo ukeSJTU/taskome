@@ -30,6 +30,7 @@ import {
   FileChartColumnIcon,
   FileIcon,
   CommandIcon,
+  BookOpenIcon,
   KeyRoundIcon,
 } from "lucide-react";
 
@@ -110,6 +111,11 @@ const data = {
     },
   ],
   navSecondary: [
+    {
+      title: "API reference",
+      url: "/api-reference",
+      icon: <BookOpenIcon />,
+    },
     {
       title: "API keys",
       url: "/account/api-keys",
