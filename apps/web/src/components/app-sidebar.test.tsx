@@ -15,5 +15,9 @@ describe("AppSidebar", () => {
     );
 
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "API keys" })).toHaveAttribute(
+      "href",
+      "/account/api-keys",
+    );
   });
 });

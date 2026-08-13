@@ -42,7 +42,203 @@ function authHeaders(headers: Headers) {
   return requestHeaders;
 }
 
+async function authenticatedUser(email: string, name: string) {
+  const auth = authState.auth;
+  if (!auth) throw new Error("test auth was not initialized");
+  const context = await auth.$context;
+  const user = await context.test.saveUser(context.test.createUser({ email, name }));
+  const { headers } = await context.test.login({ userId: user.id });
+  return {
+    context,
+    headers,
+    sessionHeaders: new Headers({
+      ...Object.fromEntries(authHeaders(headers)),
+      "content-type": "application/json",
+    }),
+  };
+}
+
 describe("/api/auth", () => {
+  it("creates multiple named Personal API Keys and never lists their secrets", async () => {
+    const { context, headers } = await authenticatedUser(
+      "automation@example.com",
+      "Automation User",
+    );
+
+    const createKey = (name: string) =>
+      POST(
+        new Request(`${baseURL}/api/auth/api-key/create`, {
+          body: JSON.stringify({ name }),
+          headers: new Headers({
+            ...Object.fromEntries(authHeaders(headers)),
+            "content-type": "application/json",
+          }),
+          method: "POST",
+        }),
+      );
+
+    const workstationResponse = await createKey("Workstation");
+    const clusterResponse = await createKey("Cluster submitter");
+    expect(workstationResponse.status).toBe(200);
+    expect(clusterResponse.status).toBe(200);
+
+    const workstation = await workstationResponse.json();
+    const cluster = await clusterResponse.json();
+    expect(workstation).toMatchObject({
+      enabled: true,
+      expiresAt: null,
+      name: "Workstation",
+      permissions: null,
+      prefix: "taskome_",
+      rateLimitEnabled: false,
+    });
+    expect(cluster.name).toBe("Cluster submitter");
+    expect(workstation.key).toMatch(/^taskome_/);
+    expect(cluster.key).toMatch(/^taskome_/);
+    expect(cluster.key).not.toBe(workstation.key);
+    const storedKeys = await context.adapter.findMany<{ key: string }>({ model: "apikey" });
+    expect(storedKeys.map((key) => key.key)).not.toContain(workstation.key);
+    expect(storedKeys.map((key) => key.key)).not.toContain(cluster.key);
+
+    const listResponse = await GET(
+      new Request(`${baseURL}/api/auth/api-key/list`, { headers: authHeaders(headers) }),
+    );
+    expect(listResponse.status).toBe(200);
+    const listed = await listResponse.json();
+    expect(listed.total).toBe(2);
+    expect(listed.apiKeys.map((key: { name: string }) => key.name)).toEqual(
+      expect.arrayContaining(["Workstation", "Cluster submitter"]),
+    );
+    expect(listed.apiKeys.every((key: Record<string, unknown>) => !("key" in key))).toBe(true);
+  });
+
+  it("requires a Web session and a name for Personal API Key management", async () => {
+    const { sessionHeaders } = await authenticatedUser("key-owner@example.com", "Key Owner");
+
+    const unnamedResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/create`, {
+        body: JSON.stringify({}),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(unnamedResponse.status).toBe(400);
+
+    const whitespaceNameResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/create`, {
+        body: JSON.stringify({ name: "   " }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(whitespaceNameResponse.status).toBe(400);
+
+    const customPrefixResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/create`, {
+        body: JSON.stringify({ name: "Wrong prefix", prefix: "other_" }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(customPrefixResponse.status).toBe(400);
+
+    const createdResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/create`, {
+        body: JSON.stringify({ name: "Leaked automation" }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    const created = await createdResponse.json();
+    const apiKeyHeaders = new Headers({
+      "content-type": "application/json",
+      origin: baseURL,
+      "x-api-key": created.key,
+    });
+
+    const createWithApiKeyResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/create`, {
+        body: JSON.stringify({ name: "Nested key" }),
+        headers: apiKeyHeaders,
+        method: "POST",
+      }),
+    );
+    const listWithApiKeyResponse = await GET(
+      new Request(`${baseURL}/api/auth/api-key/list`, { headers: apiKeyHeaders }),
+    );
+    expect(createWithApiKeyResponse.status).toBe(401);
+    expect(listWithApiKeyResponse.status).toBe(401);
+  });
+
+  it("revokes one Personal API Key permanently while preserving its metadata", async () => {
+    const { headers, sessionHeaders } = await authenticatedUser(
+      "revoke@example.com",
+      "Revoke User",
+    );
+
+    const createResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/create`, {
+        body: JSON.stringify({ name: "Retired workstation" }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    const created = await createResponse.json();
+
+    const revokeResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/update`, {
+        body: JSON.stringify({ enabled: false, keyId: created.id }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(revokeResponse.status).toBe(200);
+    expect(await revokeResponse.json()).toMatchObject({
+      enabled: false,
+      id: created.id,
+      name: "Retired workstation",
+    });
+
+    const reactivateResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/update`, {
+        body: JSON.stringify({ enabled: true, keyId: created.id }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(reactivateResponse.status).toBe(400);
+
+    const renameResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/update`, {
+        body: JSON.stringify({ keyId: created.id, name: "Erased history" }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(renameResponse.status).toBe(400);
+
+    const deleteResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/delete`, {
+        body: JSON.stringify({ keyId: created.id }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(deleteResponse.status).toBe(400);
+
+    const listResponse = await GET(
+      new Request(`${baseURL}/api/auth/api-key/list`, { headers: authHeaders(headers) }),
+    );
+    const listed = await listResponse.json();
+    expect(listed.apiKeys).toContainEqual(
+      expect.objectContaining({
+        enabled: false,
+        id: created.id,
+        name: "Retired workstation",
+      }),
+    );
+  });
+
   it("publishes OAuth and OpenID discovery metadata", async () => {
     const oauthResponse = await GETOAuthMetadata(new Request(baseURL));
     const oauthMetadata = await oauthResponse.json();

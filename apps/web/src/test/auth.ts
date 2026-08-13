@@ -12,7 +12,20 @@ import { server } from "./msw/server";
  */
 export async function useTestAuth() {
   const auth = createTestAuth();
-  server.use(http.all("http://localhost:3000/api/auth/*", ({ request }) => auth.handler(request)));
+  let sessionCookie: string | null = null;
+  server.use(
+    http.all("http://localhost:3000/api/auth/*", ({ request }) => {
+      const headers = new Headers(request.headers);
+      if (sessionCookie) headers.set("cookie", sessionCookie);
+      return auth.handler(new Request(request, { headers }));
+    }),
+  );
   const { test } = await auth.$context;
-  return test;
+  return {
+    authenticate: async (userId: string) => {
+      const login = await test.login({ userId });
+      sessionCookie = login.headers.get("cookie");
+    },
+    test,
+  };
 }

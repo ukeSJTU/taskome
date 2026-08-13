@@ -8,6 +8,13 @@
       "when": 1786550758721,
       "tag": "0000_shallow_franklin_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786639663095,
+      "tag": "0001_tiny_absorbing_man",
+      "breakpoints": true
     }
   ]
 }
