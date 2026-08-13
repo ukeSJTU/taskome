@@ -6,6 +6,7 @@ services:
       -dir=/data
       -s3
       -s3.config=/etc/seaweedfs/s3-config.json
+      -s3.allowedOrigins=${SEAWEEDFS_ALLOWED_ORIGINS:-http://localhost:3001}
     ports:
       - "127.0.0.1:9333:9333" # master, dev-only
       - "127.0.0.1:8888:8888" # filer, dev-only

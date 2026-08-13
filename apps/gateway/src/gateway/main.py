@@ -9,6 +9,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from gateway.api.health import router as health_router
 from gateway.api.mcp import create_mcp_server
 from gateway.api.v1.router import router as api_v1_router
+from gateway.core.auth import create_token_verifier
 from gateway.core.config import Environment, Settings
 from gateway.core.errors import register_error_handlers
 from gateway.core.lifespan import lifespan
@@ -19,6 +20,9 @@ from gateway.core.middleware import (
 )
 from gateway.core.observability import create_observability
 from gateway.db.database import Database
+from gateway.repositories.input_files import InputFileRepository
+from gateway.services.input_files import InputFileService
+from gateway.services.storage import SeaweedFSStorage
 
 if TYPE_CHECKING:
     from opentelemetry.sdk._logs.export import LogRecordExporter
@@ -35,13 +39,32 @@ def create_app(
     app_settings = settings or Settings()
     docs_url = "/docs" if app_settings.expose_docs else None
     openapi_url = "/openapi.json" if app_settings.expose_docs else None
-    mcp_server = create_mcp_server(app_settings)
-    mcp_app = mcp_server.http_app(path="/")
     observability = create_observability(
         app_settings,
         span_exporter=span_exporter,
         log_exporter=log_exporter,
     )
+    app_database = database or Database(
+        app_settings.database_url.get_secret_value(),
+        tracer_provider=observability.tracer_provider,
+    )
+    token_verifier = create_token_verifier(app_settings.auth_jwks_url)
+    input_file_service = InputFileService(
+        repository=InputFileRepository(app_database),
+        storage=SeaweedFSStorage(
+            internal_endpoint=app_settings.seaweedfs_internal_endpoint,
+            public_endpoint=app_settings.resolved_seaweedfs_public_endpoint,
+            access_key=app_settings.seaweedfs_access_key,
+            secret_key=app_settings.seaweedfs_secret_key.get_secret_value(),
+            bucket=app_settings.seaweedfs_bucket,
+        ),
+    )
+    mcp_server = create_mcp_server(
+        app_settings,
+        input_file_service,
+        auth_provider=None if app_settings.environment is Environment.TEST else token_verifier,
+    )
+    mcp_app = mcp_server.http_app(path="/")
 
     application = FastAPI(
         title=app_settings.app_name,
@@ -52,7 +75,9 @@ def create_app(
         lifespan=combine_lifespans(lifespan, mcp_app.lifespan),
     )
     application.state.settings = app_settings
-    application.state.database = database or Database(app_settings.database_url.get_secret_value())
+    application.state.database = app_database
+    application.state.input_file_service = input_file_service
+    application.state.token_verifier = token_verifier
     application.state.mcp = mcp_server
     application.state.observability = observability
     register_error_handlers(application)

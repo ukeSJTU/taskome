@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 from alembic.runtime.migration import MigrationContext
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -14,11 +15,17 @@ from gateway.db.models import GATEWAY_SCHEMA
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from opentelemetry.sdk.trace import TracerProvider
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class Database:
-    def __init__(self, database_url: str) -> None:
+    def __init__(
+        self,
+        database_url: str,
+        *,
+        tracer_provider: TracerProvider | None = None,
+    ) -> None:
         self._engine = create_async_engine(
             database_url,
             echo=False,
@@ -27,6 +34,11 @@ class Database:
             pool_size=5,
             pool_timeout=10,
         )
+        if tracer_provider is not None:
+            SQLAlchemyInstrumentor().instrument(
+                engine=self._engine.sync_engine,
+                tracer_provider=tracer_provider,
+            )
         self._sessions = async_sessionmaker(self._engine, expire_on_commit=False)
 
     @asynccontextmanager

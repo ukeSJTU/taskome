@@ -36,6 +36,27 @@ def test_docs_default_to_disabled_only_in_production() -> None:
     ).expose_docs
 
 
+def test_seaweedfs_public_endpoint_defaults_to_internal_endpoint() -> None:
+    settings = Settings(
+        database_url="postgresql+psycopg://test:test@localhost:5432/test",
+        seaweedfs_internal_endpoint="http://seaweedfs:8333",
+        _env_file=None,
+    )
+
+    assert settings.resolved_seaweedfs_public_endpoint == "http://seaweedfs:8333"
+
+
+def test_seaweedfs_public_endpoint_can_differ_from_internal_endpoint() -> None:
+    settings = Settings(
+        database_url="postgresql+psycopg://test:test@localhost:5432/test",
+        seaweedfs_internal_endpoint="http://seaweedfs:8333",
+        seaweedfs_public_endpoint="https://files.example.test",
+        _env_file=None,
+    )
+
+    assert settings.resolved_seaweedfs_public_endpoint == "https://files.example.test"
+
+
 def test_standard_otel_names_are_loaded_from_dotenv(tmp_path: Path) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text(

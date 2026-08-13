@@ -67,6 +67,7 @@ def test_migrate_creates_gateway_history_without_touching_public(database_url: s
     with psycopg.connect(database_url.replace("+psycopg", ""), autocommit=True) as connection:
         connection.execute("CREATE TABLE public.migration_sentinel (value text NOT NULL)")
         connection.execute("INSERT INTO public.migration_sentinel VALUES ('preserve me')")
+        connection.execute("DROP SCHEMA IF EXISTS gateway CASCADE")
 
     environment = {**os.environ, "ENVIRONMENT": "production", "DATABASE_URL": database_url}
     first = subprocess.run(
@@ -91,7 +92,7 @@ def test_migrate_creates_gateway_history_without_touching_public(database_url: s
             "preserve me",
         )
         assert connection.execute("SELECT version_num FROM gateway.alembic_version").fetchone() == (
-            "20260812_01",
+            "20260813_01",
         )
         assert connection.execute("SELECT to_regclass('public.alembic_version')").fetchone() == (
             None,

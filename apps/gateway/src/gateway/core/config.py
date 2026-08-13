@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     log_level: LogLevel = LogLevel.INFO
     docs_enabled: bool | None = None
     database_url: SecretStr
+    seaweedfs_internal_endpoint: str = "http://localhost:8333"
+    seaweedfs_public_endpoint: str | None = None
+    seaweedfs_access_key: str = "taskome-dev"
+    # Local credentials belong in .env; this placeholder must not authenticate
+    # against the checked-in SeaweedFS development identity.
+    seaweedfs_secret_key: SecretStr = SecretStr("unset")
+    seaweedfs_bucket: str = "taskome"
+    auth_jwks_url: str = "http://localhost:3001/api/auth/jwks"
     otel_service_name: str | None = None
     otel_exporter_otlp_endpoint: str | None = None
     # Signal-specific endpoints and headers are read reflectively by
@@ -53,3 +61,7 @@ class Settings(BaseSettings):
         if self.docs_enabled is not None:
             return self.docs_enabled
         return self.environment is not Environment.PRODUCTION
+
+    @property
+    def resolved_seaweedfs_public_endpoint(self) -> str:
+        return self.seaweedfs_public_endpoint or self.seaweedfs_internal_endpoint
