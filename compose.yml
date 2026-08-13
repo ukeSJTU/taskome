@@ -1,6 +1,7 @@
 name: taskome
 
 include:
+  - infra/redis.yml
   - infra/seaweedfs.yml
   - infra/otel-gui.yml
 

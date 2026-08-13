@@ -15,8 +15,8 @@ services:
         required: false
     environment:
       BETTER_AUTH_URL: http://localhost:3000
-      GATEWAY_URL: http://gateway:8000
-      CORS_ORIGIN: http://localhost:3000
+      GATEWAY_INTERNAL_URL: http://gateway:8000
+      AUTH_TRUSTED_ORIGIN: http://localhost:3000
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
     depends_on:
       postgres:
@@ -50,16 +50,19 @@ services:
       - path: apps/gateway/.env
         required: false
     environment:
-      ENVIRONMENT: production
+      APP_ENVIRONMENT: production
       AUTH_JWKS_URL: http://web:3000/api/auth/jwks
       AUTH_ISSUER: http://localhost:3000
       AUTH_OAUTH_ISSUER: http://localhost:3000/api/auth
       AUTH_SESSION_AUDIENCE: http://localhost:3000
       AUTH_OAUTH_AUDIENCE: http://gateway:8000
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
+      RATE_LIMIT_REDIS_URL: redis://redis-rate-limit:6379/0
     depends_on:
       gateway-migrate:
         condition: service_completed_successfully
+      redis-rate-limit:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -86,7 +89,7 @@ services:
       context: .
       dockerfile: apps/gateway/Dockerfile
     environment:
-      ENVIRONMENT: production
+      APP_ENVIRONMENT: production
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
     depends_on:
       postgres:

@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     log_level: LogLevel = LogLevel.INFO
     docs_enabled: bool | None = None
     database_url: SecretStr
+    rate_limit_redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
     seaweedfs_internal_endpoint: str = "http://localhost:8333"
     seaweedfs_public_endpoint: str | None = None
     seaweedfs_access_key: str = "taskome-dev"

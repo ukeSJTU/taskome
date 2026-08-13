@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastmcp.utilities.lifespan import combine_lifespans
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from redis.asyncio import Redis
 from scalar_fastapi import get_scalar_api_reference
 
 from gateway.api.health import router as health_router
@@ -23,6 +24,7 @@ from gateway.core.middleware import (
     SecurityHeadersMiddleware,
 )
 from gateway.core.observability import create_observability
+from gateway.core.rate_limit import create_rate_limit_store
 from gateway.db.database import Database
 from gateway.repositories.input_files import InputFileRepository
 from gateway.schemas.problem import ProblemDetails
@@ -36,13 +38,14 @@ if TYPE_CHECKING:
     from opentelemetry.sdk.trace.export import SpanExporter
 
 
-def create_app(
+def create_app(  # noqa: PLR0913
     settings: Settings | None = None,
     *,
     database: Database | None = None,
     span_exporter: SpanExporter | None = None,
     log_exporter: LogRecordExporter | None = None,
     token_verifier: TokenVerifier | None = None,
+    rate_limit_redis: Redis | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
     openapi_url = "/openapi.json" if app_settings.expose_docs else None
@@ -55,6 +58,10 @@ def create_app(
         app_settings.database_url.get_secret_value(),
         tracer_provider=observability.tracer_provider,
     )
+    app_rate_limit_redis = rate_limit_redis or Redis.from_url(
+        app_settings.rate_limit_redis_url.get_secret_value()
+    )
+    rate_limit_store = create_rate_limit_store(app_settings.rate_limit_redis_url.get_secret_value())
     verifier = token_verifier or create_token_verifier(app_settings)
     input_file_service = InputFileService(
         repository=InputFileRepository(app_database),
@@ -69,7 +76,7 @@ def create_app(
     mcp_server = create_mcp_server(
         app_settings,
         input_file_service,
-        auth_provider=None if app_settings.environment is Environment.TEST else verifier,
+        auth_provider=None if app_settings.app_environment is Environment.TEST else verifier,
     )
     mcp_app = mcp_server.http_app(path="/")
 
@@ -83,6 +90,8 @@ def create_app(
     )
     application.state.settings = app_settings
     application.state.database = app_database
+    application.state.rate_limit_redis = app_rate_limit_redis
+    application.state.rate_limit_store = rate_limit_store
     application.state.input_file_service = input_file_service
     application.state.token_verifier = verifier
     application.state.mcp = mcp_server
@@ -102,7 +111,7 @@ def create_app(
     application.add_middleware(RequestIDMiddleware)
     application.add_middleware(
         SecurityHeadersMiddleware,
-        include_hsts=app_settings.environment is Environment.PRODUCTION,
+        include_hsts=app_settings.app_environment is Environment.PRODUCTION,
     )
     FastAPIInstrumentor.instrument_app(
         application,
@@ -141,7 +150,8 @@ def _configure_openapi(application: FastAPI) -> None:
         application.openapi_schema = schema
         return schema
 
-    application.openapi = openapi
+    # FastAPI invokes an instance-assigned OpenAPI callable without passing self.
+    application.openapi = cast("Any", openapi)
 
 
 app = create_app()

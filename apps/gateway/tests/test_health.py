@@ -7,7 +7,7 @@ from tests.helpers import available_database
 
 def test_liveness_reports_process_alive() -> None:
     app = create_app(
-        Settings(environment=Environment.TEST),
+        Settings(app_environment=Environment.TEST),
         database=available_database,
     )
 
@@ -20,7 +20,7 @@ def test_liveness_reports_process_alive() -> None:
 
 def test_readiness_reports_lifespan_initialization() -> None:
     app = create_app(
-        Settings(environment=Environment.TEST),
+        Settings(app_environment=Environment.TEST),
         database=available_database,
     )
 
@@ -29,4 +29,7 @@ def test_readiness_reports_lifespan_initialization() -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ready"
-    assert response.json()["checks"] == {"database": {"status": "ok"}}
+    assert response.json()["checks"] == {
+        "database": {"status": "ok"},
+        "redis": {"status": "ok"},
+    }

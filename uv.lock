@@ -692,6 +692,7 @@ dependencies = [
     { name = "scalar-fastapi" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "structlog" },
+    { name = "throttled-py", extra = ["redis"] },
 ]
 
 [package.metadata]
@@ -711,6 +712,7 @@ requires-dist = [
     { name = "scalar-fastapi", specifier = ">=1.8,<2" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0,<2.1" },
     { name = "structlog", specifier = ">=25.5.0" },
+    { name = "throttled-py", extras = ["redis"], specifier = ">=3.4,<4" },
 ]
 
 [[package]]
@@ -1677,6 +1679,15 @@ wheels = [
 ]
 
 [[package]]
+name = "redis"
+version = "7.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/51/93/05e7d4a65285066a74f48697f9b9cde5cfce71398033d69ed83c3d98f5c9/redis-7.4.1.tar.gz", hash = "sha256:1a1df5067062cf7cbe677994e391f8ee0840f499d370f1a71266e0dd3aa9308e", size = 4945742, upload-time = "2026-06-05T09:10:06.703Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/2e/2677f3f93dae0497e7e33b6637302e7f3744efc553f34231183e32584885/redis-7.4.1-py3-none-any.whl", hash = "sha256:1fa4647af1c5e93a2c685aa248ee44cce092691146d41390518dabe9a99839b0", size = 410171, upload-time = "2026-06-05T09:10:05.128Z" },
+]
+
+[[package]]
 name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2065,6 +2076,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4b/13/2cc466bddf26d0085f30a2b2bd56b7f8708b54a54db833eec97c5c69129b/testcontainers-4.15.0.tar.gz", hash = "sha256:085cde086337632e19002719460b7b80bbab2bdd51bb3ea04f77d0de96504706", size = 95340, upload-time = "2026-07-24T23:08:01.731Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/7e/424aac8b355597835deb333e757a0e94b5ccf38ad00f07fe6ed1f4e17c88/testcontainers-4.15.0-py3-none-any.whl", hash = "sha256:8796c14e76604031ad39cf0ed3b8e9806283a1fbf5270965c2b1c594caa31b74", size = 160771, upload-time = "2026-07-24T23:08:00.13Z" },
+]
+
+[[package]]
+name = "throttled-py"
+version = "3.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fb/40/f26c9594d00f35cee000f4e9e87a2a6fc10d8eeeb3529439f587e1e1c553/throttled_py-3.4.1.tar.gz", hash = "sha256:b13f03b57d514c0e269ef442f7aeebc601cfe5661820579fdd8d5179039e52fd", size = 902802, upload-time = "2026-08-01T17:18:38.943Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c0/7d/c8c772258ff394bc0b5135a396a20cda2b85f6ad600784a992bc39f99c75/throttled_py-3.4.1-py3-none-any.whl", hash = "sha256:6d6cdab9e0d8ada93b0387b62875850dd2f02873e66682f55b0d23e18e80ca89", size = 83069, upload-time = "2026-08-01T17:18:37.49Z" },
+]
+
+[package.optional-dependencies]
+redis = [
+    { name = "redis" },
 ]
 
 [[package]]
