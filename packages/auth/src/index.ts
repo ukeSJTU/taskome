@@ -25,7 +25,8 @@ export function createAuth() {
     plugins: [
       jwt(),
       oauthProvider({
-        scopes: ["taskome"],
+        scopes: ["openid", "profile", "email", "taskome"],
+        disableJwtPlugin: false,
         loginPage: "/login",
         consentPage: "/oauth/consent",
         allowDynamicClientRegistration: false,

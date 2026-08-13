@@ -47,6 +47,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@better-auth/utils": "0.4.2",
     "@tailwindcss/postcss": "catalog:",
     "@taskome/config": "workspace:*",
     "@testing-library/jest-dom": "^7.0.1",

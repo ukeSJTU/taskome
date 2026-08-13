@@ -1,5 +1,5 @@
-import { auth } from "@taskome/auth";
 import { oauthProviderOpenIdConfigMetadata } from "@better-auth/oauth-provider";
+import { auth } from "@taskome/auth";
 
 const metadata = oauthProviderOpenIdConfigMetadata(auth);
 

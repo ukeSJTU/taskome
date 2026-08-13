@@ -1,12 +1,20 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@taskome/ui/components/button";
 
 export default function OAuthConsentPage() {
+  return (
+    <Suspense fallback={<main className="min-h-svh" />}>
+      <OAuthConsentContent />
+    </Suspense>
+  );
+}
+
+function OAuthConsentContent() {
   const searchParams = useSearchParams();
   const [submitting, setSubmitting] = useState(false);
   const clientId = searchParams.get("client_id") ?? "this application";
