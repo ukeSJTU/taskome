@@ -11,6 +11,8 @@ import { oauthGatewayAudience } from "./oauth-audience";
 
 export function createAuth() {
   const db = createDb();
+  const gatewayRESTResource = new URL("/v1", env.GATEWAY_PUBLIC_URL).toString();
+  const gatewayMCPResource = new URL("/mcp", env.GATEWAY_PUBLIC_URL).toString();
 
   return betterAuth({
     database: drizzleAdapter(db, {
@@ -25,17 +27,17 @@ export function createAuth() {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
     plugins: [
-      jwt(),
+      jwt({ jwt: { audience: gatewayRESTResource } }),
       oauthProvider({
         scopes: ["openid", "profile", "email", "taskome"],
-        validAudiences: [env.GATEWAY_INTERNAL_URL],
+        validAudiences: [gatewayMCPResource],
         disableJwtPlugin: false,
         loginPage: "/login",
         consentPage: "/oauth/consent",
         allowDynamicClientRegistration: false,
         allowUnauthenticatedClientRegistration: false,
       }),
-      oauthGatewayAudience(env.GATEWAY_INTERNAL_URL),
+      oauthGatewayAudience(gatewayMCPResource),
       twoFactor({ issuer: "taskome" }),
       nextCookies(),
     ],

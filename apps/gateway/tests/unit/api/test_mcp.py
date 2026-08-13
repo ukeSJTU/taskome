@@ -1,16 +1,24 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+import base64
+import json
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
-from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
+import httpx2
+import jwt
+import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from fastmcp.server.auth.providers.jwt import JWTVerifier, StaticTokenVerifier
 from fastmcp.utilities.asgi_transport import run_asgi_lifespan
 from fastmcp.utilities.tests import ASGIServer
 from gateway.api.mcp import create_mcp_server
+from gateway.core.auth import MCPPrincipalVerifier
 from gateway.core.config import Environment, Settings
 from gateway.services.input_files import DownloadUrl, InputFileService, UploadUrl
+from mcp.shared.exceptions import MCPError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -20,7 +28,70 @@ if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
 
 
-def test_mcp_endpoint_accepts_protocol_clients(create_test_app: Callable[..., FastAPI]) -> None:
+def _base64url(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+
+def _channel_tokens() -> tuple[str, str, JWTVerifier]:
+    private_key = Ed25519PrivateKey.generate()
+    jwks = {
+        "keys": [
+            {
+                "alg": "EdDSA",
+                "crv": "Ed25519",
+                "kid": "test-key",
+                "kty": "OKP",
+                "use": "sig",
+                "x": _base64url(private_key.public_key().public_bytes_raw()),
+            },
+        ],
+    }
+
+    def sign(*, issuer: str, audience: str, client_id: str | None = None) -> str:
+        claims = {
+            "aud": audience,
+            "exp": datetime.now(UTC) + timedelta(minutes=5),
+            "iat": datetime.now(UTC),
+            "iss": issuer,
+            "sub": "user-123",
+        }
+        if client_id is not None:
+            claims["azp"] = client_id
+        return jwt.encode(
+            claims,
+            private_key,
+            algorithm="EdDSA",
+            headers={"kid": "test-key"},
+        )
+
+    async def jwks_handler(_request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, json=jwks)
+
+    verifier = JWTVerifier(
+        jwks_uri="http://auth.test/api/auth/jwks",
+        issuer="http://localhost:3000/api/auth",
+        audience="http://localhost:8000/mcp",
+        algorithm="EdDSA",
+        http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(jwks_handler)),
+    )
+    oauth_token = sign(
+        issuer="http://localhost:3000/api/auth",
+        audience="http://localhost:8000/mcp",
+        client_id="mcp-client",
+    )
+    session_token = sign(
+        issuer="http://localhost:3000",
+        audience="http://localhost:8000/v1",
+    )
+    return oauth_token, session_token, verifier
+
+
+def test_mcp_accepts_oauth_token_and_rejects_session_token_through_protocol(
+    create_test_app: Callable[..., FastAPI],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    oauth_token, session_token, verifier = _channel_tokens()
+
     class LifespanStateApp:
         def __init__(self, app: ASGIApp) -> None:
             self.app = app
@@ -30,18 +101,10 @@ def test_mcp_endpoint_accepts_protocol_clients(create_test_app: Callable[..., Fa
                 scope["state"] = {}
             await self.app(scope, receive, send)
 
-    async def list_tools() -> list[Tool]:
+    async def list_tools(token: str) -> list[Tool]:
         app = create_test_app(
             Settings(app_environment=Environment.TEST),
-            token_verifier=StaticTokenVerifier(
-                {
-                    "test-token": {
-                        "client_id": "test-client",
-                        "scopes": [],
-                        "sub": "user-123",
-                    }
-                }
-            ),
+            mcp_token_verifier=verifier,
         )
         server = ASGIServer(
             url="http://127.0.0.1/mcp",
@@ -51,15 +114,29 @@ def test_mcp_endpoint_accepts_protocol_clients(create_test_app: Callable[..., Fa
         async with (
             run_asgi_lifespan(LifespanStateApp(app)),
             server.client(
-                headers={"Authorization": "Bearer test-token"},
+                headers={"Authorization": f"Bearer {token}"},
             ) as client,
         ):
             return await client.list_tools()
 
-    assert [tool.name for tool in asyncio.run(list_tools())] == [
+    assert [tool.name for tool in asyncio.run(list_tools(oauth_token))] == [
         "prepare_input_file_upload",
         "prepare_input_file_download",
     ]
+    with pytest.raises(MCPError):
+        asyncio.run(list_tools(session_token))
+
+    events = [
+        json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")
+    ]
+    access_events = [event for event in events if event["event"] == "http_request"]
+    assert any(
+        event.get("user_id") == "user-123"
+        and event.get("credential_kind") == "oauth_access_token"
+        and event.get("credential_id") == "mcp-client"
+        for event in access_events
+    )
+    assert oauth_token not in json.dumps(access_events)
 
 
 def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:
@@ -77,14 +154,16 @@ def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:
         server = create_mcp_server(
             Settings(app_environment=Environment.TEST),
             cast("InputFileService", FakeInputFileService()),
-            auth_provider=StaticTokenVerifier(
-                {
-                    "test-token": {
-                        "client_id": "test-client",
-                        "scopes": [],
-                        "sub": "user-a",
+            auth_provider=MCPPrincipalVerifier(
+                StaticTokenVerifier(
+                    {
+                        "test-token": {
+                            "client_id": "test-client",
+                            "scopes": [],
+                            "sub": "user-a",
+                        }
                     }
-                }
+                )
             ),
         )
         asgi_server = ASGIServer(
@@ -126,14 +205,16 @@ def test_mcp_download_tool_delegates_to_the_shared_service() -> None:
         server = create_mcp_server(
             Settings(app_environment=Environment.TEST),
             cast("InputFileService", FakeInputFileService()),
-            auth_provider=StaticTokenVerifier(
-                {
-                    "test-token": {
-                        "client_id": "test-client",
-                        "scopes": [],
-                        "sub": "user-a",
+            auth_provider=MCPPrincipalVerifier(
+                StaticTokenVerifier(
+                    {
+                        "test-token": {
+                            "client_id": "test-client",
+                            "scopes": [],
+                            "sub": "user-a",
+                        }
                     }
-                }
+                )
             ),
         )
         asgi_server = ASGIServer(

@@ -81,3 +81,18 @@ def test_checked_in_env_example_matches_gateway_settings() -> None:
 
     assert settings.otel_exporter_otlp_endpoint is None
     assert {key.lower() for key in uncommented_keys} <= Settings.model_fields.keys()
+
+
+def test_auth_endpoints_and_resources_are_derived_from_canonical_origins() -> None:
+    settings = Settings(
+        better_auth_url="https://example.com",
+        web_internal_url="http://web:3000",
+        gateway_public_url="https://api.example.com",
+        _env_file=None,
+    )
+
+    assert settings.auth_jwks_url == "http://web:3000/api/auth/jwks"
+    assert settings.auth_session_issuer == "https://example.com"
+    assert settings.auth_oauth_issuer == "https://example.com/api/auth"
+    assert settings.rest_resource == "https://api.example.com/v1"
+    assert settings.mcp_resource == "https://api.example.com/mcp"

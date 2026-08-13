@@ -1,7 +1,7 @@
 from enum import StrEnum
 from importlib.metadata import version
 
-from pydantic import Field, SecretStr
+from pydantic import AnyHttpUrl, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,11 +45,9 @@ class Settings(BaseSettings):
     # against the checked-in SeaweedFS development identity.
     seaweedfs_secret_key: SecretStr = SecretStr("unset")
     seaweedfs_bucket: str = "taskome"
-    auth_jwks_url: str = "http://localhost:3000/api/auth/jwks"
-    auth_issuer: str = "http://localhost:3000"
-    auth_oauth_issuer: str = "http://localhost:3000/api/auth"
-    auth_session_audience: str = "http://localhost:3000"
-    auth_oauth_audience: str = "http://localhost:8000"
+    better_auth_url: AnyHttpUrl = AnyHttpUrl("http://localhost:3000")
+    web_internal_url: AnyHttpUrl = AnyHttpUrl("http://localhost:3000")
+    gateway_public_url: AnyHttpUrl = AnyHttpUrl("http://localhost:8000")
     otel_service_name: str | None = None
     otel_exporter_otlp_endpoint: str | None = None
     # Signal-specific endpoints and headers are read reflectively by
@@ -70,3 +68,23 @@ class Settings(BaseSettings):
     @property
     def resolved_seaweedfs_public_endpoint(self) -> str:
         return self.seaweedfs_public_endpoint or self.seaweedfs_internal_endpoint
+
+    @property
+    def auth_jwks_url(self) -> str:
+        return f"{str(self.web_internal_url).rstrip('/')}/api/auth/jwks"
+
+    @property
+    def auth_session_issuer(self) -> str:
+        return str(self.better_auth_url).rstrip("/")
+
+    @property
+    def auth_oauth_issuer(self) -> str:
+        return f"{str(self.better_auth_url).rstrip('/')}/api/auth"
+
+    @property
+    def rest_resource(self) -> str:
+        return f"{str(self.gateway_public_url).rstrip('/')}/v1"
+
+    @property
+    def mcp_resource(self) -> str:
+        return f"{str(self.gateway_public_url).rstrip('/')}/mcp"

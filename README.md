@@ -89,6 +89,17 @@ Commands:
 
 Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in the compose files for container networking.
 
+Public identity and internal reachability use four canonical origins. Native
+development and the production-shaped local Compose rehearsal keep public origins
+on localhost; Compose uses service names only for internal hops. A real deployment
+uses the documented example hosts:
+
+| Environment        | `BETTER_AUTH_URL`       | `WEB_INTERNAL_URL`      | `GATEWAY_PUBLIC_URL`      | `GATEWAY_INTERNAL_URL`  |
+| ------------------ | ----------------------- | ----------------------- | ------------------------- | ----------------------- |
+| Native local       | `http://localhost:3000` | `http://localhost:3000` | `http://localhost:8000`   | `http://localhost:8000` |
+| Local Compose      | `http://localhost:3000` | `http://web:3000`       | `http://localhost:8000`   | `http://gateway:8000`   |
+| Production example | `https://example.com`   | `http://web:3000`       | `https://api.example.com` | `http://gateway:8000`   |
+
 For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
 
 ## Git Hooks and Formatting

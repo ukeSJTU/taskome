@@ -11,15 +11,17 @@ from scalar_fastapi import get_scalar_api_reference
 
 from gateway.api.health import router as health_router
 from gateway.api.mcp import create_mcp_server
-from gateway.api.v1.router import auth_api_router
 from gateway.api.v1.router import router as api_v1_router
-from gateway.core.auth import create_token_verifier
+from gateway.core.auth import (
+    MCPPrincipalVerifier,
+    create_mcp_token_verifier,
+    create_rest_token_verifier,
+)
 from gateway.core.config import Environment, Settings
 from gateway.core.errors import register_error_handlers
 from gateway.core.lifespan import lifespan
 from gateway.core.middleware import (
     AccessLoggingMiddleware,
-    MCPAuthenticationMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
 )
@@ -45,7 +47,8 @@ def create_app(  # noqa: PLR0913
     database: Database | None = None,
     span_exporter: SpanExporter | None = None,
     log_exporter: LogRecordExporter | None = None,
-    token_verifier: TokenVerifier | None = None,
+    rest_token_verifier: TokenVerifier | None = None,
+    mcp_token_verifier: TokenVerifier | None = None,
     rate_limit_redis: Redis | None = None,
     rate_limit_store: RedisStore | None = None,
 ) -> FastAPI:
@@ -66,7 +69,12 @@ def create_app(  # noqa: PLR0913
     app_rate_limit_store = rate_limit_store or create_rate_limit_store(
         app_settings.rate_limit_redis_url.get_secret_value()
     )
-    verifier = token_verifier or create_token_verifier(app_settings)
+    rest_verifier = rest_token_verifier or create_rest_token_verifier(app_settings)
+    mcp_verifier = (
+        MCPPrincipalVerifier(mcp_token_verifier)
+        if mcp_token_verifier is not None
+        else create_mcp_token_verifier(app_settings)
+    )
     input_file_service = InputFileService(
         repository=InputFileRepository(app_database),
         storage=SeaweedFSStorage(
@@ -80,7 +88,7 @@ def create_app(  # noqa: PLR0913
     mcp_server = create_mcp_server(
         app_settings,
         input_file_service,
-        auth_provider=None if app_settings.app_environment is Environment.TEST else verifier,
+        auth_provider=mcp_verifier,
     )
     mcp_app = mcp_server.http_app(path="/")
 
@@ -97,21 +105,16 @@ def create_app(  # noqa: PLR0913
     application.state.rate_limit_redis = app_rate_limit_redis
     application.state.rate_limit_store = app_rate_limit_store
     application.state.input_file_service = input_file_service
-    application.state.token_verifier = verifier
+    application.state.rest_token_verifier = rest_verifier
     application.state.mcp = mcp_server
     application.state.observability = observability
     register_error_handlers(application)
     application.include_router(health_router)
     application.include_router(api_v1_router)
-    application.include_router(auth_api_router)
     application.mount("/mcp", mcp_app)
     if app_settings.expose_docs:
         _add_scalar_api_reference(application)
     application.add_middleware(AccessLoggingMiddleware)
-    application.add_middleware(
-        MCPAuthenticationMiddleware,
-        verifier=verifier,
-    )
     application.add_middleware(RequestIDMiddleware)
     application.add_middleware(
         SecurityHeadersMiddleware,

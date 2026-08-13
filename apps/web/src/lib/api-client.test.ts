@@ -29,7 +29,7 @@ describe("gateway API client", () => {
 
     expect(getToken).toHaveBeenCalledWith({ headers: expect.any(Headers) });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]?.toString()).toBe("http://gateway.test/api/v1/auth/me");
+    expect(fetchMock.mock.calls[0]?.[0]?.toString()).toBe("http://gateway.test/v1/me");
     const options = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(options.cache).toBe("no-store");
     expect((options.headers as Headers).get("authorization")).toBe("Bearer session-jwt");

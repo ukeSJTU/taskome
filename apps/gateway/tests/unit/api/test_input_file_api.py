@@ -17,18 +17,19 @@ if TYPE_CHECKING:
 def test_rest_input_file_endpoints_require_auth_and_delegate(
     create_test_app: Callable[..., FastAPI],
 ) -> None:
-    app = create_test_app()
+    app = create_test_app(
+        rest_token_verifier=StaticTokenVerifier(
+            {
+                "test-token": {
+                    "client_id": "test-client",
+                    "scopes": [],
+                    "sub": "user-a",
+                }
+            }
+        )
+    )
     service = FakeInputFileService()
     app.state.input_file_service = service
-    app.state.token_verifier = StaticTokenVerifier(
-        {
-            "test-token": {
-                "client_id": "test-client",
-                "scopes": [],
-                "sub": "user-a",
-            }
-        }
-    )
 
     with TestClient(app) as client:
         unauthorized = client.post(
@@ -63,17 +64,18 @@ def test_rest_input_file_endpoints_require_auth_and_delegate(
 def test_rest_input_file_access_hides_other_owners(
     create_test_app: Callable[..., FastAPI],
 ) -> None:
-    app = create_test_app()
-    app.state.input_file_service = FakeInputFileService()
-    app.state.token_verifier = StaticTokenVerifier(
-        {
-            "other-user-token": {
-                "client_id": "test-client",
-                "scopes": [],
-                "sub": "user-b",
+    app = create_test_app(
+        rest_token_verifier=StaticTokenVerifier(
+            {
+                "other-user-token": {
+                    "client_id": "test-client",
+                    "scopes": [],
+                    "sub": "user-b",
+                }
             }
-        }
+        )
     )
+    app.state.input_file_service = FakeInputFileService()
 
     with TestClient(app) as client:
         response = client.get(

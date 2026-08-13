@@ -1,12 +1,12 @@
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from gateway.core.auth import current_claims
+from gateway.core.auth import Principal, current_principal
 from gateway.core.errors import problem_responses
-from gateway.schemas.problem import Identity
+from gateway.schemas.auth import Identity
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])
 
 
 @router.get(
@@ -16,6 +16,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     responses=problem_responses(401),
 )
 async def current_identity(
-    claims: Annotated[dict[str, Any], Depends(current_claims)],
+    principal: Annotated[Principal, Depends(current_principal)],
 ) -> Identity:
-    return Identity.model_validate({key: claims[key] for key in ("aud", "iss", "sub")})
+    return Identity.model_validate(principal, from_attributes=True)
