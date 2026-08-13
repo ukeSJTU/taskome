@@ -1,0 +1,15 @@
+[tasks.dev]
+description = "Run docs in development mode"
+run = "pnpm run dev"
+
+[tasks.build]
+description = "Build docs for production"
+run = "pnpm run build"
+
+[tasks.start]
+description = "Run the production docs server"
+run = "pnpm run start"
+
+[tasks."check-types"]
+description = "Type-check docs"
+run = "pnpm run check-types"

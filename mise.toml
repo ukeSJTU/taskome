@@ -2,7 +2,7 @@
 monorepo_root = true
 
 [monorepo]
-config_roots = ["apps/gateway"]
+config_roots = ["apps/gateway", "apps/docs"]
 
 [tools]
 node = "24"
