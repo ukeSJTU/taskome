@@ -4,6 +4,7 @@ import asyncio
 import json
 import tempfile
 import time
+import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING
 
@@ -120,13 +121,33 @@ def test_input_file_upload_and_download_use_seaweedfs(
         assert response.status == 200
         assert response.headers["Access-Control-Allow-Origin"] == "http://localhost:3001"
 
+    missing_condition = urllib.request.Request(  # noqa: S310
+        uploaded.upload_url,
+        data=b"missing-condition",
+        method="PUT",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(missing_condition)  # noqa: S310
+    assert error.value.code == 403
+
     request = urllib.request.Request(  # noqa: S310
         uploaded.upload_url,
         data=b"ATOM 1 TEST",
+        headers={"If-None-Match": "*"},
         method="PUT",
     )
     with urllib.request.urlopen(request) as response:  # noqa: S310
         assert response.status == 200
+
+    overwrite = urllib.request.Request(  # noqa: S310
+        uploaded.upload_url,
+        data=b"OVERWRITTEN",
+        headers={"If-None-Match": "*"},
+        method="PUT",
+    )
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(overwrite)  # noqa: S310
+    assert error.value.code == 412
 
     downloaded = asyncio.run(input_file_service.mint_download_url("user-a", uploaded.id))
     with urllib.request.urlopen(downloaded.download_url) as response:  # noqa: S310
@@ -140,6 +161,7 @@ def test_deleted_input_file_is_unavailable_to_its_owner(
     request = urllib.request.Request(  # noqa: S310
         uploaded.upload_url,
         data=b"old",
+        headers={"If-None-Match": "*"},
         method="PUT",
     )
     with urllib.request.urlopen(request) as response:  # noqa: S310

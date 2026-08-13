@@ -21,6 +21,15 @@ def input_file_service(request: Request) -> InputFileService:
     return request.app.state.input_file_service
 
 
+def input_file_not_found() -> AppError:
+    return AppError(
+        error_type="input-file-not-found",
+        title="Input File Not Found",
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="The requested Input File is not available.",
+    )
+
+
 @router.post("", response_model=UploadUrlResponse, status_code=status.HTTP_201_CREATED)
 async def create_input_file(
     body: CreateInputFileRequest,
@@ -44,12 +53,7 @@ async def download_input_file(
     try:
         result = await service.mint_download_url(owner_user_id, input_file_id)
     except InputFileNotFoundError as error:
-        raise AppError(
-            error_type="input-file-not-found",
-            title="Input File Not Found",
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="The requested Input File is not available.",
-        ) from error
+        raise input_file_not_found() from error
     return DownloadUrlResponse.model_validate(result, from_attributes=True)
 
 
@@ -62,9 +66,4 @@ async def delete_input_file(
     try:
         await service.delete(owner_user_id, input_file_id)
     except InputFileNotFoundError as error:
-        raise AppError(
-            error_type="input-file-not-found",
-            title="Input File Not Found",
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="The requested Input File is not available.",
-        ) from error
+        raise input_file_not_found() from error

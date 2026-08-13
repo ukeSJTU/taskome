@@ -44,7 +44,12 @@ class SeaweedFSStorage:
             self._internal.create_bucket(Bucket=self._bucket)
 
     def mint_upload_url(self, key: str, expires_in: int) -> tuple[str, datetime]:
-        return self._presign("put_object", key, expires_in)
+        return self._presign(
+            "put_object",
+            key,
+            expires_in,
+            params={"IfNoneMatch": "*"},
+        )
 
     def mint_download_url(self, key: str, expires_in: int) -> tuple[str, datetime]:
         return self._presign("get_object", key, expires_in)
@@ -52,10 +57,20 @@ class SeaweedFSStorage:
     def delete(self, key: str) -> None:
         self._internal.delete_object(Bucket=self._bucket, Key=key)
 
-    def _presign(self, operation: str, key: str, expires_in: int) -> tuple[str, datetime]:
+    def _presign(
+        self,
+        operation: str,
+        key: str,
+        expires_in: int,
+        *,
+        params: dict[str, str] | None = None,
+    ) -> tuple[str, datetime]:
+        request_params = {"Bucket": self._bucket, "Key": key}
+        if params is not None:
+            request_params.update(params)
         url = self._public.generate_presigned_url(
             operation,
-            Params={"Bucket": self._bucket, "Key": key},
+            Params=request_params,
             ExpiresIn=expires_in,
         )
         return url, datetime.now(UTC) + timedelta(seconds=expires_in)

@@ -25,7 +25,7 @@ proxy.
 
 ## Interfaces
 
-- `/api/v1` — versioned business REST API namespace
+- `/v1` — versioned business REST API namespace
 - `/mcp` — MCP Streamable HTTP transport
 - `/internal` — reserved internal API namespace
 - `/health/live` — process liveness
@@ -34,9 +34,13 @@ proxy.
 The MCP server exposes the Task-agnostic `mint_input_file_upload_url` tool. It
 returns an Input File id and a short-lived presigned SeaweedFS PUT URL; callers
 transfer bytes directly to SeaweedFS. The REST equivalent is
-`POST /api/v1/input-files`, with presigned download and delete endpoints under
-`/api/v1/input-files/{id}`. These REST endpoints and the MCP tool require a
+`POST /v1/input-files`, with presigned download and delete endpoints under
+`/v1/input-files/{id}`. These REST endpoints and the MCP tool require a
 better-auth JWT.
+
+Upload callers must send `If-None-Match: *` with the PUT request. The condition
+is signed into the URL so an Input File's object cannot be overwritten after its
+first successful upload.
 
 ## Configuration
 

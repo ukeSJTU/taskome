@@ -10,7 +10,9 @@ class CreateInputFileRequest(BaseModel):
 
 class UploadUrlResponse(BaseModel):
     id: UUID
-    upload_url: str
+    upload_url: str = Field(
+        description="PUT with If-None-Match: *; the condition prevents overwrites."
+    )
     expires_at: datetime
 
 

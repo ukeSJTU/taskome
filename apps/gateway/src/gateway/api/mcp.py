@@ -35,6 +35,7 @@ def create_mcp_server(
 
     @server.tool(name="mint_input_file_upload_url")
     async def mint_input_file_upload_url(original_filename: str) -> dict[str, str]:
+        """Mint a one-time upload URL; PUT must include If-None-Match: *."""
         token = get_access_token()
         if token is None or token.subject is None:
             raise PermissionError

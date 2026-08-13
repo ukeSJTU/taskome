@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from gateway.repositories.input_files import InputFileRepository
     from gateway.services.storage import SeaweedFSStorage
 
-UPLOAD_URL_TTL_SECONDS = 900
+PRESIGNED_URL_TTL_SECONDS = 900
 
 
 class InputFileNotFoundError(Exception):
@@ -37,7 +37,7 @@ class InputFileService:
         *,
         repository: InputFileRepository,
         storage: SeaweedFSStorage,
-        url_ttl_seconds: int = UPLOAD_URL_TTL_SECONDS,
+        url_ttl_seconds: int = PRESIGNED_URL_TTL_SECONDS,
     ) -> None:
         self._repository = repository
         self._storage = storage

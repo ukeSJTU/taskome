@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from alembic.runtime.migration import MigrationContext
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.instrumentation.utils import suppress_instrumentation
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -47,33 +48,36 @@ class Database:
             yield session
 
     async def is_available(self) -> bool:
-        try:
-            async with timeout(2):
-                async with self._engine.connect() as connection:
-                    await connection.execute(text("SELECT 1"))
-                    schema = await connection.execute(
-                        text(
-                            "SELECT 1 FROM information_schema.schemata WHERE schema_name = :schema"
-                        ),
-                        {"schema": GATEWAY_SCHEMA},
-                    )
-                    return schema.scalar_one_or_none() == 1
-        except Exception:  # noqa: BLE001 - callers deliberately receive no database details.
-            return False
+        with suppress_instrumentation():
+            try:
+                async with timeout(2):
+                    async with self._engine.connect() as connection:
+                        await connection.execute(text("SELECT 1"))
+                        schema = await connection.execute(
+                            text(
+                                "SELECT 1 FROM information_schema.schemata "
+                                "WHERE schema_name = :schema"
+                            ),
+                            {"schema": GATEWAY_SCHEMA},
+                        )
+                        return schema.scalar_one_or_none() == 1
+            except Exception:  # noqa: BLE001 - callers deliberately receive no database details.
+                return False
 
     async def dispose(self) -> None:
         await self._engine.dispose()
 
     async def is_at_head(self) -> bool:
         expected = set(current_heads())
-        try:
-            async with self._engine.connect() as connection:
-                actual = await connection.run_sync(
-                    lambda sync_connection: MigrationContext.configure(
-                        sync_connection,
-                        opts={"version_table_schema": GATEWAY_SCHEMA},
-                    ).get_current_heads(),
-                )
-                return set(actual) == expected
-        except Exception:  # noqa: BLE001
-            return False
+        with suppress_instrumentation():
+            try:
+                async with self._engine.connect() as connection:
+                    actual = await connection.run_sync(
+                        lambda sync_connection: MigrationContext.configure(
+                            sync_connection,
+                            opts={"version_table_schema": GATEWAY_SCHEMA},
+                        ).get_current_heads(),
+                    )
+                    return set(actual) == expected
+            except Exception:  # noqa: BLE001
+                return False

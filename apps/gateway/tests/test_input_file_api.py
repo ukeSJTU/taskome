@@ -60,20 +60,20 @@ def test_rest_input_file_endpoints_require_auth_and_delegate() -> None:
 
     with TestClient(app) as client:
         unauthorized = client.post(
-            "/api/v1/input-files",
+            "/v1/input-files",
             json={"original_filename": "binder.pdb"},
         )
         created = client.post(
-            "/api/v1/input-files",
+            "/v1/input-files",
             json={"original_filename": "binder.pdb"},
             headers={"Authorization": "Bearer test-token"},
         )
         downloaded = client.get(
-            f"/api/v1/input-files/{service.input_file_id}/download-url",
+            f"/v1/input-files/{service.input_file_id}/download-url",
             headers={"Authorization": "Bearer test-token"},
         )
         deleted = client.delete(
-            f"/api/v1/input-files/{service.input_file_id}",
+            f"/v1/input-files/{service.input_file_id}",
             headers={"Authorization": "Bearer test-token"},
         )
 
@@ -103,7 +103,7 @@ def test_rest_input_file_access_hides_other_owners() -> None:
 
     with TestClient(app) as client:
         response = client.get(
-            f"/api/v1/input-files/{uuid4()}/download-url",
+            f"/v1/input-files/{uuid4()}/download-url",
             headers={"Authorization": "Bearer other-user-token"},
         )
 
