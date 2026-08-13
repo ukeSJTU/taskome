@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp.utilities.asgi_transport import run_asgi_lifespan
@@ -11,7 +11,7 @@ from fastmcp.utilities.tests import ASGIServer
 from gateway.api.mcp import create_mcp_server
 from gateway.core.config import Environment, Settings
 from gateway.main import create_app
-from gateway.services.input_files import InputFileService, UploadUrl
+from gateway.services.input_files import DownloadUrl, InputFileService, UploadUrl
 
 if TYPE_CHECKING:
     from fastmcp.tools.base import Tool
@@ -55,7 +55,8 @@ def test_mcp_endpoint_accepts_protocol_clients() -> None:
             return await client.list_tools()
 
     assert [tool.name for tool in asyncio.run(list_tools())] == [
-        "mint_input_file_upload_url",
+        "prepare_input_file_upload",
+        "prepare_input_file_download",
     ]
 
 
@@ -94,10 +95,59 @@ def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:
             asgi_server.client(auth="test-token") as client,
         ):
             result = await client.call_tool(
-                "mint_input_file_upload_url",
+                "prepare_input_file_upload",
                 {"original_filename": "binder.pdb"},
             )
             return cast("dict[str, str]", result.structured_content)
 
     result = asyncio.run(call_tool())
     assert result["upload_url"] == "http://seaweedfs/upload"
+
+
+def test_mcp_download_tool_delegates_to_the_shared_service() -> None:
+    input_file_id = uuid4()
+
+    class FakeInputFileService:
+        async def mint_download_url(
+            self,
+            owner_user_id: str,
+            requested_input_file_id: UUID,
+        ) -> DownloadUrl:
+            assert owner_user_id == "user-a"
+            assert requested_input_file_id == input_file_id
+            return DownloadUrl(
+                download_url="http://seaweedfs/download",
+                expires_at=datetime.now(UTC),
+            )
+
+    async def call_tool() -> dict[str, str]:
+        server = create_mcp_server(
+            Settings(app_environment=Environment.TEST),
+            cast("InputFileService", FakeInputFileService()),
+            auth_provider=StaticTokenVerifier(
+                {
+                    "test-token": {
+                        "client_id": "test-client",
+                        "scopes": [],
+                        "sub": "user-a",
+                    }
+                }
+            ),
+        )
+        asgi_server = ASGIServer(
+            url="http://127.0.0.1/mcp",
+            app=server.http_app(path="/mcp"),
+            transport_type="streamable-http",
+        )
+        async with (
+            run_asgi_lifespan(asgi_server.app),
+            asgi_server.client(auth="test-token") as client,
+        ):
+            result = await client.call_tool(
+                "prepare_input_file_download",
+                {"input_file_id": str(input_file_id)},
+            )
+            return cast("dict[str, str]", result.structured_content)
+
+    result = asyncio.run(call_tool())
+    assert result["download_url"] == "http://seaweedfs/download"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import UUID  # noqa: TC003 - FastMCP resolves tool annotations at registration.
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
@@ -33,9 +34,9 @@ def create_mcp_server(
         mask_error_details=settings.app_environment is Environment.PRODUCTION,
     )
 
-    @server.tool(name="mint_input_file_upload_url")
-    async def mint_input_file_upload_url(original_filename: str) -> dict[str, str]:
-        """Mint a one-time upload URL; PUT must include If-None-Match: *."""
+    @server.tool(name="prepare_input_file_upload")
+    async def prepare_input_file_upload(original_filename: str) -> dict[str, str]:
+        """Prepare a one-time upload; PUT must include If-None-Match: *."""
         token = get_access_token()
         if token is None or token.subject is None:
             raise PermissionError
@@ -43,6 +44,18 @@ def create_mcp_server(
         return {
             "id": str(result.id),
             "upload_url": result.upload_url,
+            "expires_at": result.expires_at.isoformat(),
+        }
+
+    @server.tool(name="prepare_input_file_download")
+    async def prepare_input_file_download(input_file_id: UUID) -> dict[str, str]:
+        """Prepare a short-lived download for an owned Input File."""
+        token = get_access_token()
+        if token is None or token.subject is None:
+            raise PermissionError
+        result = await service.mint_download_url(token.subject, input_file_id)
+        return {
+            "download_url": result.download_url,
             "expires_at": result.expires_at.isoformat(),
         }
 

@@ -32,11 +32,12 @@ proxy. Swagger UI and ReDoc are disabled in every environment.
 - `/health/live` — process liveness
 - `/health/ready` — dependency readiness
 
-The MCP server exposes the Task-agnostic `mint_input_file_upload_url` tool. It
-returns an Input File id and a short-lived presigned SeaweedFS PUT URL; callers
-transfer bytes directly to SeaweedFS. The REST equivalent is
+The MCP server exposes the Task-agnostic `prepare_input_file_upload` and
+`prepare_input_file_download` tools. They return short-lived presigned
+SeaweedFS URLs, with the upload tool also returning a new Input File id; callers
+transfer bytes directly to or from SeaweedFS. The REST equivalent is
 `POST /v1/input-files`, with presigned download and delete endpoints under
-`/v1/input-files/{id}`. These REST endpoints and the MCP tool require a
+`/v1/input-files/{id}`. These REST endpoints and the MCP tools require a
 better-auth JWT.
 
 Upload callers must send `If-None-Match: *` with the PUT request. The condition
