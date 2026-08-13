@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from gateway.db.database import Database
-from gateway.db.models import metadata
+from gateway.models import metadata
 from gateway.repositories.input_files import InputFileRepository
 from gateway.services.input_files import (
     InputFileNotFoundError,

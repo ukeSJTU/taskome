@@ -94,7 +94,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["python", "-m", "gateway.db.commands", "migrate"]
+    command: ["python", "-m", "scripts.database", "migrate"]
     security_opt:
       - no-new-privileges:true
     cap_drop:

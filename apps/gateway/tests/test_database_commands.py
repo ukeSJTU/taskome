@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import subprocess
 import sys
@@ -8,10 +9,8 @@ from typing import TYPE_CHECKING
 import psycopg
 import pytest
 from alembic import command
-from alembic.runtime.migration import MigrationContext
-from gateway.db.commands import revision
-from gateway.db.migrations import config, current_heads
-from sqlalchemy import create_engine
+from gateway.db.database import Database
+from scripts.database import config, revision
 from testcontainers.postgres import PostgresContainer
 
 if TYPE_CHECKING:
@@ -32,7 +31,7 @@ def test_development_push_rebuilds_only_gateway_schema(database_url: str) -> Non
         connection.execute("CREATE TABLE gateway.dirty (value text NOT NULL)")
 
     result = subprocess.run(
-        [sys.executable, "-m", "gateway.db.commands", "push"],
+        [sys.executable, "-m", "scripts.database", "push"],
         check=False,
         capture_output=True,
         env={**os.environ, "APP_ENVIRONMENT": "development", "DATABASE_URL": database_url},
@@ -52,7 +51,7 @@ def test_development_push_rebuilds_only_gateway_schema(database_url: str) -> Non
 
 def test_development_push_rejects_non_development_environment(database_url: str) -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "gateway.db.commands", "push"],
+        [sys.executable, "-m", "scripts.database", "push"],
         check=False,
         capture_output=True,
         env={**os.environ, "APP_ENVIRONMENT": "production", "DATABASE_URL": database_url},
@@ -71,14 +70,14 @@ def test_migrate_creates_gateway_history_without_touching_public(database_url: s
 
     environment = {**os.environ, "APP_ENVIRONMENT": "production", "DATABASE_URL": database_url}
     first = subprocess.run(
-        [sys.executable, "-m", "gateway.db.commands", "migrate"],
+        [sys.executable, "-m", "scripts.database", "migrate"],
         check=False,
         capture_output=True,
         env=environment,
         text=True,
     )
     second = subprocess.run(
-        [sys.executable, "-m", "gateway.db.commands", "migrate"],
+        [sys.executable, "-m", "scripts.database", "migrate"],
         check=False,
         capture_output=True,
         env=environment,
@@ -102,7 +101,7 @@ def test_migrate_creates_gateway_history_without_touching_public(database_url: s
 def test_migrations_match_current_metadata(database_url: str) -> None:
     environment = {**os.environ, "APP_ENVIRONMENT": "production", "DATABASE_URL": database_url}
     result = subprocess.run(
-        [sys.executable, "-m", "gateway.db.commands", "migrate"],
+        [sys.executable, "-m", "scripts.database", "migrate"],
         check=False,
         capture_output=True,
         env=environment,
@@ -110,9 +109,11 @@ def test_migrations_match_current_metadata(database_url: str) -> None:
     )
 
     assert result.returncode == 0, result.stderr
-    with create_engine(database_url).connect() as connection:
-        context = MigrationContext.configure(connection, opts={"version_table_schema": "gateway"})
-        assert context.get_current_heads() == current_heads()
+    database = Database(database_url)
+    try:
+        assert asyncio.run(database.is_at_head())
+    finally:
+        asyncio.run(database.dispose())
     command.check(config(database_url))
 
 

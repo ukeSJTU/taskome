@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import select
 
-from gateway.db.models import InputFile
+from gateway.models import InputFile
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

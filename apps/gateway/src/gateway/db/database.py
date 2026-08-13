@@ -2,22 +2,26 @@ from __future__ import annotations
 
 from asyncio import timeout
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING
 
+from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.instrumentation.utils import suppress_instrumentation
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from gateway.db.migrations import current_heads
-from gateway.db.models import GATEWAY_SCHEMA
+from gateway.db.base import GATEWAY_SCHEMA
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from opentelemetry.sdk.trace import TracerProvider
     from sqlalchemy.ext.asyncio import AsyncSession
+
+ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[3] / "alembic.ini"
 
 
 class Database:
@@ -70,7 +74,8 @@ class Database:
         await self._engine.dispose()
 
     async def is_at_head(self) -> bool:
-        expected = set(current_heads())
+        config = Config(str(ALEMBIC_CONFIG_PATH))
+        expected = set(ScriptDirectory.from_config(config).get_heads())
         with suppress_instrumentation():
             try:
                 async with self._engine.connect() as connection:

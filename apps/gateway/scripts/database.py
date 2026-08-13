@@ -3,15 +3,28 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from pathlib import Path
 
 from alembic import command
+from alembic.config import Config
 from alembic.util.exc import CommandError
+from gateway.core.config import Environment, Settings
+from gateway.db.base import GATEWAY_SCHEMA
+from gateway.models import metadata
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from gateway.core.config import Environment, Settings
-from gateway.db.migrations import config, upgrade
-from gateway.db.models import GATEWAY_SCHEMA, metadata
+GATEWAY_ROOT = Path(__file__).resolve().parents[1]
+
+
+def config(database_url: str) -> Config:
+    alembic_config = Config(str(GATEWAY_ROOT / "alembic.ini"))
+    alembic_config.set_main_option("sqlalchemy.url", database_url)
+    return alembic_config
+
+
+def migrate(database_url: str) -> None:
+    command.upgrade(config(database_url), "head")
 
 
 async def push(database_url: str) -> None:
@@ -32,7 +45,7 @@ def revision() -> bool:
         database_url = postgres.get_connection_url().replace(
             "postgresql+psycopg2", "postgresql+psycopg"
         )
-        upgrade(database_url)
+        migrate(database_url)
         try:
             command.check(config(database_url))
         except CommandError as error:
@@ -44,7 +57,7 @@ def revision() -> bool:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Gateway database developer commands")
+    parser = argparse.ArgumentParser(description="Gateway database commands")
     parser.add_argument("operation", choices=("push", "revision", "migrate"))
     args = parser.parse_args()
     settings = Settings()
@@ -56,7 +69,7 @@ def main() -> None:
     if args.operation == "revision":
         revision()
         return
-    upgrade(settings.database_url.get_secret_value())
+    migrate(settings.database_url.get_secret_value())
 
 
 if __name__ == "__main__":

@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-from logging.config import fileConfig
-
 from alembic import context
+from gateway.db.base import GATEWAY_SCHEMA
+from gateway.models import metadata
 from sqlalchemy import engine_from_config, pool, text
 
-from gateway.db.models import GATEWAY_SCHEMA, metadata
-
 config = context.config
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
-
 target_metadata = metadata
 
 

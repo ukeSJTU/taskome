@@ -28,12 +28,12 @@ run = "uv run python scripts/export_openapi.py"
 
 [tasks."db:push"]
 description = "Rebuild the development Gateway schema from SQLAlchemy metadata"
-run = "uv run python -m gateway.db.commands push"
+run = "uv run python -m scripts.database push"
 
 [tasks."db:migrate"]
 description = "Upgrade the Gateway schema through checked-in Alembic revisions"
-run = "uv run python -m gateway.db.commands migrate"
+run = "uv run python -m scripts.database migrate"
 
 [tasks."db:revision"]
 description = "Generate a reviewed Gateway Alembic revision in disposable PostgreSQL"
-run = "uv run python -m gateway.db.commands revision"
+run = "uv run python -m scripts.database revision"
