@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import tempfile
-import time
 import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING
@@ -20,6 +19,7 @@ from gateway.services.storage import SeaweedFSStorage
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from testcontainers.core.container import DockerContainer
+from testcontainers.core.wait_strategies import HttpWaitStrategy
 from testcontainers.postgres import PostgresContainer
 
 if TYPE_CHECKING:
@@ -61,6 +61,7 @@ def input_file_service() -> Iterator[InputFileService]:
                     ),
                 )
                 .with_exposed_ports(8333)
+                .waiting_for(HttpWaitStrategy(8333, "/status").with_startup_timeout(90))
                 .with_volume_mapping(
                     config_file.name,
                     "/etc/seaweedfs/s3-config.json",
@@ -69,7 +70,6 @@ def input_file_service() -> Iterator[InputFileService]:
                 endpoint = (
                     f"http://{seaweedfs.get_container_host_ip()}:{seaweedfs.get_exposed_port(8333)}"
                 )
-                _wait_for_seaweedfs(endpoint)
                 database = Database(database_url)
                 asyncio.run(_create_schema(database_url))
                 yield InputFileService(
@@ -83,16 +83,6 @@ def input_file_service() -> Iterator[InputFileService]:
                     ),
                 )
                 asyncio.run(database.dispose())
-
-
-def _wait_for_seaweedfs(endpoint: str) -> None:
-    for _ in range(30):
-        try:
-            with urllib.request.urlopen(f"{endpoint}/status", timeout=1):  # noqa: S310
-                return
-        except OSError:
-            time.sleep(1)
-    pytest.fail("SeaweedFS did not become ready")
 
 
 async def _create_schema(database_url: str) -> None:
