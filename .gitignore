@@ -11,6 +11,10 @@ dist
 build
 *.tsbuildinfo
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
 # Generated files
 apps/web/src/routeTree.gen.ts
 

@@ -2,7 +2,7 @@
 monorepo_root = true
 
 [monorepo]
-config_roots = ["apps/gateway", "apps/docs"]
+config_roots = ["apps/gateway", "apps/docs", "packages/task-kit"]
 
 [tools]
 node = "24"
@@ -71,19 +71,19 @@ run = [
 
 [tasks.lint]
 description = "Lint the whole repo (TS + Python), safe autofixes"
-depends = ["ts:lint", "//apps/gateway:lint"]
+depends = ["ts:lint", "//apps/gateway:lint", "//packages/task-kit:lint"]
 
 [tasks.format]
 description = "Format the whole repo (TS + Python)"
-depends = ["ts:format", "//apps/gateway:format"]
+depends = ["ts:format", "//apps/gateway:format", "//packages/task-kit:format"]
 
 [tasks.check]
 description = "Read-only check across the whole repo (lint + format + types)"
-depends = ["ts:check", "//apps/gateway:check"]
+depends = ["ts:check", "//apps/gateway:check", "//packages/task-kit:check"]
 
 [tasks.test]
 description = "Run tests across the repo"
-depends = ["ts:test", "//apps/gateway:test"]
+depends = ["ts:test", "//apps/gateway:test", "//packages/task-kit:test"]
 output = "prefix"
 
 [tasks."dev:up"]
