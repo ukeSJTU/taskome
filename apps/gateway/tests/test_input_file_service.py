@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import tempfile
 import urllib.error
 import urllib.request
@@ -51,6 +52,7 @@ def input_file_service() -> Iterator[InputFileService]:
                 config_file,
             )
             config_file.flush()
+            os.fchmod(config_file.fileno(), 0o644)
             with (
                 DockerContainer(
                     "chrislusf/seaweedfs:latest",
