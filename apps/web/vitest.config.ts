@@ -8,7 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "@taskome/api-client": fileURLToPath(
+        new URL("../../packages/api-client/src", import.meta.url),
+      ),
       "@taskome/ui": fileURLToPath(new URL("../../packages/ui/src", import.meta.url)),
+      "next/headers": fileURLToPath(new URL("./src/test-mocks/next-headers.ts", import.meta.url)),
     },
   },
   test: {

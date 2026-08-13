@@ -1,0 +1,8 @@
+{
+  "extends": "@taskome/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true
+  },
+  "include": ["orval.config.ts", "src/**/*.ts"]
+}

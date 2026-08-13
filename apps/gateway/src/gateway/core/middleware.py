@@ -5,10 +5,14 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import structlog
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 from opentelemetry.trace import get_current_span
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+    from gateway.core.auth import JWKSVerifier
 
 _BASE_SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -111,3 +115,29 @@ class SecurityHeadersMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_with_security_headers)
+
+
+class MCPAuthenticationMiddleware:
+    def __init__(self, app: ASGIApp, *, verifier: JWKSVerifier) -> None:
+        self.app = app
+        self.verifier = verifier
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not scope.get("path", "").startswith("/mcp"):
+            await self.app(scope, receive, send)
+            return
+
+        authorization = dict(scope.get("headers", [])).get(b"authorization", b"").decode("latin-1")
+        try:
+            claims = await self.verifier.verify_bearer(authorization)
+        except HTTPException:
+            response = JSONResponse(
+                {"detail": "A valid bearer token is required."},
+                status_code=401,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            await response(scope, receive, send)
+            return
+
+        scope.setdefault("state", {})["auth"] = claims
+        await self.app(scope, receive, send)

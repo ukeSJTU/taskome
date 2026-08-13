@@ -15,10 +15,16 @@ from gateway.services.input_files import InputFileService, UploadUrl
 
 if TYPE_CHECKING:
     from fastmcp.tools.base import Tool
+    from gateway.core.auth import JWKSVerifier
     from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 def test_mcp_endpoint_accepts_protocol_clients() -> None:
+    class TestVerifier:
+        async def verify_bearer(self, authorization: str | None) -> dict[str, str]:
+            assert authorization == "Bearer test-token"
+            return {"sub": "user-123"}
+
     class LifespanStateApp:
         def __init__(self, app: ASGIApp) -> None:
             self.app = app
@@ -29,13 +35,21 @@ def test_mcp_endpoint_accepts_protocol_clients() -> None:
             await self.app(scope, receive, send)
 
     async def list_tools() -> list[Tool]:
-        app = create_app(Settings(environment=Environment.TEST))
+        app = create_app(
+            Settings(environment=Environment.TEST),
+            auth_verifier=cast("JWKSVerifier", TestVerifier()),
+        )
         server = ASGIServer(
             url="http://127.0.0.1/mcp",
             app=app,
             transport_type="http",
         )
-        async with run_asgi_lifespan(LifespanStateApp(app)), server.client() as client:
+        async with (
+            run_asgi_lifespan(LifespanStateApp(app)),
+            server.client(
+                headers={"Authorization": "Bearer test-token"},
+            ) as client,
+        ):
             return await client.list_tools()
 
     assert [tool.name for tool in asyncio.run(list_tools())] == [

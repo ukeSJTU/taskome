@@ -8,13 +8,15 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from gateway.api.health import router as health_router
 from gateway.api.mcp import create_mcp_server
+from gateway.api.v1.router import auth_api_router
 from gateway.api.v1.router import router as api_v1_router
-from gateway.core.auth import create_token_verifier
+from gateway.core.auth import JWKSVerifier, create_token_verifier
 from gateway.core.config import Environment, Settings
 from gateway.core.errors import register_error_handlers
 from gateway.core.lifespan import lifespan
 from gateway.core.middleware import (
     AccessLoggingMiddleware,
+    MCPAuthenticationMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
 )
@@ -35,6 +37,7 @@ def create_app(
     database: Database | None = None,
     span_exporter: SpanExporter | None = None,
     log_exporter: LogRecordExporter | None = None,
+    auth_verifier: JWKSVerifier | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
     docs_url = "/docs" if app_settings.expose_docs else None
@@ -49,6 +52,11 @@ def create_app(
         tracer_provider=observability.tracer_provider,
     )
     token_verifier = create_token_verifier(app_settings.auth_jwks_url)
+    gateway_auth_verifier = auth_verifier or JWKSVerifier(
+        app_settings.auth_jwks_url,
+        issuers=[app_settings.auth_issuer, app_settings.auth_oauth_issuer],
+        audiences=[app_settings.auth_session_audience, app_settings.auth_oauth_audience],
+    )
     input_file_service = InputFileService(
         repository=InputFileRepository(app_database),
         storage=SeaweedFSStorage(
@@ -78,13 +86,19 @@ def create_app(
     application.state.database = app_database
     application.state.input_file_service = input_file_service
     application.state.token_verifier = token_verifier
+    application.state.auth_verifier = gateway_auth_verifier
     application.state.mcp = mcp_server
     application.state.observability = observability
     register_error_handlers(application)
     application.include_router(health_router)
     application.include_router(api_v1_router)
+    application.include_router(auth_api_router)
     application.mount("/mcp", mcp_app)
     application.add_middleware(AccessLoggingMiddleware)
+    application.add_middleware(
+        MCPAuthenticationMiddleware,
+        verifier=gateway_auth_verifier,
+    )
     application.add_middleware(RequestIDMiddleware)
     application.add_middleware(
         SecurityHeadersMiddleware,

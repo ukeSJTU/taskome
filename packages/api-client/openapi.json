@@ -1,0 +1,52 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Taskome Gateway API",
+    "version": "0.1.0"
+  },
+  "servers": [{ "url": "http://localhost:8000" }],
+  "paths": {
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "getCurrentIdentity",
+        "summary": "Return the authenticated caller identity",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Authenticated caller",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Identity" }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Identity": {
+        "type": "object",
+        "required": ["aud", "iss", "sub"],
+        "properties": {
+          "aud": {
+            "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }]
+          },
+          "iss": { "type": "string" },
+          "sub": { "type": "string" }
+        }
+      }
+    }
+  }
+}

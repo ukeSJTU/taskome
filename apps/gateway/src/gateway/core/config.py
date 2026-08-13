@@ -44,7 +44,11 @@ class Settings(BaseSettings):
     # against the checked-in SeaweedFS development identity.
     seaweedfs_secret_key: SecretStr = SecretStr("unset")
     seaweedfs_bucket: str = "taskome"
-    auth_jwks_url: str = "http://localhost:3001/api/auth/jwks"
+    auth_jwks_url: str = "http://localhost:3000/api/auth/jwks"
+    auth_issuer: str = "http://localhost:3000"
+    auth_oauth_issuer: str = "http://localhost:3000/api/auth"
+    auth_session_audience: str = "http://localhost:3000"
+    auth_oauth_audience: str = "http://localhost:8000"
     otel_service_name: str | None = None
     otel_exporter_otlp_endpoint: str | None = None
     # Signal-specific endpoints and headers are read reflectively by
