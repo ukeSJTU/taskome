@@ -8,7 +8,7 @@ pre-commit:
       run: pnpm oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: oxfmt
-      run: pnpm oxfmt --write {staged_files}
+      run: pnpm oxfmt --write --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: ruff-check
       glob: "*.py"
