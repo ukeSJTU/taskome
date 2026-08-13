@@ -169,6 +169,18 @@
       "skillPath": "skills/engineering/prototype/SKILL.md",
       "computedHash": "73862de6cd32acf30799bfb2220357b96c1a58ab0e3d01126b769fd659d6555a"
     },
+    "pytest-advanced": {
+      "source": "laurigates/claude-plugins",
+      "sourceType": "github",
+      "skillPath": "python-plugin/skills/pytest-advanced/SKILL.md",
+      "computedHash": "f5df37a7477893bbc49488115998ec00c1de4c6730bbf17913d678616c938d46"
+    },
+    "python-testing": {
+      "source": "laurigates/claude-plugins",
+      "sourceType": "github",
+      "skillPath": "python-plugin/skills/python-testing/SKILL.md",
+      "computedHash": "86fdee15ae4b73e70a99566c21c6d884b13536b89e1b2301d4e96a80ef57aa40"
+    },
     "research": {
       "source": "mattpocock/skills",
       "sourceType": "github",
