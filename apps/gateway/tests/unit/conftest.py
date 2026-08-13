@@ -27,7 +27,7 @@ class FakeDatabase:
         return True
 
 
-class FakeRateLimitRedis:
+class FakeRedis:
     """Stands in for the Redis client `lifespan` pings on every startup, in every environment."""
 
     async def ping(self) -> bool:
@@ -55,7 +55,7 @@ def create_test_app() -> Callable[..., FastAPI]:
 
     def _create(settings: Settings | None = None, **overrides: Any) -> FastAPI:  # noqa: ANN401
         overrides.setdefault("database", cast("Database", FakeDatabase()))
-        overrides.setdefault("rate_limit_redis", cast("Redis", FakeRateLimitRedis()))
+        overrides.setdefault("redis", cast("Redis", FakeRedis()))
         overrides.setdefault("personal_api_key_verifier", FakePersonalApiKeyVerifier())
         return create_app(settings or Settings(app_environment=Environment.TEST), **overrides)
 

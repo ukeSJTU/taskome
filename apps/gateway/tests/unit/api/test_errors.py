@@ -191,3 +191,31 @@ def test_nonstandard_http_status_still_uses_problem_details(
     assert response.status_code == 499
     assert response.headers["Content-Type"] == "application/problem+json"
     assert response.json()["detail"] == "Client closed request."
+
+
+def test_handled_errors_log_safe_diagnostic_context(
+    create_test_app: Callable[..., FastAPI],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    app = create_test_app()
+
+    @app.get("/conflict-log")
+    def conflict() -> None:
+        raise AppError(
+            error_type="conflict",
+            title="Conflict",
+            status_code=409,
+            detail="The resource already exists.",
+        )
+
+    with TestClient(app) as client:
+        response = client.get("/conflict-log")
+
+    events = [
+        json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")
+    ]
+    event = next(item for item in events if item["event"] == "application_error")
+    assert event["level"] == "warning"
+    assert event["error_type"] == "conflict"
+    assert event["detail"] == "Conflict"
+    assert event["request_id"] == response.headers["X-Request-ID"]

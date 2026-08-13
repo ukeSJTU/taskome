@@ -1,3 +1,5 @@
+"""REST and MCP authentication with lifespan-owned JWKS transport."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,13 +16,48 @@ from fastmcp.server.dependencies import get_access_token
 from pydantic import AnyHttpUrl
 
 if TYPE_CHECKING:
+    import httpx2
+
     from gateway.core.config import Settings
 
 from gateway.core.errors import AppError
 from gateway.core.personal_api_keys import PersonalApiKeyVerificationUnavailableError
 
 
+class ManagedJWTVerifier(TokenVerifier):
+    """JWT verifier whose pooled JWKS client is attached during app startup."""
+
+    def __init__(self, settings: Settings, *, oauth: bool) -> None:
+        super().__init__()
+        self._settings = settings
+        self._oauth = oauth
+        self._delegate: JWTVerifier | None = None
+        self.jwks_uri = settings.auth_jwks_url
+        self.issuer = settings.auth_oauth_issuer if oauth else settings.auth_session_issuer
+        self.audience = settings.mcp_resource if oauth else settings.rest_resource
+
+    def start(self, http_client: httpx2.AsyncClient) -> None:
+        """Construct the FastMCP verifier with the app-owned JWKS client."""
+
+        self._delegate = JWTVerifier(
+            jwks_uri=self.jwks_uri,
+            issuer=self.issuer,
+            audience=self.audience,
+            algorithm="EdDSA",
+            http_client=http_client,
+        )
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        """Verify a bearer token through the initialized delegate."""
+
+        if self._delegate is None:
+            raise RuntimeError("JWT verifier used outside the application lifespan")  # noqa: TRY003, EM101
+        return await self._delegate.verify_token(token)
+
+
 class CredentialKind(StrEnum):
+    """Credential channels normalized into a principal."""
+
     SESSION_JWT = "session_jwt"
     OAUTH_ACCESS_TOKEN = "oauth_access_token"  # noqa: S105 - This is a credential kind, not a secret.
     PERSONAL_API_KEY = "personal_api_key"
@@ -28,16 +65,22 @@ class CredentialKind(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Principal:
+    """Authenticated identity shared by REST and MCP adapters."""
+
     user_id: str
     credential_kind: CredentialKind
     credential_id: str | None = None
 
 
 class PrincipalAccessToken(AccessToken):
+    """FastMCP access token carrying a normalized principal."""
+
     principal: Principal
 
 
 class MCPPrincipalVerifier(TokenVerifier):
+    """Translate a verified MCP token into Taskome's principal model."""
+
     def __init__(self, token_verifier: TokenVerifier) -> None:
         super().__init__(
             base_url=token_verifier.base_url,
@@ -47,6 +90,8 @@ class MCPPrincipalVerifier(TokenVerifier):
         self.token_verifier = token_verifier
 
     async def verify_token(self, token: str) -> AccessToken | None:
+        """Verify an MCP token and bind its normalized principal."""
+
         access_token = await self.token_verifier.verify_token(token)
         if access_token is None:
             return None
@@ -63,24 +108,16 @@ bearer_scheme = HTTPBearer(auto_error=False)
 api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
-def create_rest_token_verifier(settings: Settings) -> JWTVerifier:
-    return JWTVerifier(
-        jwks_uri=settings.auth_jwks_url,
-        issuer=settings.auth_session_issuer,
-        audience=settings.rest_resource,
-        algorithm="EdDSA",
-    )
+def create_rest_token_verifier(settings: Settings) -> ManagedJWTVerifier:
+    """Create a session-JWT verifier initialized later by the app lifespan."""
+
+    return ManagedJWTVerifier(settings, oauth=False)
 
 
 def create_mcp_token_verifier(settings: Settings) -> MCPPrincipalVerifier:
-    return MCPPrincipalVerifier(
-        JWTVerifier(
-            jwks_uri=settings.auth_jwks_url,
-            issuer=settings.auth_oauth_issuer,
-            audience=settings.mcp_resource,
-            algorithm="EdDSA",
-        )
-    )
+    """Create an OAuth verifier initialized later by the app lifespan."""
+
+    return MCPPrincipalVerifier(ManagedJWTVerifier(settings, oauth=True))
 
 
 def create_mcp_auth_provider(
@@ -129,6 +166,8 @@ async def current_principal(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     personal_api_key: Annotated[str | None, Depends(api_key_scheme)],
 ) -> Principal:
+    """Authenticate one unambiguous REST credential and return its principal."""
+
     if request.headers.get("authorization") is not None and personal_api_key is not None:
         raise AppError(
             error_type="ambiguous-credentials",
@@ -173,6 +212,8 @@ async def current_principal(
 
 
 def current_mcp_principal() -> Principal:
+    """Return the principal attached to the active MCP tool call."""
+
     token = get_access_token()
     if not isinstance(token, PrincipalAccessToken):
         raise PermissionError

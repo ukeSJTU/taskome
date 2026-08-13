@@ -1,3 +1,5 @@
+"""Stable Problem Details responses and safe structured error logging."""
+
 from __future__ import annotations
 
 from http import HTTPStatus
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
 
 
 class AppError(Exception):
+    """Expected application failure safe to translate into Problem Details."""
+
     def __init__(
         self,
         *,
@@ -36,6 +40,8 @@ def problem_responses(
     *status_codes: int,
     include_default: bool = True,
 ) -> dict[int | str, dict[str, Any]]:
+    """Build reusable OpenAPI response declarations for Problem Details."""
+
     responses: dict[int | str, dict[str, Any]] = {
         status_code: {
             "description": HTTPStatus(status_code).phrase,
@@ -68,6 +74,8 @@ def problem_response(  # noqa: PLR0913
     detail: str,
     errors: list[ValidationIssue] | None = None,
 ) -> JSONResponse:
+    """Render one request-scoped RFC 7807 response."""
+
     problem = ProblemDetails(
         type=f"urn:taskome:error:{error_type}",
         title=title,
@@ -88,7 +96,18 @@ def http_exception_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
+    """Render and log handled HTTP errors without echoing request input."""
+
     http_error = cast("StarletteHTTPException", exc)
+    structlog.get_logger().warning(
+        "http_error",
+        status_code=http_error.status_code,
+        detail=(
+            HTTPStatus(http_error.status_code).phrase
+            if http_error.status_code in HTTPStatus._value2member_map_
+            else "Non-standard HTTP status"
+        ),
+    )
     if http_error.status_code == HTTPStatus.NOT_FOUND:
         response = problem_response(
             request,
@@ -120,6 +139,8 @@ def request_validation_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
+    """Render validation issues and log only their safe field paths and codes."""
+
     validation_error = cast("RequestValidationError", exc)
     issues = [
         ValidationIssue(
@@ -129,6 +150,11 @@ def request_validation_handler(
         )
         for error in validation_error.errors()
     ]
+    structlog.get_logger().warning(
+        "request_validation_error",
+        fields=[issue.location for issue in issues],
+        codes=[issue.code for issue in issues],
+    )
     return problem_response(
         request,
         error_type="request-validation",
@@ -140,7 +166,14 @@ def request_validation_handler(
 
 
 def app_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Render and log an expected domain/application failure."""
+
     app_error = cast("AppError", exc)
+    structlog.get_logger().warning(
+        "application_error",
+        error_type=app_error.error_type,
+        detail=app_error.title,
+    )
     return problem_response(
         request,
         error_type=app_error.error_type,
@@ -151,6 +184,8 @@ def app_error_handler(request: Request, exc: Exception) -> JSONResponse:
 
 
 def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Hide unexpected internals from callers while retaining a traceback in logs."""
+
     structlog.get_logger().exception(
         "unhandled_error",
         exc_info=(type(exc), exc, exc.__traceback__),
@@ -173,6 +208,8 @@ def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
 
 
 def register_error_handlers(app: FastAPI) -> None:
+    """Register the Gateway's stable Problem Details error contract."""
+
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, request_validation_handler)

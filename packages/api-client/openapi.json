@@ -2,23 +2,40 @@
   "components": {
     "schemas": {
       "CreateInputFileRequest": {
+        "description": "Validated REST input for creating an immutable Input File.",
         "properties": {
           "original_filename": {
+            "maxLength": 255,
             "minLength": 1,
             "title": "Original Filename",
             "type": "string"
+          },
+          "size_bytes": {
+            "maximum": 52428800.0,
+            "minimum": 1.0,
+            "title": "Size Bytes",
+            "type": "integer"
           }
         },
-        "required": ["original_filename"],
+        "required": [
+          "original_filename",
+          "size_bytes"
+        ],
         "title": "CreateInputFileRequest",
         "type": "object"
       },
       "CredentialKind": {
-        "enum": ["session_jwt", "oauth_access_token", "personal_api_key"],
+        "description": "Credential channels normalized into a principal.",
+        "enum": [
+          "session_jwt",
+          "oauth_access_token",
+          "personal_api_key"
+        ],
         "title": "CredentialKind",
         "type": "string"
       },
       "DownloadUrlResponse": {
+        "description": "Caller-visible signed download URL and expiry.",
         "properties": {
           "download_url": {
             "title": "Download Url",
@@ -30,14 +47,21 @@
             "type": "string"
           }
         },
-        "required": ["download_url", "expires_at"],
+        "required": [
+          "download_url",
+          "expires_at"
+        ],
         "title": "DownloadUrlResponse",
         "type": "object"
       },
       "HealthResponse": {
         "properties": {
           "status": {
-            "enum": ["alive", "ready", "not_ready"],
+            "enum": [
+              "alive",
+              "ready",
+              "not_ready"
+            ],
             "title": "Status",
             "type": "string"
           },
@@ -47,11 +71,15 @@
             "type": "string"
           }
         },
-        "required": ["status", "timestamp"],
+        "required": [
+          "status",
+          "timestamp"
+        ],
         "title": "HealthResponse",
         "type": "object"
       },
       "Identity": {
+        "description": "Normalized identity returned by the REST authentication endpoint.",
         "properties": {
           "credential_id": {
             "anyOf": [
@@ -72,7 +100,11 @@
             "type": "string"
           }
         },
-        "required": ["user_id", "credential_kind", "credential_id"],
+        "required": [
+          "user_id",
+          "credential_kind",
+          "credential_id"
+        ],
         "title": "Identity",
         "type": "object"
       },
@@ -118,7 +150,14 @@
             "type": "string"
           }
         },
-        "required": ["type", "title", "status", "detail", "instance", "request_id"],
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "request_id"
+        ],
         "title": "ProblemDetails",
         "type": "object"
       },
@@ -135,7 +174,11 @@
             "type": "object"
           },
           "status": {
-            "enum": ["alive", "ready", "not_ready"],
+            "enum": [
+              "alive",
+              "ready",
+              "not_ready"
+            ],
             "title": "Status",
             "type": "string"
           },
@@ -145,11 +188,16 @@
             "type": "string"
           }
         },
-        "required": ["status", "timestamp", "checks"],
+        "required": [
+          "status",
+          "timestamp",
+          "checks"
+        ],
         "title": "ReadinessResponse",
         "type": "object"
       },
       "UploadUrlResponse": {
+        "description": "Caller-visible upload id, signed URL, and expiry.",
         "properties": {
           "expires_at": {
             "format": "date-time",
@@ -162,12 +210,16 @@
             "type": "string"
           },
           "upload_url": {
-            "description": "PUT with If-None-Match: *; the condition prevents overwrites.",
+            "description": "PUT with the declared Content-Length and If-None-Match: *; both headers are signed.",
             "title": "Upload Url",
             "type": "string"
           }
         },
-        "required": ["id", "upload_url", "expires_at"],
+        "required": [
+          "id",
+          "upload_url",
+          "expires_at"
+        ],
         "title": "UploadUrlResponse",
         "type": "object"
       },
@@ -196,7 +248,11 @@
             "type": "string"
           }
         },
-        "required": ["location", "message", "code"],
+        "required": [
+          "location",
+          "message",
+          "code"
+        ],
         "title": "ValidationIssue",
         "type": "object"
       }
@@ -221,6 +277,7 @@
   "paths": {
     "/health/live": {
       "get": {
+        "description": "Report that the worker event loop is serving requests.",
         "operationId": "getLiveness",
         "responses": {
           "200": {
@@ -235,11 +292,14 @@
           }
         },
         "summary": "Liveness",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/health/ready": {
       "get": {
+        "description": "Report whether the initialized Gateway can reach DB and Redis concurrently.",
         "operationId": "getReadiness",
         "responses": {
           "200": {
@@ -254,11 +314,14 @@
           }
         },
         "summary": "Readiness",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/v1/input-files": {
       "post": {
+        "description": "Allocate an Input File and return its constrained upload URL.",
         "operationId": "createInputFile",
         "requestBody": {
           "content": {
@@ -341,11 +404,14 @@
           }
         ],
         "summary": "Create Input File",
-        "tags": ["input-files"]
+        "tags": [
+          "input-files"
+        ]
       }
     },
     "/v1/input-files/{input_file_id}": {
       "delete": {
+        "description": "Soft-delete an Input File and remove its object.",
         "operationId": "deleteInputFile",
         "parameters": [
           {
@@ -433,11 +499,14 @@
           }
         ],
         "summary": "Delete Input File",
-        "tags": ["input-files"]
+        "tags": [
+          "input-files"
+        ]
       }
     },
     "/v1/input-files/{input_file_id}/download-url": {
       "get": {
+        "description": "Return a download URL for a caller-owned Input File.",
         "operationId": "getInputFileDownloadUrl",
         "parameters": [
           {
@@ -532,11 +601,14 @@
           }
         ],
         "summary": "Download Input File Url",
-        "tags": ["input-files"]
+        "tags": [
+          "input-files"
+        ]
       }
     },
     "/v1/me": {
       "get": {
+        "description": "Return the authenticated caller's normalized identity.",
         "operationId": "getCurrentIdentity",
         "responses": {
           "200": {
@@ -599,7 +671,9 @@
           }
         ],
         "summary": "Current Identity",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     }
   }

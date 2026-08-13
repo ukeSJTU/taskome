@@ -6,6 +6,9 @@
  */
 import type { CredentialKind } from "./credentialKind";
 
+/**
+ * Normalized identity returned by the REST authentication endpoint.
+ */
 export interface Identity {
   credential_id: string | null;
   credential_kind: CredentialKind;

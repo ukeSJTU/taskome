@@ -32,7 +32,7 @@ def service(database: Database, storage: SeaweedFSStorage) -> InputFileService:
 async def test_upload_download_delete_reaches_real_storage_and_database(
     service: InputFileService,
 ) -> None:
-    uploaded = await service.mint_upload_url("user-a", "binder.pdb")
+    uploaded = await service.mint_upload_url("user-a", "binder.pdb", len(b"ATOM 1 TEST"))
     put = urllib.request.Request(  # noqa: S310
         uploaded.upload_url,
         data=b"ATOM 1 TEST",
@@ -53,7 +53,7 @@ async def test_upload_download_delete_reaches_real_storage_and_database(
 
 
 async def test_access_is_owner_scoped_end_to_end(service: InputFileService) -> None:
-    uploaded = await service.mint_upload_url("user-a", "binder.pdb")
+    uploaded = await service.mint_upload_url("user-a", "binder.pdb", 1024)
 
     with pytest.raises(InputFileNotFoundError):
         await service.mint_download_url("user-b", uploaded.id)

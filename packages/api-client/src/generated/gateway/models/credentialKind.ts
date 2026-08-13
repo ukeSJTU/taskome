@@ -5,4 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Credential channels normalized into a principal.
+ */
 export type CredentialKind = "session_jwt" | "oauth_access_token" | "personal_api_key";

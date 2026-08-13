@@ -98,7 +98,7 @@ uses the documented example hosts:
 | Environment        | `BETTER_AUTH_URL`       | `WEB_INTERNAL_URL`      | `GATEWAY_PUBLIC_URL`      | `GATEWAY_INTERNAL_URL`  |
 | ------------------ | ----------------------- | ----------------------- | ------------------------- | ----------------------- |
 | Native local       | `http://localhost:3000` | `http://localhost:3000` | `http://localhost:8000`   | `http://localhost:8000` |
-| Local Compose      | `http://localhost:3000` | `http://web:3000`       | `http://localhost:8000`   | `http://gateway:8000`   |
+| Local Compose      | `http://localhost`      | `http://web:3000`       | `http://api.localhost`    | `http://gateway:8000`   |
 | Production example | `https://example.com`   | `http://web:3000`       | `https://api.example.com` | `http://gateway:8000`   |
 
 Web and Gateway must also share a dedicated `WEB_GATEWAY_HMAC_SECRET` of at

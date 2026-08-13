@@ -5,7 +5,18 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Validated REST input for creating an immutable Input File.
+ */
 export interface CreateInputFileRequest {
-  /** @minLength 1 */
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
   original_filename: string;
+  /**
+   * @minimum 1
+   * @maximum 52428800
+   */
+  size_bytes: number;
 }

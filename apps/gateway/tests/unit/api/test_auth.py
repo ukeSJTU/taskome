@@ -9,7 +9,11 @@ import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
 from fastmcp.server.auth.providers.jwt import JWTVerifier
-from gateway.core.auth import create_mcp_token_verifier, create_rest_token_verifier
+from gateway.core.auth import (
+    ManagedJWTVerifier,
+    create_mcp_token_verifier,
+    create_rest_token_verifier,
+)
 from gateway.core.config import Environment, Settings
 
 if TYPE_CHECKING:
@@ -153,7 +157,7 @@ def test_channel_verifiers_derive_distinct_issuers_and_resources() -> None:
     assert rest_verifier.jwks_uri == "http://web:3000/api/auth/jwks"
     assert rest_verifier.issuer == "https://example.com"
     assert rest_verifier.audience == "https://api.example.com/v1"
-    assert isinstance(mcp_verifier.token_verifier, JWTVerifier)
+    assert isinstance(mcp_verifier.token_verifier, ManagedJWTVerifier)
     assert mcp_verifier.token_verifier.jwks_uri == "http://web:3000/api/auth/jwks"
     assert mcp_verifier.token_verifier.issuer == "https://example.com/api/auth"
     assert mcp_verifier.token_verifier.audience == "https://api.example.com/mcp"

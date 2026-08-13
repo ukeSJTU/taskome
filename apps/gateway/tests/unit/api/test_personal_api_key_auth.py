@@ -53,7 +53,7 @@ def test_personal_api_key_authenticates_every_v1_request_as_its_user(
         identity = client.get("/v1/me", headers=headers)
         created = client.post(
             "/v1/input-files",
-            json={"original_filename": "binder.pdb"},
+            json={"original_filename": "binder.pdb", "size_bytes": 1024},
             headers=headers,
         )
         downloaded = client.get(
@@ -74,7 +74,7 @@ def test_personal_api_key_authenticates_every_v1_request_as_its_user(
     assert created.status_code == 201
     assert downloaded.status_code == 200
     assert deleted.status_code == 204
-    assert service.uploaded_for == ("user-a", "binder.pdb")
+    assert service.uploaded_for == ("user-a", "binder.pdb", 1024)
     assert service.downloaded_for == ("user-a", service.input_file_id)
     assert service.deleted_for == ("user-a", service.input_file_id)
     assert verifier.keys == ["taskome_direct-secret"] * 4

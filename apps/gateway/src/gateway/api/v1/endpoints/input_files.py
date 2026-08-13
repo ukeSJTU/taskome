@@ -1,3 +1,5 @@
+"""REST adapters for shared Input File operations."""
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -18,10 +20,14 @@ router = APIRouter(prefix="/input-files", tags=["input-files"])
 
 
 def input_file_service(request: Request) -> InputFileService:
+    """Resolve the lifespan-owned Input File service."""
+
     return request.app.state.input_file_service
 
 
 def input_file_not_found() -> AppError:
+    """Build the ownership-obscuring not-found response."""
+
     return AppError(
         error_type="input-file-not-found",
         title="Input File Not Found",
@@ -42,8 +48,14 @@ async def create_input_file(
     principal: Annotated[Principal, Depends(current_principal)],
     service: Annotated[InputFileService, Depends(input_file_service)],
 ) -> UploadUrlResponse:
-    result = await service.mint_upload_url(principal.user_id, body.original_filename)
-    return UploadUrlResponse.model_validate(result, from_attributes=True)
+    """Allocate an Input File and return its constrained upload URL."""
+
+    result = await service.mint_upload_url(
+        principal.user_id,
+        body.original_filename,
+        body.size_bytes,
+    )
+    return UploadUrlResponse.model_validate(result)
 
 
 @router.get(
@@ -58,11 +70,13 @@ async def download_input_file(
     principal: Annotated[Principal, Depends(current_principal)],
     service: Annotated[InputFileService, Depends(input_file_service)],
 ) -> DownloadUrlResponse:
+    """Return a download URL for a caller-owned Input File."""
+
     try:
         result = await service.mint_download_url(principal.user_id, input_file_id)
     except InputFileNotFoundError as error:
         raise input_file_not_found() from error
-    return DownloadUrlResponse.model_validate(result, from_attributes=True)
+    return DownloadUrlResponse.model_validate(result)
 
 
 @router.delete(
@@ -76,6 +90,8 @@ async def delete_input_file(
     principal: Annotated[Principal, Depends(current_principal)],
     service: Annotated[InputFileService, Depends(input_file_service)],
 ) -> None:
+    """Soft-delete an Input File and remove its object."""
+
     try:
         await service.delete(principal.user_id, input_file_id)
     except InputFileNotFoundError as error:

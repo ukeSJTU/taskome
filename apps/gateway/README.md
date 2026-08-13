@@ -19,10 +19,13 @@ The gateway listens on `http://127.0.0.1:8000`. In development, the Scalar API
 reference is at `/scalar` and its OpenAPI schema is at `/openapi.json`; the MCP
 Streamable HTTP transport is mounted at `/mcp`.
 
-For a production-style process, use `mise run //apps/gateway:start`. Production
-mode emits JSON logs, enables HSTS headers, and disables Scalar and OpenAPI unless
-`DOCS_ENABLED=true` is set explicitly. TLS termination is expected at the reverse
-proxy. Swagger UI and ReDoc are disabled in every environment.
+For a production-style process, use `mise run //apps/gateway:start`. Gunicorn
+manages four Uvicorn workers by default, gives in-flight requests 30 seconds to
+finish on shutdown, and recycles workers after a jittered request budget; all
+four values are environment-overridable. Production mode emits JSON logs,
+enables HSTS headers, and disables Scalar and OpenAPI unless `DOCS_ENABLED=true`
+is set explicitly. TLS termination stays at Caddy. Swagger UI and ReDoc are
+disabled in every environment.
 
 The always-on `/internal/openapi.json` endpoint serves the cached Public OpenAPI
 projection consumed by Web's authenticated API reference. It includes only the
@@ -57,9 +60,10 @@ and PKCE S256 remain mandatory; client credentials are unavailable. Client ID
 Metadata Documents remain the preferred mechanism once the pinned auth provider
 supports them.
 
-Upload callers must send `If-None-Match: *` with the PUT request. The condition
-is signed into the URL so an Input File's object cannot be overwritten after its
-first successful upload.
+Upload callers declare `size_bytes` when requesting a URL and must send both the
+matching `Content-Length` and `If-None-Match: *` with the PUT request. Both
+headers are signed, so uploads are capped at 50 MiB and an Input File's object
+cannot be overwritten after its first successful upload.
 
 ## Configuration
 
@@ -76,12 +80,13 @@ Web and Gateway authenticate that narrow endpoint with the same dedicated
 `WEB_GATEWAY_HMAC_SECRET` (at least 32 characters), which must not be reused as
 `BETTER_AUTH_SECRET`.
 Gateway owns only the `gateway` schema; Web/Auth's Drizzle-managed tables remain in
-`public`.
+`public`. `REDIS_URL` configures the Redis instance checked by readiness; the
+client uses explicit two-second connect and I/O timeouts.
 
 At the production edge, Caddy sends only `/v1`, `/mcp`, and
 `/.well-known/oauth-protected-resource/mcp` to Gateway. Development docs, health,
-auth, and `/internal` operations remain reachable only inside the deployment or
-through the explicit loopback ports used by the local Compose rehearsal.
+auth, and `/internal` operations remain reachable only inside the deployment;
+Web and Gateway publish no host ports, so Caddy is their sole public entry point.
 OpenTelemetry keeps its standard `OTEL_*` names; setting
 `OTEL_EXPORTER_OTLP_ENDPOINT` enables OTLP/HTTP traces and logs. See
 `.env.example` for the local template.
@@ -100,8 +105,10 @@ existing head. Apply revisions with `mise run //apps/gateway:db:migrate` — thi
 the only path that builds the schema, in development, tests, and production alike
 (see ADR-0024); the production Compose stack runs `db:migrate` once before Gateway
 starts. Native development uses `localhost` in the URL; containers use the `postgres`
-host. Liveness is process-only; readiness makes a short, live database check and
-returns only `database: ok` or `database: error`.
+host. Liveness is process-only; readiness checks Postgres and Redis concurrently
+and returns a separate `ok` or `error` result for each. SeaweedFS and JWKS are
+intentionally excluded because a transient downstream failure should fail only
+the affected request, not pull the Gateway out of rotation.
 
 The source tree separates transport (`api`), operational concerns (`core`),
 contracts (`schemas`), persistence (`models` and `repositories`), and business

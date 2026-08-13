@@ -27,6 +27,9 @@ services:
         condition: service_healthy
       gateway:
         condition: service_healthy
+    networks:
+      edge:
+        ipv4_address: 172.30.0.2
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -47,15 +50,13 @@ services:
       - path: apps/web/.env
         required: false
     environment:
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-taskome-local-better-auth-secret}
-      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8000}
+      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://api.localhost}
       GATEWAY_INTERNAL_URL: http://gateway:8000
       WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
-      AUTH_TRUSTED_ORIGIN: ${AUTH_TRUSTED_ORIGIN:-http://localhost:3000}
+      AUTH_TRUSTED_ORIGIN: ${AUTH_TRUSTED_ORIGIN:-http://localhost}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
-    ports:
-      - "127.0.0.1:3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,6 +80,9 @@ services:
     tmpfs:
       - /tmp
     restart: unless-stopped
+    networks:
+      - default
+      - edge
 
   docs:
     build:
@@ -107,6 +111,9 @@ services:
     tmpfs:
       - /tmp
     restart: unless-stopped
+    networks:
+      - default
+      - edge
 
   gateway:
     build:
@@ -117,18 +124,17 @@ services:
         required: false
     environment:
       APP_ENVIRONMENT: production
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost}
       WEB_INTERNAL_URL: http://web:3000
-      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8000}
+      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://api.localhost}
       WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
-      RATE_LIMIT_REDIS_URL: redis://redis-rate-limit:6379/0
-    ports:
-      - "127.0.0.1:8000:8000"
+      REDIS_URL: redis://redis-taskiq:6379/0
+      FORWARDED_ALLOW_IPS: 172.30.0.2
     depends_on:
       gateway-migrate:
         condition: service_completed_successfully
-      redis-rate-limit:
+      redis-taskiq:
         condition: service_healthy
     healthcheck:
       test:
@@ -150,6 +156,9 @@ services:
     tmpfs:
       - /tmp
     restart: unless-stopped
+    networks:
+      - default
+      - edge
 
   gateway-migrate:
     build:
@@ -170,6 +179,12 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
 
 volumes:
   taskome_caddy_data:

@@ -1,5 +1,8 @@
+"""Validated Gateway runtime settings and dependency budgets."""
+
 from enum import StrEnum
 from importlib.metadata import version
+from typing import Annotated
 
 from pydantic import AnyHttpUrl, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,12 +12,16 @@ _HMAC_LENGTH_ERROR = "WEB_GATEWAY_HMAC_SECRET must be at least 32 characters"
 
 
 class Environment(StrEnum):
+    """Supported Gateway deployment environments."""
+
     DEVELOPMENT = "development"
     TEST = "test"
     PRODUCTION = "production"
 
 
 class LogLevel(StrEnum):
+    """Supported structured-log thresholds."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -23,10 +30,14 @@ class LogLevel(StrEnum):
 
 
 def distribution_version() -> str:
+    """Return the installed Gateway distribution version."""
+
     return version("gateway")
 
 
 class Settings(BaseSettings):
+    """Runtime configuration for Gateway resources and boundary limits."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -35,12 +46,20 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "taskome-gateway"
-    app_version: str = Field(default_factory=distribution_version)
+    app_version: Annotated[str, Field(default_factory=distribution_version)]
     app_environment: Environment = Environment.DEVELOPMENT
     log_level: LogLevel = LogLevel.INFO
     docs_enabled: bool | None = None
     database_url: SecretStr
-    rate_limit_redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
+    redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
+    database_timeout_seconds: Annotated[float, Field(gt=0)] = 5
+    redis_timeout_seconds: Annotated[float, Field(gt=0)] = 2
+    seaweedfs_connect_timeout_seconds: Annotated[float, Field(gt=0)] = 3
+    seaweedfs_io_timeout_seconds: Annotated[float, Field(gt=0)] = 10
+    jwks_timeout_seconds: Annotated[float, Field(gt=0)] = 5
+    otel_shutdown_timeout_seconds: Annotated[float, Field(gt=0)] = 5
+    request_body_max_bytes: Annotated[int, Field(gt=0)] = 4 * 1024 * 1024
+    mcp_message_max_bytes: Annotated[int, Field(gt=0)] = 1024 * 1024
     seaweedfs_internal_endpoint: str = "http://localhost:8333"
     seaweedfs_public_endpoint: str | None = None
     seaweedfs_access_key: str = "taskome-dev"
@@ -74,16 +93,22 @@ class Settings(BaseSettings):
 
     @property
     def expose_docs(self) -> bool:
+        """Expose developer reference pages outside production unless overridden."""
+
         if self.docs_enabled is not None:
             return self.docs_enabled
         return self.app_environment is not Environment.PRODUCTION
 
     @property
     def resolved_seaweedfs_public_endpoint(self) -> str:
+        """Return the caller-visible storage endpoint."""
+
         return self.seaweedfs_public_endpoint or self.seaweedfs_internal_endpoint
 
     @property
     def auth_jwks_url(self) -> str:
+        """Return the internal Better Auth JWKS endpoint."""
+
         return f"{str(self.web_internal_url).rstrip('/')}/api/auth/jwks"
 
     @property
@@ -92,16 +117,24 @@ class Settings(BaseSettings):
 
     @property
     def auth_session_issuer(self) -> str:
+        """Return the canonical issuer for Web session JWTs."""
+
         return str(self.better_auth_url).rstrip("/")
 
     @property
     def auth_oauth_issuer(self) -> str:
+        """Return the canonical issuer for MCP OAuth access tokens."""
+
         return f"{str(self.better_auth_url).rstrip('/')}/api/auth"
 
     @property
     def rest_resource(self) -> str:
+        """Return the public REST audience identifier."""
+
         return f"{str(self.gateway_public_url).rstrip('/')}/v1"
 
     @property
     def mcp_resource(self) -> str:
+        """Return the public MCP resource identifier."""
+
         return f"{str(self.gateway_public_url).rstrip('/')}/mcp"

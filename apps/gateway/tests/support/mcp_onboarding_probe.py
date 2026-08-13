@@ -24,8 +24,9 @@ class UnusedInputFileService:
         self,
         owner_user_id: str,
         original_filename: str,
+        size_bytes: int,
     ) -> UploadUrl:
-        del owner_user_id, original_filename
+        del owner_user_id, original_filename, size_bytes
         raise AssertionError
 
     async def mint_download_url(

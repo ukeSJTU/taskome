@@ -12,12 +12,14 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
+from fastmcp.exceptions import ToolError
 from fastmcp.server.auth.providers.jwt import JWTVerifier, StaticTokenVerifier
 from fastmcp.utilities.asgi_transport import run_asgi_lifespan
 from fastmcp.utilities.tests import ASGIServer
 from gateway.api.mcp import create_mcp_server
 from gateway.core.auth import MCPPrincipalVerifier
 from gateway.core.config import Environment, Settings
+from gateway.schemas.input_files import MAX_INPUT_FILE_BYTES
 from gateway.services.input_files import DownloadUrl, InputFileService, UploadUrl
 from mcp.shared.exceptions import MCPError
 
@@ -152,6 +154,39 @@ def test_mcp_accepts_oauth_token_and_rejects_session_token_through_protocol(
         for event in access_events
     )
     assert oauth_token not in json.dumps(access_events)
+    assert any(event["status_code"] == 401 for event in access_events)
+
+
+def test_rejected_mcp_auth_includes_request_id_and_is_access_logged(
+    create_test_app: Callable[..., FastAPI],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    app = create_test_app()
+
+    with TestClient(app) as client:
+        response = client.post("/mcp/", json={"jsonrpc": "2.0", "id": 1, "method": "ping"})
+
+    assert response.status_code == 401
+    assert response.json()["request_id"] == response.headers["X-Request-ID"]
+    events = [
+        json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")
+    ]
+    assert any(event["event"] == "http_request" and event["status_code"] == 401 for event in events)
+
+
+def test_mcp_message_limit_is_independent_from_the_gateway_body_limit(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app(Settings(request_body_max_bytes=256, mcp_message_max_bytes=32))
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/mcp/",
+            content=b"x" * 64,
+            headers={"Content-Type": "application/json"},
+        )
+
+    assert response.status_code == 413
 
 
 def test_mcp_publishes_protected_resource_metadata(
@@ -174,9 +209,12 @@ def test_mcp_publishes_protected_resource_metadata(
 
 def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:
     class FakeInputFileService:
-        async def mint_upload_url(self, owner_user_id: str, original_filename: str) -> UploadUrl:
+        async def mint_upload_url(
+            self, owner_user_id: str, original_filename: str, size_bytes: int
+        ) -> UploadUrl:
             assert owner_user_id == "user-a"
             assert original_filename == "binder.pdb"
+            assert size_bytes == 1024
             return UploadUrl(
                 id=uuid4(),
                 upload_url="http://seaweedfs/upload",
@@ -210,12 +248,58 @@ def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:
         ):
             result = await client.call_tool(
                 "prepare_input_file_upload",
-                {"original_filename": "binder.pdb"},
+                {"original_filename": "binder.pdb", "size_bytes": 1024},
             )
             return cast("dict[str, str]", result.structured_content)
 
     result = asyncio.run(call_tool())
     assert result["upload_url"] == "http://seaweedfs/upload"
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {"original_filename": "binder.pdb", "size_bytes": "1024"},
+        {"original_filename": "x" * 256, "size_bytes": 1024},
+        {"original_filename": "binder.pdb", "size_bytes": MAX_INPUT_FILE_BYTES + 1},
+    ],
+)
+def test_mcp_upload_tool_rejects_invalid_boundary_values(arguments: dict[str, object]) -> None:
+    class FakeInputFileService:
+        async def mint_upload_url(self, *_args: object) -> UploadUrl:
+            pytest.fail("invalid MCP arguments reached the service")
+
+    async def call_tool() -> None:
+        server = create_mcp_server(
+            Settings(app_environment=Environment.TEST),
+            cast("InputFileService", FakeInputFileService()),
+            auth_provider=MCPPrincipalVerifier(
+                StaticTokenVerifier(
+                    {
+                        "test-token": {
+                            "client_id": "test-client",
+                            "scopes": [],
+                            "sub": "user-a",
+                        }
+                    }
+                )
+            ),
+        )
+        asgi_server = ASGIServer(
+            url="http://127.0.0.1/mcp",
+            app=server.http_app(path="/mcp"),
+            transport_type="streamable-http",
+        )
+        # FastMCP 4 beta currently surfaces strict numeric coercion rejection
+        # as a transport IndexError; both paths stop before the service call.
+        with pytest.raises((ToolError, IndexError)):
+            async with (
+                run_asgi_lifespan(asgi_server.app),
+                asgi_server.client(auth="test-token") as client,
+            ):
+                await client.call_tool("prepare_input_file_upload", arguments)
+
+    asyncio.run(call_tool())
 
 
 def test_mcp_download_tool_delegates_to_the_shared_service() -> None:

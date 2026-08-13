@@ -5,6 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Caller-visible signed download URL and expiry.
+ */
 export interface DownloadUrlResponse {
   download_url: string;
   expires_at: string;
