@@ -26,6 +26,7 @@ export function createAuth() {
       jwt(),
       oauthProvider({
         scopes: ["openid", "profile", "email", "taskome"],
+        validAudiences: [env.GATEWAY_URL],
         disableJwtPlugin: false,
         loginPage: "/login",
         consentPage: "/oauth/consent",

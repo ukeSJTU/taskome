@@ -34,6 +34,8 @@ const { GET: GETOAuthMetadata } =
 const { GET: GETOpenIDMetadata } = await import("../.well-known/openid-configuration/route");
 
 const baseURL = "http://localhost:3000";
+const gatewayAudience = "http://localhost:8000";
+const oauthIssuer = `${baseURL}/api/auth`;
 
 function authHeaders(headers: Headers) {
   const requestHeaders = new Headers(headers);
@@ -155,6 +157,7 @@ describe("/api/auth", () => {
           code: authorizationCode ?? "",
           code_verifier: codeVerifier,
           grant_type: "authorization_code",
+          resource: gatewayAudience,
           redirect_uri: "http://localhost:4000/callback",
         }),
         headers: new Headers({
@@ -167,7 +170,13 @@ describe("/api/auth", () => {
     expect(tokenResponse.status).toBe(200);
     const token = await tokenResponse.json();
     expect(token).toMatchObject({ scope: "taskome", token_type: "Bearer" });
-    expect(token.access_token).toEqual(expect.any(String));
+    const jwksResponse = await GET(new Request(`${baseURL}/api/auth/jwks`));
+    const verified = await jwtVerify(
+      token.access_token,
+      createLocalJWKSet(await jwksResponse.json()),
+      { audience: gatewayAudience, issuer: oauthIssuer },
+    );
+    expect(verified.payload.sub).toBe(user.id);
   });
 
   it("enables TOTP, gates password sign-in, and accepts a backup code", async () => {

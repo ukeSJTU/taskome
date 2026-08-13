@@ -23,6 +23,7 @@ export function createTestAuth() {
       jwt(),
       oauthProvider({
         scopes: ["openid", "profile", "email", "taskome"],
+        validAudiences: ["http://localhost:8000"],
         disableJwtPlugin: false,
         loginPage: "/login",
         consentPage: "/oauth/consent",
