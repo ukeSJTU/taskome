@@ -11,16 +11,33 @@ export class GatewayAuthenticationError extends Error {
   }
 }
 
-export async function gatewayFetch(path: string, init: RequestInit = {}): Promise<Response> {
+export class GatewayResponseError extends Error {
+  readonly response: Response;
+
+  constructor(response: Response) {
+    super(`Gateway request failed with status ${response.status}.`);
+    this.name = "GatewayResponseError";
+    this.response = response;
+  }
+}
+
+export async function gatewayFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
   const sessionToken = await auth.api.getToken({ headers: await headers() });
   if (!sessionToken?.token) throw new GatewayAuthenticationError();
 
   const requestHeaders = new Headers(init.headers);
   requestHeaders.set("authorization", `Bearer ${sessionToken.token}`);
 
-  return fetch(new URL(path, env.GATEWAY_URL), {
+  const response = await fetch(new URL(url, env.GATEWAY_URL), {
     ...init,
     cache: "no-store",
     headers: requestHeaders,
   });
+  if (!response.ok) throw new GatewayResponseError(response);
+
+  return {
+    data: await response.json(),
+    headers: response.headers,
+    status: response.status,
+  } as T;
 }

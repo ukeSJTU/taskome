@@ -1,11 +1,13 @@
 packages:
   - apps/web
+  - packages/api-client
   - packages/ui
   - packages/auth
   - packages/db
   - packages/env
   - packages/config
 allowBuilds:
+  "@scarf/scarf": set this to true or false
   "@swc/core": true
   esbuild: true
   sharp: true

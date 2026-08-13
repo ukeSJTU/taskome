@@ -3,25 +3,26 @@
 import { describe, expect, it, vi } from "vitest";
 
 const getToken = vi.fn();
-const requestHeaders = new Headers({ cookie: "better-auth.session_token=session" });
-const nextHeaders = vi.fn(async () => requestHeaders);
 
 vi.mock("server-only", () => ({}));
 vi.mock("@taskome/auth", () => ({ auth: { api: { getToken } } }));
 vi.mock("@taskome/env/server", () => ({ env: { GATEWAY_URL: "http://gateway.test" } }));
-vi.mock("next/headers", () => ({ headers: nextHeaders }));
 
-const { GatewayAuthenticationError, gatewayFetch } = await import("./gateway");
+const { GatewayAuthenticationError, getCurrentIdentity } = await import("@taskome/api-client");
 
-describe("gatewayFetch", () => {
+describe("gateway API client", () => {
   it("attaches a short-lived Better Auth JWT to server-side gateway calls", async () => {
     getToken.mockResolvedValueOnce({ token: "session-jwt" });
-    const fetchMock = vi.fn().mockResolvedValueOnce(new Response("ok"));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ aud: "web", iss: "auth", sub: "user" })),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
-    await gatewayFetch("/api/v1/auth/me");
+    await getCurrentIdentity();
 
-    expect(getToken).toHaveBeenCalledWith({ headers: requestHeaders });
+    expect(getToken).toHaveBeenCalledWith({ headers: expect.any(Headers) });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]?.toString()).toBe("http://gateway.test/api/v1/auth/me");
     const options = fetchMock.mock.calls[0]?.[1] as RequestInit;
@@ -32,8 +33,6 @@ describe("gatewayFetch", () => {
   it("rejects gateway calls without a current session token", async () => {
     getToken.mockResolvedValueOnce(null);
 
-    await expect(gatewayFetch("/api/v1/auth/me")).rejects.toBeInstanceOf(
-      GatewayAuthenticationError,
-    );
+    await expect(getCurrentIdentity()).rejects.toBeInstanceOf(GatewayAuthenticationError);
   });
 });

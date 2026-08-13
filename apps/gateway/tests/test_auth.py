@@ -16,7 +16,7 @@ def _base64url(value: bytes) -> str:
     return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
 
 
-def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> None:
+def _signed_token(*, issuer: str, audience: str) -> tuple[str, dict[str, list[dict[str, str]]]]:
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key().public_bytes_raw()
     jwks = {
@@ -33,16 +33,21 @@ def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> Non
     }
     token = jwt.encode(
         {
-            "aud": "http://localhost:3000",
+            "aud": audience,
             "exp": datetime.now(UTC) + timedelta(minutes=5),
             "iat": datetime.now(UTC),
-            "iss": "http://localhost:3000",
+            "iss": issuer,
             "sub": "user-123",
         },
         private_key,
         algorithm="EdDSA",
         headers={"kid": "test-key"},
     )
+    return token, jwks
+
+
+def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> None:
+    token, jwks = _signed_token(issuer="http://localhost:3000", audience="http://localhost:3000")
 
     async def jwks_handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=jwks)
@@ -101,3 +106,37 @@ def test_mcp_route_rejects_missing_bearer_token() -> None:
 
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_mcp_route_accepts_oauth_jwt_from_the_shared_jwks() -> None:
+    token, jwks = _signed_token(
+        issuer="http://localhost:3000/api/auth",
+        audience="http://localhost:8000",
+    )
+
+    async def jwks_handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=jwks)
+
+    verifier = JWKSVerifier(
+        "http://auth.test/api/auth/jwks",
+        issuers=["http://localhost:3000", "http://localhost:3000/api/auth"],
+        audiences=["http://localhost:3000", "http://localhost:8000"],
+        client=httpx.AsyncClient(transport=httpx.MockTransport(jwks_handler)),
+    )
+    app = create_app(
+        Settings(
+            auth_issuer="http://localhost:3000",
+            auth_jwks_url="http://auth.test/api/auth/jwks",
+            auth_oauth_issuer="http://localhost:3000/api/auth",
+            auth_session_audience="http://localhost:3000",
+            auth_oauth_audience="http://localhost:8000",
+            environment=Environment.TEST,
+        ),
+        auth_verifier=verifier,
+        database=available_database,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/mcp", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code != 401

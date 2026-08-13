@@ -157,7 +157,6 @@ describe("/api/auth", () => {
           code: authorizationCode ?? "",
           code_verifier: codeVerifier,
           grant_type: "authorization_code",
-          resource: gatewayAudience,
           redirect_uri: "http://localhost:4000/callback",
         }),
         headers: new Headers({

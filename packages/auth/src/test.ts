@@ -3,6 +3,8 @@ import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { jwt, testUtils, twoFactor } from "better-auth/plugins";
 
+import { oauthGatewayAudience } from "./oauth-audience";
+
 export function createTestAuth() {
   return betterAuth({
     baseURL: "http://localhost:3000",
@@ -30,6 +32,7 @@ export function createTestAuth() {
         allowDynamicClientRegistration: false,
         allowUnauthenticatedClientRegistration: false,
       }),
+      oauthGatewayAudience("http://localhost:8000"),
       twoFactor({ issuer: "taskome" }),
       testUtils({ captureOTP: true }),
     ],

@@ -7,6 +7,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { jwt, twoFactor } from "better-auth/plugins";
 
+import { oauthGatewayAudience } from "./oauth-audience";
+
 export function createAuth() {
   const db = createDb();
 
@@ -33,6 +35,7 @@ export function createAuth() {
         allowDynamicClientRegistration: false,
         allowUnauthenticatedClientRegistration: false,
       }),
+      oauthGatewayAudience(env.GATEWAY_URL),
       twoFactor({ issuer: "taskome" }),
       nextCookies(),
     ],

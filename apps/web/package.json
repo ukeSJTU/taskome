@@ -26,6 +26,7 @@
     "@swc/helpers": "^0.5.23",
     "@tanstack/react-form": "^1.33.2",
     "@tanstack/react-table": "^9.1.2",
+    "@taskome/api-client": "workspace:*",
     "@taskome/auth": "workspace:*",
     "@taskome/env": "workspace:*",
     "@taskome/ui": "workspace:*",
