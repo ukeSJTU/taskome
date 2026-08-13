@@ -76,7 +76,7 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 Two files, not one — see [ADR-0013](docs/adr/0013-dev-support-base-and-prod-overlay-compose.md):
 
 - `compose.yml` — dev-support services only (postgres, SeaweedFS, a local otel-gui trace/log viewer). `web` and `gateway` run natively in development (`mise run dev`), not in containers.
-- `compose.prod.yml` — overlay adding the containerized app stack (`web`, `gateway`) on top of `compose.yml`. App Dockerfiles live in `apps/*/Dockerfile`.
+- `compose.prod.yml` — overlay adding the three deployables (`web`, `docs`, and one `gateway`) plus Caddy on top of `compose.yml`. App Dockerfiles live in `apps/*/Dockerfile`.
 - `infra/` — shared infrastructure compose fragments (`include:`-d from one of the files above), plus placeholders for the eventual reverse proxy and GPU server provisioning. See `infra/README.md`.
 
 Commands:
@@ -86,6 +86,7 @@ Commands:
 - Start the full prod-shaped stack: `mise run prod:up`
 - Logs: `mise run prod:logs`
 - Stop: `mise run prod:down`
+- Validate Compose and the public Caddy routing boundary: `mise run deployment:check`
 
 Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in the compose files for container networking.
 
@@ -105,6 +106,15 @@ least 32 characters. Gateway uses it only to sign internal Personal API Key
 verification requests to Web; keep it distinct from `BETTER_AUTH_SECRET` and do
 not expose it to browsers or Direct API Clients.
 
+For a real deployment, copy [`.env.production.example`](.env.production.example)
+to `.env`, replace both secret placeholders, populate the app-specific `.env`
+files, and point the three hostnames at the machine. Caddy is the only public
+application edge. It routes `example.com` to Web and `docs.example.com` to Docs;
+`api.example.com` exposes only `/v1`, `/mcp`, and
+`/.well-known/oauth-protected-resource/mcp`. Gateway development, health, auth,
+and internal paths are deliberately not routed. See
+[`infra/proxy/README.md`](infra/proxy/README.md) for the exact matrix.
+
 For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
 
 ## Git Hooks and Formatting
@@ -118,7 +128,9 @@ For more details, see the guide on [Deploying with Docker Compose](https://www.b
 ```
 taskome/
 ├── apps/
-│   └── web/         # Fullstack application (Next.js)
+│   ├── web/         # Fullstack application (Next.js)
+│   ├── docs/        # Public documentation (Next.js/Fumadocs)
+│   └── gateway/     # REST + MCP backend (FastAPI/FastMCP)
 ├── packages/
 │   ├── ui/          # Shared shadcn/ui components and styles
 │   ├── auth/        # Authentication configuration & logic

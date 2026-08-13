@@ -1,10 +1,43 @@
 name: taskome
 
-# Combined with compose.yml this is a local production-shape rehearsal, not a deployable production stack: it still inherits dev-support services and their loopback ports.
+# Combined with compose.yml, defaults preserve the localhost production-shape rehearsal.
+# A real deployment supplies the public origins from .env.production.example.
 include:
   - infra/ray.yml
 
 services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    environment:
+      WEB_ADDRESS: ${WEB_ADDRESS:-http://localhost}
+      DOCS_ADDRESS: ${DOCS_ADDRESS:-http://docs.localhost}
+      API_ADDRESS: ${API_ADDRESS:-http://api.localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra/proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - taskome_caddy_data:/data
+      - taskome_caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      docs:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
   web:
     build:
       context: .
@@ -14,12 +47,15 @@ services:
       - path: apps/web/.env
         required: false
     environment:
-      BETTER_AUTH_URL: http://localhost:3000
-      GATEWAY_PUBLIC_URL: http://localhost:8000
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-taskome-local-better-auth-secret}
+      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8000}
       GATEWAY_INTERNAL_URL: http://gateway:8000
       WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
-      AUTH_TRUSTED_ORIGIN: http://localhost:3000
+      AUTH_TRUSTED_ORIGIN: ${AUTH_TRUSTED_ORIGIN:-http://localhost:3000}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
+    ports:
+      - "127.0.0.1:3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,6 +80,34 @@ services:
       - /tmp
     restart: unless-stopped
 
+  docs:
+    build:
+      context: .
+      dockerfile: apps/docs/Dockerfile
+    init: true
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
   gateway:
     build:
       context: .
@@ -53,12 +117,14 @@ services:
         required: false
     environment:
       APP_ENVIRONMENT: production
-      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       WEB_INTERNAL_URL: http://web:3000
-      GATEWAY_PUBLIC_URL: http://localhost:8000
+      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8000}
       WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
       RATE_LIMIT_REDIS_URL: redis://redis-rate-limit:6379/0
+    ports:
+      - "127.0.0.1:8000:8000"
     depends_on:
       gateway-migrate:
         condition: service_completed_successfully
@@ -104,3 +170,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+
+volumes:
+  taskome_caddy_data:
+  taskome_caddy_config:
