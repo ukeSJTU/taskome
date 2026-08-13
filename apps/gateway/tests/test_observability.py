@@ -73,7 +73,17 @@ def test_database_readiness_is_suppressed_but_business_queries_are_traced() -> N
         asyncio.run(business_query())
         spans = exporter.get_finished_spans()
         assert spans
-        assert any(span.attributes and "db.statement" in span.attributes for span in spans)
+        statement_spans = [
+            span for span in spans if span.attributes and "db.statement" in span.attributes
+        ]
+        assert statement_spans
+        for span in statement_spans:
+            attributes = span.attributes or {}
+            assert not any(
+                key in attributes
+                for key in ("db.url", "db.password", "db.bindings", "db.parameters")
+            )
+            assert "test-secret" not in str(attributes)
         asyncio.run(database.dispose())
 
 

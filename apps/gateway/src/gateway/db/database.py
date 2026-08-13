@@ -39,6 +39,8 @@ class Database:
             SQLAlchemyInstrumentor().instrument(
                 engine=self._engine.sync_engine,
                 tracer_provider=tracer_provider,
+                enable_commenter=False,
+                enable_attribute_commenter=False,
             )
         self._sessions = async_sessionmaker(self._engine, expire_on_commit=False)
 
