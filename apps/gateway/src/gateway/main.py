@@ -14,6 +14,7 @@ from gateway.api.mcp import create_mcp_server
 from gateway.api.v1.router import router as api_v1_router
 from gateway.core.auth import (
     MCPPrincipalVerifier,
+    create_mcp_auth_provider,
     create_mcp_token_verifier,
     create_rest_token_verifier,
 )
@@ -78,6 +79,7 @@ def create_app(  # noqa: PLR0913
         if mcp_token_verifier is not None
         else create_mcp_token_verifier(app_settings)
     )
+    mcp_auth_provider = create_mcp_auth_provider(app_settings, mcp_verifier)
     api_key_verifier = personal_api_key_verifier or WebPersonalApiKeyVerifier(
         url=app_settings.personal_api_key_verification_url,
         secret=app_settings.web_gateway_hmac_secret.get_secret_value(),
@@ -95,7 +97,7 @@ def create_app(  # noqa: PLR0913
     mcp_server = create_mcp_server(
         app_settings,
         input_file_service,
-        auth_provider=mcp_verifier,
+        auth_provider=mcp_auth_provider,
     )
     mcp_app = mcp_server.http_app(path="/")
 
@@ -120,6 +122,7 @@ def create_app(  # noqa: PLR0913
     register_error_handlers(application)
     application.include_router(health_router)
     application.include_router(api_v1_router)
+    application.router.routes.extend(mcp_auth_provider.get_routes("/mcp"))
 
     @application.get("/internal/openapi.json", include_in_schema=False)
     async def public_openapi() -> dict[str, Any]:

@@ -1,9 +1,9 @@
-import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { jwt, testUtils, twoFactor } from "better-auth/plugins";
 
 import { oauthGatewayAudience } from "./oauth-audience";
+import { mcpOAuthProvider } from "./mcp-oauth";
 import { enforcePersonalApiKeyLifecycle, personalApiKeyPlugin } from "./personal-api-keys";
 
 export function createTestAuth() {
@@ -23,19 +23,12 @@ export function createTestAuth() {
       verification: [],
     }),
     emailAndPassword: { enabled: true },
+    rateLimit: { enabled: true },
     hooks: { before: enforcePersonalApiKeyLifecycle },
     plugins: [
       personalApiKeyPlugin(),
       jwt({ jwt: { audience: "http://localhost:8000/v1" } }),
-      oauthProvider({
-        scopes: ["openid", "profile", "email", "taskome"],
-        validAudiences: ["http://localhost:8000/mcp"],
-        disableJwtPlugin: false,
-        loginPage: "/login",
-        consentPage: "/oauth/consent",
-        allowDynamicClientRegistration: false,
-        allowUnauthenticatedClientRegistration: false,
-      }),
+      mcpOAuthProvider("http://localhost:8000/mcp"),
       oauthGatewayAudience("http://localhost:8000/mcp"),
       twoFactor({ issuer: "taskome" }),
       testUtils({ captureOTP: true }),

@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING, Annotated
 import structlog
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
+from fastmcp.server.auth import RemoteAuthProvider
 from fastmcp.server.auth.auth import AccessToken, TokenVerifier
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 from fastmcp.server.dependencies import get_access_token
+from pydantic import AnyHttpUrl
 
 if TYPE_CHECKING:
     from gateway.core.config import Settings
@@ -78,6 +80,20 @@ def create_mcp_token_verifier(settings: Settings) -> MCPPrincipalVerifier:
             audience=settings.mcp_resource,
             algorithm="EdDSA",
         )
+    )
+
+
+def create_mcp_auth_provider(
+    settings: Settings,
+    token_verifier: MCPPrincipalVerifier,
+) -> RemoteAuthProvider:
+    return RemoteAuthProvider(
+        token_verifier=token_verifier,
+        authorization_servers=[AnyHttpUrl(settings.auth_oauth_issuer)],
+        base_url=settings.gateway_public_url,
+        resource_base_url=settings.gateway_public_url,
+        scopes_supported=["taskome"],
+        resource_name="Taskome MCP",
     )
 
 

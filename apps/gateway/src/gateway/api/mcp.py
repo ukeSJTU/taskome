@@ -1,23 +1,31 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID  # noqa: TC003 - FastMCP resolves tool annotations at registration.
 
 from fastmcp import FastMCP
 
-from gateway.core.auth import MCPPrincipalVerifier, current_mcp_principal
+from gateway.core.auth import current_mcp_principal
 from gateway.core.config import Environment
 
 if TYPE_CHECKING:
+    from fastmcp.server.auth import AuthProvider
+
     from gateway.core.config import Settings
-    from gateway.services.input_files import InputFileService
+    from gateway.services.input_files import DownloadUrl, UploadUrl
+
+
+class MCPInputFileService(Protocol):
+    async def mint_upload_url(self, owner_user_id: str, original_filename: str) -> UploadUrl: ...
+
+    async def mint_download_url(self, owner_user_id: str, input_file_id: UUID) -> DownloadUrl: ...
 
 
 def create_mcp_server(
     settings: Settings,
-    service: InputFileService,
+    service: MCPInputFileService,
     *,
-    auth_provider: MCPPrincipalVerifier,
+    auth_provider: AuthProvider,
 ) -> FastMCP:
     server = FastMCP(
         name=settings.app_name,

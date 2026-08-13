@@ -1,13 +1,13 @@
 import { createDb } from "@taskome/db";
 import * as schema from "@taskome/db/schema/auth";
 import { env } from "@taskome/env/server";
-import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { jwt, twoFactor } from "better-auth/plugins";
 
 import { oauthGatewayAudience } from "./oauth-audience";
+import { mcpOAuthProvider } from "./mcp-oauth";
 import { enforcePersonalApiKeyLifecycle, personalApiKeyPlugin } from "./personal-api-keys";
 
 export function createAuth() {
@@ -31,15 +31,7 @@ export function createAuth() {
     plugins: [
       personalApiKeyPlugin(),
       jwt({ jwt: { audience: gatewayRESTResource } }),
-      oauthProvider({
-        scopes: ["openid", "profile", "email", "taskome"],
-        validAudiences: [gatewayMCPResource],
-        disableJwtPlugin: false,
-        loginPage: "/login",
-        consentPage: "/oauth/consent",
-        allowDynamicClientRegistration: false,
-        allowUnauthenticatedClientRegistration: false,
-      }),
+      mcpOAuthProvider(gatewayMCPResource),
       oauthGatewayAudience(gatewayMCPResource),
       twoFactor({ issuer: "taskome" }),
       nextCookies(),

@@ -40,6 +40,21 @@ run = "pnpm run check"
 [tasks."ts:test"]
 run = "pnpm run test"
 
+[tasks."test:mcp-oauth-onboarding"]
+description = "Verify a Better Auth token through the Gateway MCP protocol"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+fixture_path="$(mktemp)"
+trap 'rm -f "$fixture_path"' EXIT
+MCP_ONBOARDING_FIXTURE_PATH="$fixture_path" pnpm --dir apps/web exec vitest run \
+  'src/app/api/auth/[...all]/route.test.ts' \
+  --testNamePattern 'completes an OAuth authorization-code flow after user consent'
+uv run --project apps/gateway python apps/gateway/tests/support/mcp_onboarding_probe.py \
+  < "$fixture_path"
+'''
+
 [tasks."deps:outdated"]
 description = "Report available Node and Python dependency updates without changing lockfiles"
 run = '''
