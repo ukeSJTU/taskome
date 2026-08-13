@@ -52,6 +52,15 @@ function formatDate(value: Date | string) {
   return dateFormatter.format(new Date(value));
 }
 
+function KeyListSkeleton({ kind }: { kind: "active" | "revoked" }) {
+  return (
+    <div className="flex flex-col gap-3" aria-label={`Loading ${kind} keys`}>
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-12 w-full" />
+    </div>
+  );
+}
+
 function KeyList({
   keys,
   kind,
@@ -304,10 +313,7 @@ export function ApiKeysPanel() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex flex-col gap-3" aria-label="Loading active keys">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
+              <KeyListSkeleton kind="active" />
             ) : (
               <KeyList
                 keys={activeKeys}
@@ -333,10 +339,7 @@ export function ApiKeysPanel() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex flex-col gap-3" aria-label="Loading revoked keys">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
+              <KeyListSkeleton kind="revoked" />
             ) : (
               <KeyList
                 keys={revokedKeys}

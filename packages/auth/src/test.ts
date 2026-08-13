@@ -4,7 +4,7 @@ import { memoryAdapter } from "better-auth/adapters/memory";
 import { jwt, testUtils, twoFactor } from "better-auth/plugins";
 
 import { oauthGatewayAudience } from "./oauth-audience";
-import { personalApiKeyPlugin, preventPersonalApiKeyReactivation } from "./personal-api-keys";
+import { enforcePersonalApiKeyLifecycle, personalApiKeyPlugin } from "./personal-api-keys";
 
 export function createTestAuth() {
   return betterAuth({
@@ -23,7 +23,7 @@ export function createTestAuth() {
       verification: [],
     }),
     emailAndPassword: { enabled: true },
-    hooks: { before: preventPersonalApiKeyReactivation },
+    hooks: { before: enforcePersonalApiKeyLifecycle },
     plugins: [
       personalApiKeyPlugin(),
       jwt({ jwt: { audience: "http://localhost:8000/v1" } }),

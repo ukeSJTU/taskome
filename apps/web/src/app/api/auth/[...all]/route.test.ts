@@ -42,15 +42,28 @@ function authHeaders(headers: Headers) {
   return requestHeaders;
 }
 
+async function authenticatedUser(email: string, name: string) {
+  const auth = authState.auth;
+  if (!auth) throw new Error("test auth was not initialized");
+  const context = await auth.$context;
+  const user = await context.test.saveUser(context.test.createUser({ email, name }));
+  const { headers } = await context.test.login({ userId: user.id });
+  return {
+    context,
+    headers,
+    sessionHeaders: new Headers({
+      ...Object.fromEntries(authHeaders(headers)),
+      "content-type": "application/json",
+    }),
+  };
+}
+
 describe("/api/auth", () => {
   it("creates multiple named Personal API Keys and never lists their secrets", async () => {
-    const auth = authState.auth;
-    if (!auth) throw new Error("test auth was not initialized");
-    const context = await auth.$context;
-    const user = await context.test.saveUser(
-      context.test.createUser({ email: "automation@example.com", name: "Automation User" }),
+    const { context, headers } = await authenticatedUser(
+      "automation@example.com",
+      "Automation User",
     );
-    const { headers } = await context.test.login({ userId: user.id });
 
     const createKey = (name: string) =>
       POST(
@@ -83,6 +96,9 @@ describe("/api/auth", () => {
     expect(workstation.key).toMatch(/^taskome_/);
     expect(cluster.key).toMatch(/^taskome_/);
     expect(cluster.key).not.toBe(workstation.key);
+    const storedKeys = await context.adapter.findMany<{ key: string }>({ model: "apikey" });
+    expect(storedKeys.map((key) => key.key)).not.toContain(workstation.key);
+    expect(storedKeys.map((key) => key.key)).not.toContain(cluster.key);
 
     const listResponse = await GET(
       new Request(`${baseURL}/api/auth/api-key/list`, { headers: authHeaders(headers) }),
@@ -97,17 +113,7 @@ describe("/api/auth", () => {
   });
 
   it("requires a Web session and a name for Personal API Key management", async () => {
-    const auth = authState.auth;
-    if (!auth) throw new Error("test auth was not initialized");
-    const context = await auth.$context;
-    const user = await context.test.saveUser(
-      context.test.createUser({ email: "key-owner@example.com", name: "Key Owner" }),
-    );
-    const { headers } = await context.test.login({ userId: user.id });
-    const sessionHeaders = new Headers({
-      ...Object.fromEntries(authHeaders(headers)),
-      "content-type": "application/json",
-    });
+    const { sessionHeaders } = await authenticatedUser("key-owner@example.com", "Key Owner");
 
     const unnamedResponse = await POST(
       new Request(`${baseURL}/api/auth/api-key/create`, {
@@ -117,6 +123,24 @@ describe("/api/auth", () => {
       }),
     );
     expect(unnamedResponse.status).toBe(400);
+
+    const whitespaceNameResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/create`, {
+        body: JSON.stringify({ name: "   " }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(whitespaceNameResponse.status).toBe(400);
+
+    const customPrefixResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/create`, {
+        body: JSON.stringify({ name: "Wrong prefix", prefix: "other_" }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(customPrefixResponse.status).toBe(400);
 
     const createdResponse = await POST(
       new Request(`${baseURL}/api/auth/api-key/create`, {
@@ -147,17 +171,10 @@ describe("/api/auth", () => {
   });
 
   it("revokes one Personal API Key permanently while preserving its metadata", async () => {
-    const auth = authState.auth;
-    if (!auth) throw new Error("test auth was not initialized");
-    const context = await auth.$context;
-    const user = await context.test.saveUser(
-      context.test.createUser({ email: "revoke@example.com", name: "Revoke User" }),
+    const { headers, sessionHeaders } = await authenticatedUser(
+      "revoke@example.com",
+      "Revoke User",
     );
-    const { headers } = await context.test.login({ userId: user.id });
-    const sessionHeaders = new Headers({
-      ...Object.fromEntries(authHeaders(headers)),
-      "content-type": "application/json",
-    });
 
     const createResponse = await POST(
       new Request(`${baseURL}/api/auth/api-key/create`, {
@@ -190,6 +207,24 @@ describe("/api/auth", () => {
       }),
     );
     expect(reactivateResponse.status).toBe(400);
+
+    const renameResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/update`, {
+        body: JSON.stringify({ keyId: created.id, name: "Erased history" }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(renameResponse.status).toBe(400);
+
+    const deleteResponse = await POST(
+      new Request(`${baseURL}/api/auth/api-key/delete`, {
+        body: JSON.stringify({ keyId: created.id }),
+        headers: sessionHeaders,
+        method: "POST",
+      }),
+    );
+    expect(deleteResponse.status).toBe(400);
 
     const listResponse = await GET(
       new Request(`${baseURL}/api/auth/api-key/list`, { headers: authHeaders(headers) }),

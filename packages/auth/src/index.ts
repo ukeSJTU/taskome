@@ -8,7 +8,7 @@ import { nextCookies } from "better-auth/next-js";
 import { jwt, twoFactor } from "better-auth/plugins";
 
 import { oauthGatewayAudience } from "./oauth-audience";
-import { personalApiKeyPlugin, preventPersonalApiKeyReactivation } from "./personal-api-keys";
+import { enforcePersonalApiKeyLifecycle, personalApiKeyPlugin } from "./personal-api-keys";
 
 export function createAuth() {
   const db = createDb();
@@ -27,7 +27,7 @@ export function createAuth() {
     },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
-    hooks: { before: preventPersonalApiKeyReactivation },
+    hooks: { before: enforcePersonalApiKeyLifecycle },
     plugins: [
       personalApiKeyPlugin(),
       jwt({ jwt: { audience: gatewayRESTResource } }),
