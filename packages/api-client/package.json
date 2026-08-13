@@ -1,0 +1,26 @@
+{
+  "name": "@taskome/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "generate": "orval --config orval.config.ts && oxfmt --write src/generated/gateway.ts"
+  },
+  "dependencies": {
+    "@taskome/auth": "workspace:*",
+    "@taskome/env": "workspace:*",
+    "next": "^16.3.0",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@taskome/config": "workspace:*",
+    "orval": "^7.15.0",
+    "typescript": "catalog:"
+  }
+}

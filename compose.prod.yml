@@ -16,6 +16,7 @@ services:
         required: false
     environment:
       BETTER_AUTH_URL: http://localhost:3001
+      GATEWAY_URL: http://gateway:8000
       CORS_ORIGIN: http://localhost:3001
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
     depends_on:
@@ -53,6 +54,11 @@ services:
         required: false
     environment:
       ENVIRONMENT: production
+      AUTH_JWKS_URL: http://web:3001/api/auth/jwks
+      AUTH_ISSUER: http://localhost:3001
+      AUTH_OAUTH_ISSUER: http://localhost:3001/api/auth
+      AUTH_SESSION_AUDIENCE: http://localhost:3001
+      AUTH_OAUTH_AUDIENCE: http://gateway:8000
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
     depends_on:
       gateway-migrate:
