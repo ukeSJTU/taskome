@@ -20,7 +20,7 @@ Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as 
 
 ## Architecture
 
-- **Components**: `apps/web` (Next.js) is the only user-facing deployable — there is no separate frontend/backend split. Its own API routes are the BFF: they aggregate calls to `apps/gateway` (FastAPI + MCP) into responses shaped for the frontend, rather than exposing gateway's endpoints raw.
+- **Components**: `apps/web` (Next.js) is the only user-facing deployable for the authenticated product — there is no separate frontend/backend split. Its own API routes are the BFF: they aggregate calls to `apps/gateway` (FastAPI + MCP) into responses shaped for the frontend, rather than exposing gateway's endpoints raw. `apps/docs` (public docs site) is the one deliberate exception — it's static content with no gateway access, so it doesn't participate in the BFF boundary this principle protects. See ADR-0020.
 - **Data ownership**: each service reads and writes only the Postgres data it owns — `apps/web` owns auth, `apps/gateway` owns everything else (jobs, input files, …). Cross-service access always goes through gateway's REST API, never direct SQL against the other's tables. One shared Postgres instance, split by schema per owner; migrations stay per-owner too (`packages/db`/Drizzle for web, SQLAlchemy/Alembic for gateway).
 - **Web → gateway calls**: server-side only (never the browser), authenticated with a better-auth-minted JWT, through the generated client in `packages/api-client` (orval, from gateway's checked-in OpenAPI spec). See ADR-0012 for the full reasoning.
 

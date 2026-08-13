@@ -6,7 +6,7 @@ Wraps bioinformatics compute tools (PepMimic, BindCraft, …) and exposes them t
 
 **Task**:
 A capability type registered in the platform (e.g. `pepmimic`, `bindcraft`). Declares an `executionMode` of `sync` or `async`. Analogous to a class.
-_Avoid_: Model (reserve "model" strictly for the ML model weights a Task may use internally, never for the Task itself), Tool (MCP's own vocabulary for a callable primitive — a Task Server may expose a Task as one or more MCP tools, but "Task" is the platform-level concept).
+_Avoid_: Model (reserve "model" strictly for the ML model weights a Task may use internally, never for the Task itself), Tool (MCP's own vocabulary for a callable primitive — a Task Server may expose a Task as one or more MCP tools, but "Task" is the platform-level concept). This avoidance is scoped to internal/engineering usage; user-facing product copy (docs site, marketing) may still call a Task a "tool" (e.g. "PepMimic, BindCraft, GraphPep" as the platform's tool set) since that's the vocabulary users already bring.
 
 **Job**:
 One invocation of a Task, created every time a Task is called — analogous to an instance of the Task class. A `sync` Task's Job is created and resolved to a terminal state (`ok`/`error`) within the same call. An `async` Task's Job starts `queued`/`running` and is polled until it reaches a terminal state.
