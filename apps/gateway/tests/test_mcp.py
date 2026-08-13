@@ -15,16 +15,10 @@ from gateway.services.input_files import InputFileService, UploadUrl
 
 if TYPE_CHECKING:
     from fastmcp.tools.base import Tool
-    from gateway.core.auth import JWKSVerifier
     from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 def test_mcp_endpoint_accepts_protocol_clients() -> None:
-    class TestVerifier:
-        async def verify_bearer(self, authorization: str | None) -> dict[str, str]:
-            assert authorization == "Bearer test-token"
-            return {"sub": "user-123"}
-
     class LifespanStateApp:
         def __init__(self, app: ASGIApp) -> None:
             self.app = app
@@ -37,7 +31,15 @@ def test_mcp_endpoint_accepts_protocol_clients() -> None:
     async def list_tools() -> list[Tool]:
         app = create_app(
             Settings(environment=Environment.TEST),
-            auth_verifier=cast("JWKSVerifier", TestVerifier()),
+            token_verifier=StaticTokenVerifier(
+                {
+                    "test-token": {
+                        "client_id": "test-client",
+                        "scopes": [],
+                        "sub": "user-123",
+                    }
+                }
+            ),
         )
         server = ASGIServer(
             url="http://127.0.0.1/mcp",
