@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { SidebarProvider } from "@taskome/ui/components/sidebar";
+
+import { render, screen } from "@/test/render";
 
 import { AppSidebar } from "./app-sidebar";
 

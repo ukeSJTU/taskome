@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID  # noqa: TC003
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
     from datetime import datetime
 
-    from gateway.repositories.input_files import InputFileRepository
-    from gateway.services.storage import SeaweedFSStorage
+    from gateway.repositories.input_files import InputFileRecord
 
 PRESIGNED_URL_TTL_SECONDS = 900
 
@@ -31,12 +31,37 @@ class DownloadUrl:
     expires_at: datetime
 
 
+class InputFileRepositoryPort(Protocol):
+    """What `InputFileService` needs from a repository — see ADR-0017 for why this is a port."""
+
+    def create(
+        self, owner_user_id: str, original_filename: str
+    ) -> AbstractAsyncContextManager[InputFileRecord]: ...
+
+    async def find_active_owned(
+        self, owner_user_id: str, input_file_id: UUID
+    ) -> InputFileRecord | None: ...
+
+    def mark_deleted(
+        self, owner_user_id: str, input_file_id: UUID
+    ) -> AbstractAsyncContextManager[InputFileRecord | None]: ...
+
+
+class StoragePort(Protocol):
+    """What `InputFileService` needs from object storage — see ADR-0017 for why this is a port."""
+
+    def ensure_bucket(self) -> None: ...
+    def mint_upload_url(self, key: str, expires_in: int) -> tuple[str, datetime]: ...
+    def mint_download_url(self, key: str, expires_in: int) -> tuple[str, datetime]: ...
+    def delete(self, key: str) -> None: ...
+
+
 class InputFileService:
     def __init__(
         self,
         *,
-        repository: InputFileRepository,
-        storage: SeaweedFSStorage,
+        repository: InputFileRepositoryPort,
+        storage: StoragePort,
         url_ttl_seconds: int = PRESIGNED_URL_TTL_SECONDS,
     ) -> None:
         self._repository = repository

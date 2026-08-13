@@ -7,17 +7,19 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi.testclient import TestClient
-from gateway.core.config import Environment, Settings
-from gateway.main import create_app
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import pytest
+    from fastapi import FastAPI
 
 
 def test_access_log_is_structured_and_omits_query_values(
+    create_test_app: Callable[..., FastAPI],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+    app = create_test_app()
 
     with TestClient(app) as client:
         response = client.get("/does-not-exist?token=secret-value")
@@ -42,9 +44,10 @@ def test_access_log_is_structured_and_omits_query_values(
 
 
 def test_access_log_uses_route_template_and_trace_context(
+    create_test_app: Callable[..., FastAPI],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+    app = create_test_app()
 
     @app.get("/items/{item_id}")
     def read_item(item_id: int) -> dict[str, int]:
@@ -64,7 +67,7 @@ def test_access_log_uses_route_template_and_trace_context(
 def test_production_server_logs_are_json(
     tmp_path: Path,
 ) -> None:
-    config_path = Path(__file__).parents[1] / "logging.prod.json"
+    config_path = Path(__file__).parents[3] / "logging.prod.json"
     log_config = json.loads(config_path.read_text())
     default_handler = log_config["handlers"]["default"]
     default_handler["class"] = "logging.FileHandler"

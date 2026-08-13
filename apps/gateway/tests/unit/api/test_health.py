@@ -1,15 +1,17 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from fastapi.testclient import TestClient
-from gateway.core.config import Environment, Settings
-from gateway.main import create_app
 
-from tests.helpers import available_database
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from fastapi import FastAPI
 
 
-def test_liveness_reports_process_alive() -> None:
-    app = create_app(
-        Settings(app_environment=Environment.TEST),
-        database=available_database,
-    )
+def test_liveness_reports_process_alive(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     with TestClient(app) as client:
         response = client.get("/health/live")
@@ -18,11 +20,8 @@ def test_liveness_reports_process_alive() -> None:
     assert response.json()["status"] == "alive"
 
 
-def test_readiness_reports_lifespan_initialization() -> None:
-    app = create_app(
-        Settings(app_environment=Environment.TEST),
-        database=available_database,
-    )
+def test_readiness_reports_lifespan_initialization(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     with TestClient(app) as client:
         response = client.get("/health/ready")

@@ -1,14 +1,19 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi.testclient import TestClient
 from gateway.core.config import Environment, Settings
-from gateway.main import create_app
 
-from tests.helpers import available_database
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from fastapi import FastAPI
 
 
-def test_gateway_generates_its_own_request_id() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+def test_gateway_generates_its_own_request_id(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     with TestClient(app) as client:
         response = client.get(
@@ -21,8 +26,8 @@ def test_gateway_generates_its_own_request_id() -> None:
     assert request_id != "caller-controlled"
 
 
-def test_gateway_adds_baseline_security_headers() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+def test_gateway_adds_baseline_security_headers(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     with TestClient(app) as client:
         response = client.get("/health/live")
@@ -43,11 +48,8 @@ def test_gateway_adds_baseline_security_headers() -> None:
     assert "Strict-Transport-Security" not in response.headers
 
 
-def test_production_gateway_adds_hsts() -> None:
-    app = create_app(
-        Settings(app_environment=Environment.PRODUCTION),
-        database=available_database,
-    )
+def test_production_gateway_adds_hsts(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app(Settings(app_environment=Environment.PRODUCTION))
 
     with TestClient(app) as client:
         response = client.get("/health/live")

@@ -1,8 +1,13 @@
-from gateway.api.v1.router import auth_api_router, router
-from gateway.core.config import Environment, Settings
-from gateway.main import create_app
+from __future__ import annotations
 
-from tests.helpers import available_database
+from typing import TYPE_CHECKING
+
+from gateway.api.v1.router import auth_api_router, router
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from fastapi import FastAPI
 
 
 def test_business_api_router_owns_the_versioned_namespace() -> None:
@@ -10,8 +15,10 @@ def test_business_api_router_owns_the_versioned_namespace() -> None:
     assert auth_api_router.prefix == "/api/v1"
 
 
-def test_rest_openapi_declares_stable_operations_and_problem_responses() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST), database=available_database)
+def test_rest_openapi_declares_stable_operations_and_problem_responses(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app()
     openapi = app.openapi()
 
     expected_operations = {

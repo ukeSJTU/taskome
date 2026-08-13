@@ -1,5 +1,3 @@
-// @vitest-environment node
-
 import { PassThrough } from "node:stream";
 
 import { describe, expect, it } from "vitest";

@@ -23,45 +23,6 @@ def database_url() -> Iterator[str]:
         yield postgres.get_connection_url().replace("postgresql+psycopg2", "postgresql+psycopg")
 
 
-def test_development_push_rebuilds_only_gateway_schema(database_url: str) -> None:
-    with psycopg.connect(database_url.replace("+psycopg", ""), autocommit=True) as connection:
-        connection.execute("CREATE TABLE public.sentinel (value text NOT NULL)")
-        connection.execute("INSERT INTO public.sentinel VALUES ('preserve me')")
-        connection.execute("CREATE SCHEMA gateway")
-        connection.execute("CREATE TABLE gateway.dirty (value text NOT NULL)")
-
-    result = subprocess.run(
-        [sys.executable, "-m", "scripts.database", "push"],
-        check=False,
-        capture_output=True,
-        env={**os.environ, "APP_ENVIRONMENT": "development", "DATABASE_URL": database_url},
-        text=True,
-    )
-
-    assert result.returncode == 0, result.stderr
-    with psycopg.connect(database_url.replace("+psycopg", ""), autocommit=True) as connection:
-        assert connection.execute("SELECT value FROM public.sentinel").fetchone() == (
-            "preserve me",
-        )
-        assert connection.execute("SELECT to_regclass('gateway.dirty')").fetchone() == (None,)
-        assert connection.execute(
-            "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'gateway'"
-        ).fetchone() == ("gateway",)
-
-
-def test_development_push_rejects_non_development_environment(database_url: str) -> None:
-    result = subprocess.run(
-        [sys.executable, "-m", "scripts.database", "push"],
-        check=False,
-        capture_output=True,
-        env={**os.environ, "APP_ENVIRONMENT": "production", "DATABASE_URL": database_url},
-        text=True,
-    )
-
-    assert result.returncode != 0
-    assert "development" in result.stderr
-
-
 def test_migrate_creates_gateway_history_without_touching_public(database_url: str) -> None:
     with psycopg.connect(database_url.replace("+psycopg", ""), autocommit=True) as connection:
         connection.execute("CREATE TABLE public.migration_sentinel (value text NOT NULL)")

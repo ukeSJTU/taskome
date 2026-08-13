@@ -1,5 +1,3 @@
-// @vitest-environment node
-
 import { createTestAuth } from "@taskome/auth/test";
 import { base32 } from "@better-auth/utils/base32";
 import { createLocalJWKSet, jwtVerify } from "jose";

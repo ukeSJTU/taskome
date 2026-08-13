@@ -7,14 +7,18 @@ from fastapi import HTTPException, Path
 from fastapi.testclient import TestClient
 from gateway.core.config import Environment, Settings
 from gateway.core.errors import AppError
-from gateway.main import create_app
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import pytest
+    from fastapi import FastAPI
 
 
-def test_docs_enabled_exposes_scalar_instead_of_fastapi_documentation() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST, docs_enabled=True))
+def test_docs_enabled_exposes_scalar_instead_of_fastapi_documentation(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app(Settings(app_environment=Environment.TEST, docs_enabled=True))
 
     with TestClient(app) as client:
         scalar = client.get("/scalar")
@@ -30,8 +34,8 @@ def test_docs_enabled_exposes_scalar_instead_of_fastapi_documentation() -> None:
     assert redoc.status_code == 404
 
 
-def test_docs_disabled_hides_scalar_and_openapi() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST, docs_enabled=False))
+def test_docs_disabled_hides_scalar_and_openapi(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app(Settings(app_environment=Environment.TEST, docs_enabled=False))
 
     with TestClient(app) as client:
         scalar = client.get("/scalar")
@@ -45,8 +49,8 @@ def test_docs_disabled_hides_scalar_and_openapi() -> None:
     assert redoc.status_code == 404
 
 
-def test_not_found_uses_problem_details() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+def test_not_found_uses_problem_details(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     with TestClient(app) as client:
         response = client.get("/does-not-exist")
@@ -64,8 +68,8 @@ def test_not_found_uses_problem_details() -> None:
     }
 
 
-def test_request_validation_uses_problem_details() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+def test_request_validation_uses_problem_details(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     @app.get("/items/{item_id}")
     def read_item(item_id: Annotated[int, Path(gt=0)]) -> dict[str, int]:
@@ -88,8 +92,8 @@ def test_request_validation_uses_problem_details() -> None:
     ]
 
 
-def test_application_errors_use_problem_details() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+def test_application_errors_use_problem_details(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     @app.get("/conflict")
     def conflict() -> None:
@@ -110,8 +114,8 @@ def test_application_errors_use_problem_details() -> None:
     assert problem["request_id"] == response.headers["X-Request-ID"]
 
 
-def test_unhandled_errors_hide_internal_details() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+def test_unhandled_errors_hide_internal_details(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     @app.get("/unexpected")
     def unexpected() -> None:
@@ -132,9 +136,10 @@ def test_unhandled_errors_hide_internal_details() -> None:
 
 
 def test_unhandled_errors_are_logged_with_request_context(
+    create_test_app: Callable[..., FastAPI],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+    app = create_test_app()
 
     @app.get("/unexpected")
     def unexpected() -> None:
@@ -152,8 +157,8 @@ def test_unhandled_errors_are_logged_with_request_context(
     assert "diagnostic-detail" in error_event["exception"]
 
 
-def test_http_errors_preserve_protocol_headers() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+def test_http_errors_preserve_protocol_headers(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     @app.get("/rate-limited")
     def rate_limited() -> None:
@@ -171,8 +176,10 @@ def test_http_errors_preserve_protocol_headers() -> None:
     assert response.headers["Content-Type"] == "application/problem+json"
 
 
-def test_nonstandard_http_status_still_uses_problem_details() -> None:
-    app = create_app(Settings(app_environment=Environment.TEST))
+def test_nonstandard_http_status_still_uses_problem_details(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app()
 
     @app.get("/custom-status")
     def custom_status() -> None:

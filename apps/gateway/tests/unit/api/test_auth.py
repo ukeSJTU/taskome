@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import base64
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import httpx2
 import jwt
@@ -8,9 +11,11 @@ from fastapi.testclient import TestClient
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 from gateway.core.auth import create_token_verifier
 from gateway.core.config import Environment, Settings
-from gateway.main import create_app
 
-from tests.helpers import available_database
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from fastapi import FastAPI
 
 
 def _base64url(value: bytes) -> str:
@@ -47,7 +52,9 @@ def _signed_token(*, issuer: str, audience: str) -> tuple[str, dict[str, list[di
     return token, jwks
 
 
-def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> None:
+def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
     token, jwks = _signed_token(issuer="http://localhost:3000", audience="http://localhost:3000")
 
     async def jwks_handler(_request: httpx2.Request) -> httpx2.Response:
@@ -60,7 +67,7 @@ def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> Non
         algorithm="EdDSA",
         http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(jwks_handler)),
     )
-    app = create_app(
+    app = create_test_app(
         Settings(
             auth_issuer="http://localhost:3000",
             auth_jwks_url="http://auth.test/api/auth/jwks",
@@ -69,7 +76,6 @@ def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> Non
             app_environment=Environment.TEST,
         ),
         token_verifier=verifier,
-        database=available_database,
     )
 
     with TestClient(app) as client:
@@ -83,11 +89,10 @@ def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> Non
     }
 
 
-def test_authenticated_gateway_route_rejects_missing_bearer_token() -> None:
-    app = create_app(
-        Settings(app_environment=Environment.TEST),
-        database=available_database,
-    )
+def test_authenticated_gateway_route_rejects_missing_bearer_token(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app()
 
     with TestClient(app) as client:
         response = client.get("/api/v1/auth/me")
@@ -97,11 +102,8 @@ def test_authenticated_gateway_route_rejects_missing_bearer_token() -> None:
     assert response.headers["content-type"].startswith("application/problem+json")
 
 
-def test_mcp_route_rejects_missing_bearer_token() -> None:
-    app = create_app(
-        Settings(app_environment=Environment.TEST),
-        database=available_database,
-    )
+def test_mcp_route_rejects_missing_bearer_token(create_test_app: Callable[..., FastAPI]) -> None:
+    app = create_test_app()
 
     with TestClient(app) as client:
         response = client.get("/mcp")
@@ -110,7 +112,9 @@ def test_mcp_route_rejects_missing_bearer_token() -> None:
     assert response.headers["www-authenticate"] == "Bearer"
 
 
-def test_mcp_route_accepts_oauth_jwt_from_the_shared_jwks() -> None:
+def test_mcp_route_accepts_oauth_jwt_from_the_shared_jwks(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
     token, jwks = _signed_token(
         issuer="http://localhost:3000/api/auth",
         audience="http://localhost:8000",
@@ -126,7 +130,7 @@ def test_mcp_route_accepts_oauth_jwt_from_the_shared_jwks() -> None:
         algorithm="EdDSA",
         http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(jwks_handler)),
     )
-    app = create_app(
+    app = create_test_app(
         Settings(
             auth_issuer="http://localhost:3000",
             auth_jwks_url="http://auth.test/api/auth/jwks",
@@ -136,7 +140,6 @@ def test_mcp_route_accepts_oauth_jwt_from_the_shared_jwks() -> None:
             app_environment=Environment.TEST,
         ),
         token_verifier=verifier,
-        database=available_database,
     )
 
     with TestClient(app) as client:
@@ -145,7 +148,9 @@ def test_mcp_route_accepts_oauth_jwt_from_the_shared_jwks() -> None:
     assert response.status_code != 401
 
 
-def test_mcp_route_accepts_shared_jwt_when_doubly_gated_outside_test_env() -> None:
+def test_mcp_route_accepts_shared_jwt_when_doubly_gated_outside_test_env(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
     """Regression test for the double-gate case issue #32 said was never
     exercised: in a non-TEST environment /mcp is checked twice — once by
     MCPAuthenticationMiddleware at the edge, once by fastmcp's own
@@ -165,7 +170,7 @@ def test_mcp_route_accepts_shared_jwt_when_doubly_gated_outside_test_env() -> No
         algorithm="EdDSA",
         http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(jwks_handler)),
     )
-    app = create_app(
+    app = create_test_app(
         Settings(
             auth_issuer="http://localhost:3000",
             auth_jwks_url="http://auth.test/api/auth/jwks",
@@ -174,7 +179,6 @@ def test_mcp_route_accepts_shared_jwt_when_doubly_gated_outside_test_env() -> No
             app_environment=Environment.PRODUCTION,
         ),
         token_verifier=verifier,
-        database=available_database,
     )
 
     with TestClient(app) as client:

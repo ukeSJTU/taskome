@@ -1,6 +1,4 @@
-// @vitest-environment node
-
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const getToken = vi.fn();
 
@@ -18,11 +16,6 @@ const {
 } = await import("@taskome/api-client");
 
 describe("gateway API client", () => {
-  beforeEach(() => {
-    getToken.mockReset();
-    vi.unstubAllGlobals();
-  });
-
   it("attaches a short-lived Better Auth JWT to server-side gateway calls", async () => {
     getToken.mockResolvedValueOnce({ token: "session-jwt" });
     const fetchMock = vi.fn().mockResolvedValueOnce(

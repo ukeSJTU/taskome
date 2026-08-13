@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import sys
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 from alembic.util.exc import CommandError
-from gateway.core.config import Environment, Settings
-from gateway.db.base import GATEWAY_SCHEMA
-from gateway.models import metadata
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+from gateway.core.config import Settings
 
 GATEWAY_ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,17 +20,6 @@ def config(database_url: str) -> Config:
 
 def migrate(database_url: str) -> None:
     command.upgrade(config(database_url), "head")
-
-
-async def push(database_url: str) -> None:
-    engine = create_async_engine(database_url)
-    try:
-        async with engine.begin() as connection:
-            await connection.execute(text(f"DROP SCHEMA IF EXISTS {GATEWAY_SCHEMA} CASCADE"))
-            await connection.execute(text(f"CREATE SCHEMA {GATEWAY_SCHEMA}"))
-            await connection.run_sync(metadata.create_all)
-    finally:
-        await engine.dispose()
 
 
 def revision() -> bool:
@@ -58,14 +42,9 @@ def revision() -> bool:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Gateway database commands")
-    parser.add_argument("operation", choices=("push", "revision", "migrate"))
+    parser.add_argument("operation", choices=("revision", "migrate"))
     args = parser.parse_args()
     settings = Settings()
-    if args.operation == "push":
-        if settings.app_environment is not Environment.DEVELOPMENT:
-            parser.error("push is available only in the development environment")
-        asyncio.run(push(settings.database_url.get_secret_value()))
-        return
     if args.operation == "revision":
         revision()
         return

@@ -29,7 +29,7 @@ Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as 
 Each AI owns one task at a time.
 
 - **Worktrees:** Before changing repository files, use the `using-git-worktrees` skill to select the direct-edit exception or prepare an isolated worktree.
-- **Tests:** When designing or writing tests, use the `tdd` skill so tests exercise behavior through agreed public seams.
+- **Tests:** When designing or writing tests, use the `tdd` skill so tests exercise behavior through agreed public seams. See `docs/agents/testing.md` for this repo's seam definitions, directory conventions, and fixture strategy for `apps/web` and `apps/gateway`.
 - **Review:** Before opening a feature PR, use the `code-review` skill to review the diff against project standards and its specification.
 - **Conflicts:** When an in-progress merge or rebase has conflicts, use the `resolving-merge-conflicts` skill to resolve them by intent.
 - **Commits:** Write Conventional Commits messages (`type(scope?): subject`); the `commit-msg` hook enforces them with commitlint.

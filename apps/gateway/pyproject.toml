@@ -33,6 +33,7 @@ entrypoint = "gateway.main:app"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["--cov=gateway", "--cov-report=term-missing", "--strict-markers"]
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["src/gateway"]

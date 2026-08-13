@@ -70,7 +70,7 @@ def test_standard_otel_names_are_loaded_from_dotenv(tmp_path: Path) -> None:
 
 
 def test_checked_in_env_example_matches_gateway_settings() -> None:
-    env_example = Path(__file__).parents[1] / ".env.example"
+    env_example = Path(__file__).parents[3] / ".env.example"
 
     settings = Settings(_env_file=env_example)
     uncommented_keys = {

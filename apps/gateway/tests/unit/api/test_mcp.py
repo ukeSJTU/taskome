@@ -10,15 +10,17 @@ from fastmcp.utilities.asgi_transport import run_asgi_lifespan
 from fastmcp.utilities.tests import ASGIServer
 from gateway.api.mcp import create_mcp_server
 from gateway.core.config import Environment, Settings
-from gateway.main import create_app
 from gateway.services.input_files import DownloadUrl, InputFileService, UploadUrl
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from fastapi import FastAPI
     from fastmcp.tools.base import Tool
     from starlette.types import ASGIApp, Receive, Scope, Send
 
 
-def test_mcp_endpoint_accepts_protocol_clients() -> None:
+def test_mcp_endpoint_accepts_protocol_clients(create_test_app: Callable[..., FastAPI]) -> None:
     class LifespanStateApp:
         def __init__(self, app: ASGIApp) -> None:
             self.app = app
@@ -29,7 +31,7 @@ def test_mcp_endpoint_accepts_protocol_clients() -> None:
             await self.app(scope, receive, send)
 
     async def list_tools() -> list[Tool]:
-        app = create_app(
+        app = create_test_app(
             Settings(app_environment=Environment.TEST),
             token_verifier=StaticTokenVerifier(
                 {

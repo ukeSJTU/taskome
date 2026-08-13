@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from fastmcp.server.auth import TokenVerifier
     from opentelemetry.sdk._logs.export import LogRecordExporter
     from opentelemetry.sdk.trace.export import SpanExporter
+    from throttled.asyncio.store import RedisStore
 
 
 def create_app(  # noqa: PLR0913
@@ -46,6 +47,7 @@ def create_app(  # noqa: PLR0913
     log_exporter: LogRecordExporter | None = None,
     token_verifier: TokenVerifier | None = None,
     rate_limit_redis: Redis | None = None,
+    rate_limit_store: RedisStore | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
     openapi_url = "/openapi.json" if app_settings.expose_docs else None
@@ -61,7 +63,9 @@ def create_app(  # noqa: PLR0913
     app_rate_limit_redis = rate_limit_redis or Redis.from_url(
         app_settings.rate_limit_redis_url.get_secret_value()
     )
-    rate_limit_store = create_rate_limit_store(app_settings.rate_limit_redis_url.get_secret_value())
+    app_rate_limit_store = rate_limit_store or create_rate_limit_store(
+        app_settings.rate_limit_redis_url.get_secret_value()
+    )
     verifier = token_verifier or create_token_verifier(app_settings)
     input_file_service = InputFileService(
         repository=InputFileRepository(app_database),
@@ -91,7 +95,7 @@ def create_app(  # noqa: PLR0913
     application.state.settings = app_settings
     application.state.database = app_database
     application.state.rate_limit_redis = app_rate_limit_redis
-    application.state.rate_limit_store = rate_limit_store
+    application.state.rate_limit_store = app_rate_limit_store
     application.state.input_file_service = input_file_service
     application.state.token_verifier = verifier
     application.state.mcp = mcp_server
