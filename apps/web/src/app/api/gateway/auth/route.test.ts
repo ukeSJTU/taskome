@@ -9,9 +9,9 @@ vi.mock("@taskome/api-client", () => ({
   GatewayHttpError: class GatewayHttpError extends Error {
     status: number;
 
-    constructor(status: number) {
+    constructor(response: Response, _problem: unknown) {
       super();
-      this.status = status;
+      this.status = response.status;
     }
   },
   getCurrentIdentity,
@@ -53,7 +53,16 @@ describe("GET /api/gateway/auth", () => {
 
   it("maps a gateway 401 to the BFF authentication contract", async () => {
     const GatewayHttpError = (await import("@taskome/api-client")).GatewayHttpError;
-    getCurrentIdentity.mockRejectedValueOnce(new GatewayHttpError(401));
+    getCurrentIdentity.mockRejectedValueOnce(
+      new GatewayHttpError(new Response(null, { status: 401 }), {
+        detail: "Authentication is required.",
+        instance: "/api/auth/me",
+        request_id: "test-request-id",
+        status: 401,
+        title: "Unauthorized",
+        type: "about:blank",
+      }),
+    );
 
     const response = await GET();
 

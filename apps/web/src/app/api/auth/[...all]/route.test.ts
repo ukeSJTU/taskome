@@ -238,12 +238,11 @@ describe("/api/auth", () => {
       twoFactorMethods: ["totp"],
       twoFactorRedirect: true,
     });
-    const setCookie = signInResponse.headers.get("set-cookie");
-    expect(setCookie).toContain("better-auth.two_factor");
-    const challengeCookie = setCookie
-      ?.split(",")
-      .map((cookie) => cookie.trim().split(";", 1)[0])
-      .find((cookie) => cookie.startsWith("better-auth.two_factor="));
+    const challengeCookie = signInResponse.headers
+      .getSetCookie()
+      .find((cookie) => cookie.startsWith("better-auth.two_factor="))
+      ?.split(";", 1)[0];
+    expect(challengeCookie).toBeDefined();
 
     const verifySignInResponse = await POST(
       new Request(`${baseURL}/api/auth/two-factor/verify-backup-code`, {
