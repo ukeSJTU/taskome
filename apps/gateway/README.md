@@ -77,6 +77,11 @@ Web and Gateway authenticate that narrow endpoint with the same dedicated
 `BETTER_AUTH_SECRET`.
 Gateway owns only the `gateway` schema; Web/Auth's Drizzle-managed tables remain in
 `public`.
+
+At the production edge, Caddy sends only `/v1`, `/mcp`, and
+`/.well-known/oauth-protected-resource/mcp` to Gateway. Development docs, health,
+auth, and `/internal` operations remain reachable only inside the deployment or
+through the explicit loopback ports used by the local Compose rehearsal.
 OpenTelemetry keeps its standard `OTEL_*` names; setting
 `OTEL_EXPORTER_OTLP_ENDPOINT` enables OTLP/HTTP traces and logs. See
 `.env.example` for the local template.

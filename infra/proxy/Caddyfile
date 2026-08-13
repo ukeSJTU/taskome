@@ -1,0 +1,17 @@
+{$WEB_ADDRESS:https://example.com} {
+	reverse_proxy web:3000
+}
+
+{$DOCS_ADDRESS:https://docs.example.com} {
+	reverse_proxy docs:3001
+}
+
+{$API_ADDRESS:https://api.example.com} {
+	@gateway path /v1 /v1/* /mcp /mcp/* /.well-known/oauth-protected-resource/mcp
+
+	handle @gateway {
+		reverse_proxy gateway:8000
+	}
+
+	respond 404
+}

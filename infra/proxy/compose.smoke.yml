@@ -1,0 +1,38 @@
+name: taskome-proxy-smoke
+
+services:
+  proxy:
+    image: caddy:2.10.2-alpine
+    environment:
+      WEB_ADDRESS: http://example.test
+      DOCS_ADDRESS: http://docs.example.test
+      API_ADDRESS: http://api.example.test
+    ports:
+      - "127.0.0.1:${CADDY_SMOKE_PORT}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /data
+      - /config
+    depends_on:
+      - web
+      - docs
+      - gateway
+
+  web:
+    image: caddy:2.10.2-alpine
+    command: ["caddy", "respond", "--listen", ":3000", "--body", "web"]
+
+  docs:
+    image: caddy:2.10.2-alpine
+    command: ["caddy", "respond", "--listen", ":3001", "--body", "docs"]
+
+  gateway:
+    image: caddy:2.10.2-alpine
+    command: ["caddy", "respond", "--listen", ":8000", "--body", "gateway"]

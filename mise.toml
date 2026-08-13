@@ -121,6 +121,18 @@ run = "docker compose -f compose.yml -f compose.prod.yml down"
 description = "Tail logs from the production-shaped stack"
 run = "docker compose -f compose.yml -f compose.prod.yml logs -f"
 
+[tasks."proxy:smoke"]
+description = "Validate the public Host and path routing matrix through Caddy"
+run = "bash infra/proxy/smoke.sh"
+
+[tasks."deployment:check"]
+description = "Validate production Compose and the Caddy public routing boundary"
+run = [
+  "bash infra/proxy/check-compose.sh",
+  "docker run --rm -v {{config_root}}/infra/proxy/Caddyfile:/etc/caddy/Caddyfile:ro caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile",
+  "mise run proxy:smoke",
+]
+
 [tasks."worktree:create"]
 description = "Create a feature worktree from origin/main"
 usage = '''
