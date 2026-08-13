@@ -14,6 +14,10 @@ Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as 
 - **Parameters**: each Task's MCP/REST parameters are a curated subset of the underlying tool's real config, not a full passthrough — designed per tool, including vendored-code changes where needed to expose what's worth exposing. No CLI is offered.
 - **Job chaining** (piping one Job's output into the next Job's input): out of scope for now, on the roadmap — design it when it's picked up, don't build around its absence.
 
+### Public website
+
+`apps/web` also serves as XDenovo's public corporate website (the `(public)` route group), independent of the authenticated tool platform above. XDenovo operates in the AI4Bio field (AI-native biotech / de novo protein design); the website communicates that positioning outward and is not part of the internal tool platform's product surface. `references/old-website` (the previous site) is kept as content/structure reference only, never reused as code. See ADR-0018 for the rebuild approach.
+
 ## Architecture
 
 - **Components**: `apps/web` (Next.js) is the only user-facing deployable — there is no separate frontend/backend split. Its own API routes are the BFF: they aggregate calls to `apps/gateway` (FastAPI + MCP) into responses shaped for the frontend, rather than exposing gateway's endpoints raw.

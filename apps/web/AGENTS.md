@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Gateway-backed data
+
+Before changing reads, mutations, polling, client caching, or invalidation for gateway-owned data, read `../../docs/adr/0012-web-bff-gateway-data-ownership.md` and follow its RSC, Server Action, and BFF boundary.
