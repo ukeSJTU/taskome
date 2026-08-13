@@ -119,12 +119,26 @@ def test_mcp_accepts_oauth_token_and_rejects_session_token_through_protocol(
         ):
             return await client.list_tools()
 
+    async def list_tools_with_personal_api_key() -> list[Tool]:
+        app = create_test_app(
+            Settings(app_environment=Environment.TEST),
+            mcp_token_verifier=verifier,
+        )
+        server = ASGIServer(url="http://127.0.0.1/mcp", app=app, transport_type="http")
+        async with (
+            run_asgi_lifespan(LifespanStateApp(app)),
+            server.client(headers={"X-API-Key": "taskome_direct-secret"}) as client,
+        ):
+            return await client.list_tools()
+
     assert [tool.name for tool in asyncio.run(list_tools(oauth_token))] == [
         "prepare_input_file_upload",
         "prepare_input_file_download",
     ]
     with pytest.raises(MCPError):
         asyncio.run(list_tools(session_token))
+    with pytest.raises(MCPError):
+        asyncio.run(list_tools_with_personal_api_key())
 
     events = [
         json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")

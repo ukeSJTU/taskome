@@ -6,13 +6,16 @@ from typing import TYPE_CHECKING, Annotated
 
 import structlog
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from fastmcp.server.auth.auth import AccessToken, TokenVerifier
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 from fastmcp.server.dependencies import get_access_token
 
 if TYPE_CHECKING:
     from gateway.core.config import Settings
+
+from gateway.core.errors import AppError
+from gateway.core.personal_api_keys import PersonalApiKeyVerificationUnavailableError
 
 
 class CredentialKind(StrEnum):
@@ -55,6 +58,7 @@ class MCPPrincipalVerifier(TokenVerifier):
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
+api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def create_rest_token_verifier(settings: Settings) -> JWTVerifier:
@@ -107,7 +111,37 @@ def _bind_principal(principal: Principal) -> None:
 async def current_principal(
     request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    personal_api_key: Annotated[str | None, Depends(api_key_scheme)],
 ) -> Principal:
+    if request.headers.get("authorization") is not None and personal_api_key is not None:
+        raise AppError(
+            error_type="ambiguous-credentials",
+            title="Ambiguous Credentials",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide either Authorization or X-API-Key, not both.",
+        )
+    if personal_api_key is not None:
+        try:
+            verified_key = await request.app.state.personal_api_key_verifier.verify(
+                personal_api_key
+            )
+        except PersonalApiKeyVerificationUnavailableError as error:
+            raise AppError(
+                error_type="personal-api-key-verifier-unavailable",
+                title="Personal API Key Verifier Unavailable",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Personal API Key verification is temporarily unavailable.",
+            ) from error
+        if verified_key is None:
+            raise _unauthenticated()
+        principal = Principal(
+            user_id=verified_key.user_id,
+            credential_kind=CredentialKind.PERSONAL_API_KEY,
+            credential_id=verified_key.key_id,
+        )
+        request.state.principal = principal
+        _bind_principal(principal)
+        return principal
     if credentials is None:
         raise _unauthenticated()
     verifier = request.app.state.rest_token_verifier

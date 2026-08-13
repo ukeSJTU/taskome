@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from fastapi.testclient import TestClient
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
+from gateway.core.personal_api_keys import VerifiedPersonalApiKey
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -97,6 +98,36 @@ def test_authenticated_access_log_carries_principal_without_raw_credential(
     assert access_event["credential_kind"] == "session_jwt"
     assert access_event["credential_id"] is None
     assert raw_token not in json.dumps(access_event)
+
+
+def test_personal_api_key_access_log_carries_only_non_secret_identity(
+    create_test_app: Callable[..., FastAPI],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    raw_key = "taskome_log-secret-canary"
+
+    class Verifier:
+        async def verify(self, key: str) -> VerifiedPersonalApiKey | None:
+            assert key == raw_key
+            return VerifiedPersonalApiKey(user_id="user-123", key_id="key-123")
+
+        async def aclose(self) -> None:
+            pass
+
+    app = create_test_app(personal_api_key_verifier=Verifier())
+
+    with TestClient(app) as client:
+        response = client.get("/v1/me", headers={"X-API-Key": raw_key})
+
+    events = [
+        json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")
+    ]
+    access_event = next(event for event in events if event["event"] == "http_request")
+    assert response.status_code == 200
+    assert access_event["user_id"] == "user-123"
+    assert access_event["credential_kind"] == "personal_api_key"
+    assert access_event["credential_id"] == "key-123"
+    assert raw_key not in json.dumps(events)
 
 
 def test_production_server_logs_are_json(

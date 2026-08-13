@@ -44,9 +44,9 @@ def test_rest_openapi_declares_stable_operations_and_problem_responses(
     ]
 
     for responses, statuses in (
-        (auth_responses, ("401", "default")),
-        (create_responses, ("401", "422", "default")),
-        (download_responses, ("401", "404", "422", "default")),
+        (auth_responses, ("400", "401", "503", "default")),
+        (create_responses, ("400", "401", "422", "503", "default")),
+        (download_responses, ("400", "401", "404", "422", "503", "default")),
     ):
         for status_code in statuses:
             content = responses[status_code]["content"]
@@ -58,3 +58,11 @@ def test_rest_openapi_declares_stable_operations_and_problem_responses(
         assert responses["default"]["description"] == "Problem response"
 
     assert "ProblemDetails" in openapi["components"]["schemas"]
+    security_schemes = openapi["components"]["securitySchemes"]
+    assert security_schemes["HTTPBearer"]["scheme"] == "bearer"
+    assert security_schemes["APIKeyHeader"]["in"] == "header"
+    assert security_schemes["APIKeyHeader"]["name"] == "X-API-Key"
+    assert openapi["paths"]["/v1/me"]["get"]["security"] == [
+        {"HTTPBearer": []},
+        {"APIKeyHeader": []},
+    ]

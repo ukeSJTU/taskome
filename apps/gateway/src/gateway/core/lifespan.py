@@ -34,6 +34,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     ):
         logger.error("database_startup_failed")
         await rate_limit_redis.aclose()
+        await app.state.personal_api_key_verifier.aclose()
         await database.dispose()
         await app.state.observability.shutdown()
         raise RuntimeError("database startup validation failed")  # noqa: TRY003, EM101
@@ -43,6 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except RedisError, TimeoutError:
         logger.exception("redis_startup_failed")
         await rate_limit_redis.aclose()
+        await app.state.personal_api_key_verifier.aclose()
         await database.dispose()
         await app.state.observability.shutdown()
         raise RuntimeError("Redis startup validation failed") from None  # noqa: TRY003, EM101
@@ -58,5 +60,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.ready = False
         logger.info("application_stopped")
         await rate_limit_redis.aclose()
+        await app.state.personal_api_key_verifier.aclose()
         await database.dispose()
         await app.state.observability.shutdown()

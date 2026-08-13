@@ -22,8 +22,9 @@ describe("server logger", () => {
     createLogger(output).info(
       {
         authorization: "Bearer secret-authorization",
+        api_key: "secret-api-key",
         password: "secret-password",
-        nested: { token: "secret-token" },
+        nested: { signature: "secret-signature", token: "secret-token" },
       },
       "test event",
     );
@@ -32,8 +33,9 @@ describe("server logger", () => {
     expect(event).toMatchObject({
       msg: "test event",
       authorization: "[Redacted]",
+      api_key: "[Redacted]",
       password: "[Redacted]",
-      nested: { token: "[Redacted]" },
+      nested: { signature: "[Redacted]", token: "[Redacted]" },
     });
     expect(line).not.toContain("secret-");
   });

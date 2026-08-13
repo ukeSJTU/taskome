@@ -5,6 +5,10 @@ import os
 from pathlib import Path
 
 os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://openapi:openapi@localhost:5432/openapi")
+os.environ.setdefault(
+    "WEB_GATEWAY_HMAC_SECRET",
+    "openapi-export-secret-not-for-production",
+)
 
 from gateway.main import app
 

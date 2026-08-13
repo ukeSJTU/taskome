@@ -55,6 +55,10 @@ defaults to the internal endpoint. See `.env.example` for the full storage and
 authentication settings. Gateway derives the session issuer and OAuth issuer from
 `BETTER_AUTH_URL`, its internal JWKS URL from `WEB_INTERNAL_URL`, and the REST and
 MCP resources from `GATEWAY_PUBLIC_URL`.
+Personal API Key verification calls Web on its internal origin for every request.
+Web and Gateway authenticate that narrow endpoint with the same dedicated
+`WEB_GATEWAY_HMAC_SECRET` (at least 32 characters), which must not be reused as
+`BETTER_AUTH_SECRET`.
 Gateway owns only the `gateway` schema; Web/Auth's Drizzle-managed tables remain in
 `public`.
 OpenTelemetry keeps its standard `OTEL_*` names; setting
