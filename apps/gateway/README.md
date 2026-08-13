@@ -15,13 +15,14 @@ uv sync
 mise run //apps/gateway:dev
 ```
 
-The gateway listens on `http://127.0.0.1:8000`. In development, OpenAPI is at
-`/docs`; the MCP Streamable HTTP transport is mounted at `/mcp`.
+The gateway listens on `http://127.0.0.1:8000`. In development, the Scalar API
+reference is at `/scalar` and its OpenAPI schema is at `/openapi.json`; the MCP
+Streamable HTTP transport is mounted at `/mcp`.
 
 For a production-style process, use `mise run //apps/gateway:start`. Production
-mode emits JSON logs, enables HSTS headers, and disables API docs unless
+mode emits JSON logs, enables HSTS headers, and disables Scalar and OpenAPI unless
 `DOCS_ENABLED=true` is set explicitly. TLS termination is expected at the reverse
-proxy.
+proxy. Swagger UI and ReDoc are disabled in every environment.
 
 ## Interfaces
 

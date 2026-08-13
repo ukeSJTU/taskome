@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastmcp.utilities.lifespan import combine_lifespans
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from scalar_fastapi import get_scalar_api_reference
 
 from gateway.api.health import router as health_router
 from gateway.api.mcp import create_mcp_server
@@ -29,6 +30,7 @@ from gateway.services.input_files import InputFileService
 from gateway.services.storage import SeaweedFSStorage
 
 if TYPE_CHECKING:
+    from fastapi.responses import HTMLResponse
     from fastmcp.server.auth import TokenVerifier
     from opentelemetry.sdk._logs.export import LogRecordExporter
     from opentelemetry.sdk.trace.export import SpanExporter
@@ -43,7 +45,6 @@ def create_app(
     token_verifier: TokenVerifier | None = None,
 ) -> FastAPI:
     app_settings = settings or Settings()
-    docs_url = "/docs" if app_settings.expose_docs else None
     openapi_url = "/openapi.json" if app_settings.expose_docs else None
     observability = create_observability(
         app_settings,
@@ -75,8 +76,8 @@ def create_app(
     application = FastAPI(
         title=app_settings.app_name,
         version=app_settings.app_version,
-        docs_url=docs_url,
-        redoc_url="/redoc" if app_settings.expose_docs else None,
+        docs_url=None,
+        redoc_url=None,
         openapi_url=openapi_url,
         lifespan=combine_lifespans(lifespan, mcp_app.lifespan),
     )
@@ -91,6 +92,8 @@ def create_app(
     application.include_router(api_v1_router)
     application.include_router(auth_api_router)
     application.mount("/mcp", mcp_app)
+    if app_settings.expose_docs:
+        _add_scalar_api_reference(application)
     application.add_middleware(AccessLoggingMiddleware)
     application.add_middleware(
         MCPAuthenticationMiddleware,
@@ -107,6 +110,16 @@ def create_app(
     )
     _configure_openapi(application)
     return application
+
+
+def _add_scalar_api_reference(application: FastAPI) -> None:
+    @application.get("/scalar", include_in_schema=False)
+    async def scalar_api_reference() -> HTMLResponse:
+        return get_scalar_api_reference(
+            openapi_url=application.openapi_url,
+            title=f"{application.title} API Reference",
+            telemetry=False,
+        )
 
 
 def _configure_openapi(application: FastAPI) -> None:

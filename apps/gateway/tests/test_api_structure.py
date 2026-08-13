@@ -49,4 +49,6 @@ def test_rest_openapi_declares_stable_operations_and_problem_responses() -> None
             }
             assert "application/json" not in content
 
+        assert responses["default"]["description"] == "Problem response"
+
     assert "ProblemDetails" in openapi["components"]["schemas"]

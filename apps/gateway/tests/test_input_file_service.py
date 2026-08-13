@@ -59,7 +59,7 @@ def input_file_service() -> Iterator[InputFileService]:
                     command=(
                         "server -dir=/data -s3 "
                         "-s3.config=/etc/seaweedfs/s3-config.json "
-                        "-s3.allowedOrigins=http://localhost:3001"
+                        "-s3.allowedOrigins=http://localhost:3000"
                     ),
                 )
                 .with_exposed_ports(8333)
@@ -105,13 +105,13 @@ def test_input_file_upload_and_download_use_seaweedfs(
         uploaded.upload_url,
         method="OPTIONS",
         headers={
-            "Origin": "http://localhost:3001",
+            "Origin": "http://localhost:3000",
             "Access-Control-Request-Method": "PUT",
         },
     )
     with urllib.request.urlopen(preflight) as response:  # noqa: S310
         assert response.status == 200
-        assert response.headers["Access-Control-Allow-Origin"] == "http://localhost:3001"
+        assert response.headers["Access-Control-Allow-Origin"] == "http://localhost:3000"
 
     missing_condition = urllib.request.Request(  # noqa: S310
         uploaded.upload_url,

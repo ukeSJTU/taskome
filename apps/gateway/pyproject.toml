@@ -17,6 +17,7 @@ dependencies = [
   "opentelemetry-sdk>=1.44.0",
   "psycopg[binary]>=3,<4",
   "pyjwt[crypto]>=2.10,<3",
+  "scalar-fastapi>=1.8,<2",
   "sqlalchemy[asyncio]>=2.0,<2.1",
   "structlog>=25.5.0",
 ]

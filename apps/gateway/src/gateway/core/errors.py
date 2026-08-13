@@ -49,7 +49,7 @@ def problem_responses(
     }
     if include_default:
         responses["default"] = {
-            "description": "Unexpected problem response",
+            "description": "Problem response",
             "content": {
                 "application/problem+json": {
                     "schema": {"$ref": "#/components/schemas/ProblemDetails"}

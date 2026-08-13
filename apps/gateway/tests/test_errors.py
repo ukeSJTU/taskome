@@ -13,6 +13,38 @@ if TYPE_CHECKING:
     import pytest
 
 
+def test_docs_enabled_exposes_scalar_instead_of_fastapi_documentation() -> None:
+    app = create_app(Settings(environment=Environment.TEST, docs_enabled=True))
+
+    with TestClient(app) as client:
+        scalar = client.get("/scalar")
+        openapi = client.get("/openapi.json")
+        swagger = client.get("/docs")
+        redoc = client.get("/redoc")
+
+    assert scalar.status_code == 200
+    assert scalar.headers["Content-Type"].startswith("text/html")
+    assert "/openapi.json" in scalar.text
+    assert openapi.status_code == 200
+    assert swagger.status_code == 404
+    assert redoc.status_code == 404
+
+
+def test_docs_disabled_hides_scalar_and_openapi() -> None:
+    app = create_app(Settings(environment=Environment.TEST, docs_enabled=False))
+
+    with TestClient(app) as client:
+        scalar = client.get("/scalar")
+        openapi = client.get("/openapi.json")
+        swagger = client.get("/docs")
+        redoc = client.get("/redoc")
+
+    assert scalar.status_code == 404
+    assert openapi.status_code == 404
+    assert swagger.status_code == 404
+    assert redoc.status_code == 404
+
+
 def test_not_found_uses_problem_details() -> None:
     app = create_app(Settings(environment=Environment.TEST))
 

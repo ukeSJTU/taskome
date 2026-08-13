@@ -245,7 +245,7 @@
                 }
               }
             },
-            "description": "Unexpected problem response"
+            "description": "Problem response"
           }
         },
         "security": [
@@ -347,7 +347,7 @@
                 }
               }
             },
-            "description": "Unexpected problem response"
+            "description": "Problem response"
           }
         },
         "security": [
@@ -416,7 +416,7 @@
                 }
               }
             },
-            "description": "Unexpected problem response"
+            "description": "Problem response"
           }
         },
         "security": [
@@ -492,7 +492,7 @@
                 }
               }
             },
-            "description": "Unexpected problem response"
+            "description": "Problem response"
           }
         },
         "security": [
