@@ -18,7 +18,7 @@ from testcontainers.postgres import PostgresContainer
 def test_http_requests_emit_server_spans() -> None:
     exporter = InMemorySpanExporter()
     app = create_app(
-        Settings(environment=Environment.TEST),
+        Settings(app_environment=Environment.TEST),
         span_exporter=exporter,
     )
 
@@ -35,7 +35,7 @@ def test_http_requests_emit_server_spans() -> None:
 def test_access_logs_are_exported_through_otel() -> None:
     exporter = InMemoryLogRecordExporter()
     app = create_app(
-        Settings(environment=Environment.TEST),
+        Settings(app_environment=Environment.TEST),
         log_exporter=exporter,
     )
 

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 def test_docs_enabled_exposes_scalar_instead_of_fastapi_documentation() -> None:
-    app = create_app(Settings(environment=Environment.TEST, docs_enabled=True))
+    app = create_app(Settings(app_environment=Environment.TEST, docs_enabled=True))
 
     with TestClient(app) as client:
         scalar = client.get("/scalar")
@@ -31,7 +31,7 @@ def test_docs_enabled_exposes_scalar_instead_of_fastapi_documentation() -> None:
 
 
 def test_docs_disabled_hides_scalar_and_openapi() -> None:
-    app = create_app(Settings(environment=Environment.TEST, docs_enabled=False))
+    app = create_app(Settings(app_environment=Environment.TEST, docs_enabled=False))
 
     with TestClient(app) as client:
         scalar = client.get("/scalar")
@@ -46,7 +46,7 @@ def test_docs_disabled_hides_scalar_and_openapi() -> None:
 
 
 def test_not_found_uses_problem_details() -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     with TestClient(app) as client:
         response = client.get("/does-not-exist")
@@ -65,7 +65,7 @@ def test_not_found_uses_problem_details() -> None:
 
 
 def test_request_validation_uses_problem_details() -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     @app.get("/items/{item_id}")
     def read_item(item_id: Annotated[int, Path(gt=0)]) -> dict[str, int]:
@@ -89,7 +89,7 @@ def test_request_validation_uses_problem_details() -> None:
 
 
 def test_application_errors_use_problem_details() -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     @app.get("/conflict")
     def conflict() -> None:
@@ -111,7 +111,7 @@ def test_application_errors_use_problem_details() -> None:
 
 
 def test_unhandled_errors_hide_internal_details() -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     @app.get("/unexpected")
     def unexpected() -> None:
@@ -134,7 +134,7 @@ def test_unhandled_errors_hide_internal_details() -> None:
 def test_unhandled_errors_are_logged_with_request_context(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     @app.get("/unexpected")
     def unexpected() -> None:
@@ -153,7 +153,7 @@ def test_unhandled_errors_are_logged_with_request_context(
 
 
 def test_http_errors_preserve_protocol_headers() -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     @app.get("/rate-limited")
     def rate_limited() -> None:
@@ -172,7 +172,7 @@ def test_http_errors_preserve_protocol_headers() -> None:
 
 
 def test_nonstandard_http_status_still_uses_problem_details() -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     @app.get("/custom-status")
     def custom_status() -> None:

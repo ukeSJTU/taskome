@@ -45,7 +45,7 @@ first successful upload.
 
 ## Configuration
 
-Application-local settings use `ENVIRONMENT`, `LOG_LEVEL`, and `DOCS_ENABLED`.
+Application-local settings use `APP_ENVIRONMENT`, `LOG_LEVEL`, and `DOCS_ENABLED`.
 `DATABASE_URL` is required and uses the explicit `postgresql+psycopg` dialect.
 SeaweedFS uses `SEAWEEDFS_INTERNAL_ENDPOINT` for gateway calls and
 `SEAWEEDFS_PUBLIC_ENDPOINT` for caller-facing presigned URLs; the public endpoint

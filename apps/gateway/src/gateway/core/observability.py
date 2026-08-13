@@ -61,7 +61,7 @@ def create_observability(
         {
             "service.name": settings.otel_service_name or settings.app_name,
             "service.version": settings.app_version,
-            "deployment.environment.name": settings.environment,
+            "deployment.environment.name": settings.app_environment,
         },
     )
     tracer_provider = TracerProvider(resource=resource)

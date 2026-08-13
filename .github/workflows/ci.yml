@@ -96,5 +96,5 @@ jobs:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/taskome
           BETTER_AUTH_SECRET: ci-only-secret-not-for-production-123456789
           BETTER_AUTH_URL: http://localhost:3000
-          CORS_ORIGIN: http://localhost:3000
+          AUTH_TRUSTED_ORIGIN: http://localhost:3000
         run: pnpm run build

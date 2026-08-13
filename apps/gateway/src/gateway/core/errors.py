@@ -166,7 +166,7 @@ def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers.update(
         security_headers(
-            include_hsts=request.app.state.settings.environment is Environment.PRODUCTION,
+            include_hsts=request.app.state.settings.app_environment is Environment.PRODUCTION,
         ),
     )
     return response

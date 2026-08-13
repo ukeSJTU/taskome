@@ -183,7 +183,7 @@ task-kit 是纯 Python，没有 `package.json`/`tsconfig.json`，与 TS 的 tsco
 
 ### 6. CI（`.github/workflows/ci.yml`）—— 不需要新 job，但 `build` job 需要新 app 有可用的 `build` 脚本和必要 env
 
-`build` job 跑的是 `pnpm run build`（即 `pnpm -r build`），一旦 `apps/docs` 成为 workspace 成员且有 `build` 脚本（第 1、2 条），会自动被跑到。当前 `build` job 注入的 env（`DATABASE_URL`/`BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`/`CORS_ORIGIN`）是为 `apps/web` 构建准备的；ADR-0020 说 `apps/docs` 是"static content ... no gateway access"，大概率不需要这些 env 才能 build，但**具体 build 是否需要新增环境变量，现有资料未覆盖**，需要在实际接入时验证（不是本清单能替它下结论的地方）。
+`build` job 跑的是 `pnpm run build`（即 `pnpm -r build`），一旦 `apps/docs` 成为 workspace 成员且有 `build` 脚本（第 1、2 条），会自动被跑到。当前 `build` job 注入的 env（`DATABASE_URL`/`BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`/`AUTH_TRUSTED_ORIGIN`）是为 `apps/web` 构建准备的；ADR-0020 说 `apps/docs` 是"static content ... no gateway access"，大概率不需要这些 env 才能 build，但**具体 build 是否需要新增环境变量，现有资料未覆盖**，需要在实际接入时验证（不是本清单能替它下结论的地方）。
 —— 出处：`.github/workflows/ci.yml`（`build` job）；ADR-0020（"static content with no gateway access"）。
 
 ### 7. `apps/docs/Dockerfile`（新文件）—— 需要新建，照抄 `apps/web/Dockerfile` 的多阶段模式
@@ -215,7 +215,7 @@ ADR-0020 "Consequences"："`docs.taskome.com` needs its own DNS record; Caddy st
 
 ### 12. 鉴权/JWT 接入（ADR-0012 的 web→gateway 模式）—— 不适用
 
-ADR-0020 明确 `apps/docs` 是公开、无鉴权的静态内容（"Content is public (no auth)"），不经过 gateway，不需要走 ADR-0012 描述的 `GATEWAY_URL`/JWT/`packages/api-client` 那一套 BFF 鉴权链路——这正是它被允许作为 `apps/web` 之外第二个用户可见部署单元的前提（ADR-0020 第一段对 AGENTS.md "apps/web is the only user-facing deployable" 原则的例外说明）。
+ADR-0020 明确 `apps/docs` 是公开、无鉴权的静态内容（"Content is public (no auth)"），不经过 gateway，不需要走 ADR-0012 描述的 `GATEWAY_INTERNAL_URL`/JWT/`packages/api-client` 那一套 BFF 鉴权链路——这正是它被允许作为 `apps/web` 之外第二个用户可见部署单元的前提（ADR-0020 第一段对 AGENTS.md "apps/web is the only user-facing deployable" 原则的例外说明）。
 —— 出处：ADR-0020；ADR-0012。
 
 ---
@@ -225,6 +225,6 @@ ADR-0020 明确 `apps/docs` 是公开、无鉴权的静态内容（"Content is p
 以下几点在阅读范围内的文件/ADR 中**没有找到明确答案**，如实列出，供后续单独决策，而非本清单杜撰：
 
 1. **`infra/proxy/Caddyfile` 尚不存在**：`infra/proxy/README.md` 明确写着"目标机器、域名、证书方案都还没定"。ADR-0019/0020 定了*规则*（新服务=手写一个 block；`apps/docs` 用子域名），但没有一份可编辑的 Caddyfile 模板可参照，第一个接入的独立部署服务需要从零建这个文件。
-2. **`apps/docs` 的 build 是否需要新的 env var / secrets**：CI `build` job 目前的 env 块是为 `apps/web` 准备的（`DATABASE_URL`/`BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`/`CORS_ORIGIN`）。ADR-0020 说 `apps/docs` 无 gateway 访问、无鉴权，但没有逐条说明它的 build/runtime 是否完全零 env 依赖（如 analytics、`llms.txt` 生成相关配置等）。
+2. **`apps/docs` 的 build 是否需要新的 env var / secrets**：CI `build` job 目前的 env 块是为 `apps/web` 准备的（`DATABASE_URL`/`BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`/`AUTH_TRUSTED_ORIGIN`）。ADR-0020 说 `apps/docs` 无 gateway 访问、无鉴权，但没有逐条说明它的 build/runtime 是否完全零 env 依赖（如 analytics、`llms.txt` 生成相关配置等）。
 3. **`packages/env`（`server.ts`/`web.ts`）是否需要为 `apps/docs` 新增一份 schema**：这个包目前按 app 拆了 `server.ts`/`web.ts` 两份 env 校验文件，但没有任何 ADR 提到新 app 接入时是否要照此模式加一份 `docs.ts`（或确认不需要）。这是"存在先例但没有写成规则"的情况，不代表一定要做，只是没人明确回答过。
 4. **`packages/task-kit` 加入 `uv.workspace.members` 后 `uv.lock` 需要重新生成**、以及**加入 `mise.toml` 的 `config_roots` 后根聚合任务 `depends` 需要手动追加**——这两点是从现有配置文件的字面机制直接推出的操作步骤，ADR-0016 本身没有逐字写出"记得改 depends"/"记得重新 lock"，本文档在正文中已标注为"推论"而非 ADR 原文，仍建议后续把这类操作性细节沉淀进 ADR-0016 或一份新增 app/package 的 runbook，避免每次都靠读代码反推。

@@ -49,7 +49,7 @@ def main() -> None:
     args = parser.parse_args()
     settings = Settings()
     if args.operation == "push":
-        if settings.environment is not Environment.DEVELOPMENT:
+        if settings.app_environment is not Environment.DEVELOPMENT:
             parser.error("push is available only in the development environment")
         asyncio.run(push(settings.database_url.get_secret_value()))
         return

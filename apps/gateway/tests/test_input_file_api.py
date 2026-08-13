@@ -45,7 +45,7 @@ class FakeInputFileService:
 
 
 def test_rest_input_file_endpoints_require_auth_and_delegate() -> None:
-    app = create_app(Settings(environment=Environment.TEST), database=available_database)
+    app = create_app(Settings(app_environment=Environment.TEST), database=available_database)
     service = FakeInputFileService()
     app.state.input_file_service = service
     app.state.token_verifier = StaticTokenVerifier(
@@ -89,7 +89,7 @@ def test_rest_input_file_endpoints_require_auth_and_delegate() -> None:
 
 
 def test_rest_input_file_access_hides_other_owners() -> None:
-    app = create_app(Settings(environment=Environment.TEST), database=available_database)
+    app = create_app(Settings(app_environment=Environment.TEST), database=available_database)
     app.state.input_file_service = FakeInputFileService()
     app.state.token_verifier = StaticTokenVerifier(
         {

@@ -20,7 +20,7 @@ RUN groupadd --gid 1001 gateway \
     && useradd --uid 1001 --gid gateway --no-create-home --shell /usr/sbin/nologin gateway
 WORKDIR /app/apps/gateway
 ENV PATH="/app/.venv/bin:$PATH"
-ENV ENVIRONMENT=production
+ENV APP_ENVIRONMENT=production
 
 COPY --from=builder --chown=gateway:gateway /app/.venv /app/.venv
 COPY --from=builder --chown=gateway:gateway /app/apps/gateway /app/apps/gateway

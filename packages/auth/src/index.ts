@@ -18,7 +18,7 @@ export function createAuth() {
 
       schema: schema,
     }),
-    trustedOrigins: [env.CORS_ORIGIN],
+    trustedOrigins: [env.AUTH_TRUSTED_ORIGIN],
     emailAndPassword: {
       enabled: true,
     },
@@ -28,14 +28,14 @@ export function createAuth() {
       jwt(),
       oauthProvider({
         scopes: ["openid", "profile", "email", "taskome"],
-        validAudiences: [env.GATEWAY_URL],
+        validAudiences: [env.GATEWAY_INTERNAL_URL],
         disableJwtPlugin: false,
         loginPage: "/login",
         consentPage: "/oauth/consent",
         allowDynamicClientRegistration: false,
         allowUnauthenticatedClientRegistration: false,
       }),
-      oauthGatewayAudience(env.GATEWAY_URL),
+      oauthGatewayAudience(env.GATEWAY_INTERNAL_URL),
       twoFactor({ issuer: "taskome" }),
       nextCookies(),
     ],

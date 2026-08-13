@@ -10,7 +10,7 @@
 
 **结论：与 ADR-0003 / ADR-0012 描述的角色基本一致，但发现一处配置漂移风险。**
 
-- `src/index.ts:15-42` 中 `betterAuth()` 配置包含 `jwt()` 插件、`oauthProvider()`（`validAudiences: [env.GATEWAY_URL]`, `disableJwtPlugin: false`）、自定义 `oauthGatewayAudience` 插件、`twoFactor()`、`nextCookies()`。这与 ADR-0003"网关用单一 JWKS 校验器验证 web 会话 JWT 与 MCP 的 OAuth JWT"以及 ADR-0012 consequences 中"`betterAuth()` 配置需要接入 `jwt` 插件"的要求相符，未发现偏离。
+- `src/index.ts:15-42` 中 `betterAuth()` 配置包含 `jwt()` 插件、`oauthProvider()`（`validAudiences: [env.GATEWAY_INTERNAL_URL]`, `disableJwtPlugin: false`）、自定义 `oauthGatewayAudience` 插件、`twoFactor()`、`nextCookies()`。这与 ADR-0003"网关用单一 JWKS 校验器验证 web 会话 JWT 与 MCP 的 OAuth JWT"以及 ADR-0012 consequences 中"`betterAuth()` 配置需要接入 `jwt` 插件"的要求相符，未发现偏离。
 - `src/oauth-audience.ts:1-30` 的职责说明（Better Auth 1.6.x 仅在请求携带 `resource` 参数时才签发 JWT 格式的 OAuth access token）与 ADR-0003 描述的"共享 auth 配置内部提供固定 gateway audience，外部 MCP 客户端无需自行实现 RFC 8707"完全对应，属于按 ADR 精确落地的实现，无 smell。
 
 ### 发现 1：`src/test.ts` 与 `src/index.ts` 的 better-auth 配置手工重复维护，存在漂移风险
@@ -43,7 +43,7 @@
 
 **结论：server/client 分离的结构是对的，但"server-only"边界只靠文件命名约定，没有硬性强制，与仓库里其他同类边界的做法不一致。**
 
-- `src/server.ts:5-18` 用 `@t3-oss/env-core` 的 `createEnv` 校验 `DATABASE_URL`、`BETTER_AUTH_SECRET`（`min(32)`）、`BETTER_AUTH_URL`、`GATEWAY_URL`、`CORS_ORIGIN` 等纯服务端密钥/配置，`emptyStringAsUndefined: true` 且未跳过校验（除非显式 `SKIP_ENV_VALIDATION`），这部分设计合理。
+- `src/server.ts:5-18` 用 `@t3-oss/env-core` 的 `createEnv` 校验 `DATABASE_URL`、`BETTER_AUTH_SECRET`（`min(32)`）、`BETTER_AUTH_URL`、`GATEWAY_INTERNAL_URL`、`AUTH_TRUSTED_ORIGIN` 等纯服务端密钥/配置，`emptyStringAsUndefined: true` 且未跳过校验（除非显式 `SKIP_ENV_VALIDATION`），这部分设计合理。
 - `src/web.ts:3-8` 用 `@t3-oss/env-nextjs` 声明了一个 `client: {}` / `runtimeEnv: {}` 的空壳。
 
 ### 发现 2：`packages/env/src/server.ts` 未导入 `server-only`，与仓库里已确立的"server-only 文件必须显式 import server-only"约定不一致

@@ -37,7 +37,7 @@ def configure_logging(settings: Settings, logger_provider: LoggerProvider) -> No
         structlog.processors.format_exc_info,
     ]
     renderer: structlog.types.Processor
-    if settings.environment is Environment.DEVELOPMENT:
+    if settings.app_environment is Environment.DEVELOPMENT:
         renderer = structlog.dev.ConsoleRenderer(colors=sys.stdout.isatty())
     else:
         renderer = structlog.processors.JSONRenderer()

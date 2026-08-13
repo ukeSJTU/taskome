@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 def test_access_log_is_structured_and_omits_query_values(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     with TestClient(app) as client:
         response = client.get("/does-not-exist?token=secret-value")
@@ -44,7 +44,7 @@ def test_access_log_is_structured_and_omits_query_values(
 def test_access_log_uses_route_template_and_trace_context(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    app = create_app(Settings(environment=Environment.TEST))
+    app = create_app(Settings(app_environment=Environment.TEST))
 
     @app.get("/items/{item_id}")
     def read_item(item_id: int) -> dict[str, int]:

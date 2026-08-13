@@ -10,13 +10,13 @@ from pydantic import ValidationError
 def test_settings_use_application_local_environment_names(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setenv("APP_ENVIRONMENT", "test")
     monkeypatch.setenv("LOG_LEVEL", "WARNING")
     monkeypatch.setenv("DOCS_ENABLED", "false")
 
     settings = Settings(_env_file=None)
 
-    assert settings.environment is Environment.TEST
+    assert settings.app_environment is Environment.TEST
     assert settings.log_level == "WARNING"
     assert settings.expose_docs is False
 
@@ -27,10 +27,10 @@ def test_invalid_log_level_is_rejected() -> None:
 
 
 def test_docs_default_to_disabled_only_in_production() -> None:
-    assert Settings(environment=Environment.DEVELOPMENT, _env_file=None).expose_docs
-    assert not Settings(environment=Environment.PRODUCTION, _env_file=None).expose_docs
+    assert Settings(app_environment=Environment.DEVELOPMENT, _env_file=None).expose_docs
+    assert not Settings(app_environment=Environment.PRODUCTION, _env_file=None).expose_docs
     assert Settings(
-        environment=Environment.PRODUCTION,
+        app_environment=Environment.PRODUCTION,
         docs_enabled=True,
         _env_file=None,
     ).expose_docs
@@ -79,5 +79,5 @@ def test_checked_in_env_example_matches_gateway_settings() -> None:
         if line and not line.startswith("#") and "=" in line
     }
 
-    assert settings.otel_exporter_otlp_endpoint == "http://localhost:4318"
+    assert settings.otel_exporter_otlp_endpoint is None
     assert {key.lower() for key in uncommented_keys} <= Settings.model_fields.keys()

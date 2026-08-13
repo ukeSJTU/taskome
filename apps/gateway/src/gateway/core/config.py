@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     app_name: str = "taskome-gateway"
     app_version: str = Field(default_factory=distribution_version)
-    environment: Environment = Environment.DEVELOPMENT
+    app_environment: Environment = Environment.DEVELOPMENT
     log_level: LogLevel = LogLevel.INFO
     docs_enabled: bool | None = None
     database_url: SecretStr
@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     def expose_docs(self) -> bool:
         if self.docs_enabled is not None:
             return self.docs_enabled
-        return self.environment is not Environment.PRODUCTION
+        return self.app_environment is not Environment.PRODUCTION
 
     @property
     def resolved_seaweedfs_public_endpoint(self) -> str:

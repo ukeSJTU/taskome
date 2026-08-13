@@ -24,13 +24,13 @@ def create_mcp_server(
     *,
     auth_provider: AuthProvider | None = None,
 ) -> FastMCP:
-    if auth_provider is None and settings.environment is not Environment.TEST:
+    if auth_provider is None and settings.app_environment is not Environment.TEST:
         raise MCPAuthConfigurationError
     server = FastMCP(
         name=settings.app_name,
         version=settings.app_version,
         auth=auth_provider,
-        mask_error_details=settings.environment is Environment.PRODUCTION,
+        mask_error_details=settings.app_environment is Environment.PRODUCTION,
     )
 
     @server.tool(name="mint_input_file_upload_url")

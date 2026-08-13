@@ -66,7 +66,7 @@ def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> Non
             auth_jwks_url="http://auth.test/api/auth/jwks",
             auth_session_audience="http://localhost:3000",
             auth_oauth_audience="http://localhost:8000",
-            environment=Environment.TEST,
+            app_environment=Environment.TEST,
         ),
         token_verifier=verifier,
         database=available_database,
@@ -85,7 +85,7 @@ def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token() -> Non
 
 def test_authenticated_gateway_route_rejects_missing_bearer_token() -> None:
     app = create_app(
-        Settings(environment=Environment.TEST),
+        Settings(app_environment=Environment.TEST),
         database=available_database,
     )
 
@@ -99,7 +99,7 @@ def test_authenticated_gateway_route_rejects_missing_bearer_token() -> None:
 
 def test_mcp_route_rejects_missing_bearer_token() -> None:
     app = create_app(
-        Settings(environment=Environment.TEST),
+        Settings(app_environment=Environment.TEST),
         database=available_database,
     )
 
@@ -133,7 +133,7 @@ def test_mcp_route_accepts_oauth_jwt_from_the_shared_jwks() -> None:
             auth_oauth_issuer="http://localhost:3000/api/auth",
             auth_session_audience="http://localhost:3000",
             auth_oauth_audience="http://localhost:8000",
-            environment=Environment.TEST,
+            app_environment=Environment.TEST,
         ),
         token_verifier=verifier,
         database=available_database,
@@ -171,7 +171,7 @@ def test_mcp_route_accepts_shared_jwt_when_doubly_gated_outside_test_env() -> No
             auth_jwks_url="http://auth.test/api/auth/jwks",
             auth_session_audience="http://localhost:3000",
             auth_oauth_audience="http://localhost:8000",
-            environment=Environment.PRODUCTION,
+            app_environment=Environment.PRODUCTION,
         ),
         token_verifier=verifier,
         database=available_database,
@@ -192,7 +192,7 @@ def test_default_token_verifier_matches_better_auths_eddsa_jwt_plugin_defaults()
         auth_oauth_issuer="http://localhost:3000/api/auth",
         auth_session_audience="http://localhost:3000",
         auth_oauth_audience="http://localhost:8000",
-        environment=Environment.TEST,
+        app_environment=Environment.TEST,
     )
 
     verifier = create_token_verifier(settings)

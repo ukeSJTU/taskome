@@ -18,6 +18,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    ports:
+      - "127.0.0.1:6379:6379" # dev-only: native Gateway reaches the rate-limit store locally
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

@@ -35,7 +35,7 @@ def test_development_push_rebuilds_only_gateway_schema(database_url: str) -> Non
         [sys.executable, "-m", "gateway.db.commands", "push"],
         check=False,
         capture_output=True,
-        env={**os.environ, "ENVIRONMENT": "development", "DATABASE_URL": database_url},
+        env={**os.environ, "APP_ENVIRONMENT": "development", "DATABASE_URL": database_url},
         text=True,
     )
 
@@ -55,7 +55,7 @@ def test_development_push_rejects_non_development_environment(database_url: str)
         [sys.executable, "-m", "gateway.db.commands", "push"],
         check=False,
         capture_output=True,
-        env={**os.environ, "ENVIRONMENT": "production", "DATABASE_URL": database_url},
+        env={**os.environ, "APP_ENVIRONMENT": "production", "DATABASE_URL": database_url},
         text=True,
     )
 
@@ -69,7 +69,7 @@ def test_migrate_creates_gateway_history_without_touching_public(database_url: s
         connection.execute("INSERT INTO public.migration_sentinel VALUES ('preserve me')")
         connection.execute("DROP SCHEMA IF EXISTS gateway CASCADE")
 
-    environment = {**os.environ, "ENVIRONMENT": "production", "DATABASE_URL": database_url}
+    environment = {**os.environ, "APP_ENVIRONMENT": "production", "DATABASE_URL": database_url}
     first = subprocess.run(
         [sys.executable, "-m", "gateway.db.commands", "migrate"],
         check=False,
@@ -100,7 +100,7 @@ def test_migrate_creates_gateway_history_without_touching_public(database_url: s
 
 
 def test_migrations_match_current_metadata(database_url: str) -> None:
-    environment = {**os.environ, "ENVIRONMENT": "production", "DATABASE_URL": database_url}
+    environment = {**os.environ, "APP_ENVIRONMENT": "production", "DATABASE_URL": database_url}
     result = subprocess.run(
         [sys.executable, "-m", "gateway.db.commands", "migrate"],
         check=False,

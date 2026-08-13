@@ -30,7 +30,7 @@ def test_mcp_endpoint_accepts_protocol_clients() -> None:
 
     async def list_tools() -> list[Tool]:
         app = create_app(
-            Settings(environment=Environment.TEST),
+            Settings(app_environment=Environment.TEST),
             token_verifier=StaticTokenVerifier(
                 {
                     "test-token": {
@@ -72,7 +72,7 @@ def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:
 
     async def call_tool() -> dict[str, str]:
         server = create_mcp_server(
-            Settings(environment=Environment.TEST),
+            Settings(app_environment=Environment.TEST),
             cast("InputFileService", FakeInputFileService()),
             auth_provider=StaticTokenVerifier(
                 {

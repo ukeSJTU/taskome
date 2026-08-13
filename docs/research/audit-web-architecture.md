@@ -79,7 +79,7 @@
 
 ## 未发现问题的领域（明确说明，而非省略）
 
-- **`packages/api-client` 的消费方式**：`apps/web` 中唯一的消费点（`app/api/gateway/auth/route.ts`）完全遵守"server-only、JWT 由 mutator 自动附加、调用方不接触 token"的约定；未发现任何客户端组件尝试导入该包；`GATEWAY_URL` 也正确地只存在于 `@taskome/env/server`（未在 `@taskome/env/web` 中出现）。这部分是完全合规的。
+- **`packages/api-client` 的消费方式**：`apps/web` 中唯一的消费点（`app/api/gateway/auth/route.ts`）完全遵守"server-only、JWT 由 mutator 自动附加、调用方不接触 token"的约定；未发现任何客户端组件尝试导入该包；`GATEWAY_INTERNAL_URL` 也正确地只存在于 `@taskome/env/server`（未在 `@taskome/env/web` 中出现）。这部分是完全合规的。
 - **`src/lib/logger.ts`、`request-context.ts`**：都以 `import "server-only"` 开头，`logger.ts` 对 `authorization`/`cookie`/`password`/`token`/`secret`/`session` 等敏感字段做了 redact,`request-context.ts` 用 `AsyncLocalStorage` 串联 `request_id`，且已在 `app/api/auth/[...all]/route.ts` 中正确使用（记录请求耗时、状态码、request_id header）。没有发现设计上的问题。
 - **`auth-client.ts`**：单一职责，只做 `createAuthClient` 的插件装配（`jwtClient`、`oauthProviderClient`、`twoFactorClient`),没有越界逻辑，符合预期。
 - **登录/注册表单（`login-form.tsx`、`signup-form.tsx`）**：两者结构高度一致（`@tanstack/react-form` + `zod` schema + `authClient`),是目前 `components/` 里质量最高、最贴合真实产品需求的部分，没有发现架构层面的问题（重复的 TODO 注释见下方"次要备注",不影响架构判断)。

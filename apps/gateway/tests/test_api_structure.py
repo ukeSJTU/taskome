@@ -11,7 +11,7 @@ def test_business_api_router_owns_the_versioned_namespace() -> None:
 
 
 def test_rest_openapi_declares_stable_operations_and_problem_responses() -> None:
-    app = create_app(Settings(environment=Environment.TEST), database=available_database)
+    app = create_app(Settings(app_environment=Environment.TEST), database=available_database)
     openapi = app.openapi()
 
     expected_operations = {

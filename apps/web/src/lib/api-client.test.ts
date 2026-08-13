@@ -6,7 +6,7 @@ const getToken = vi.fn();
 
 vi.mock("server-only", () => ({}));
 vi.mock("@taskome/auth", () => ({ auth: { api: { getToken } } }));
-vi.mock("@taskome/env/server", () => ({ env: { GATEWAY_URL: "http://gateway.test" } }));
+vi.mock("@taskome/env/server", () => ({ env: { GATEWAY_INTERNAL_URL: "http://gateway.test" } }));
 
 const {
   GatewayAuthenticationError,
