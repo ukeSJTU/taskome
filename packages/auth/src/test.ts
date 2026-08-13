@@ -4,12 +4,14 @@ import { memoryAdapter } from "better-auth/adapters/memory";
 import { jwt, testUtils, twoFactor } from "better-auth/plugins";
 
 import { oauthGatewayAudience } from "./oauth-audience";
+import { personalApiKeyPlugin, preventPersonalApiKeyReactivation } from "./personal-api-keys";
 
 export function createTestAuth() {
   return betterAuth({
     baseURL: "http://localhost:3000",
     database: memoryAdapter({
       account: [],
+      apikey: [],
       jwks: [],
       oauthAccessToken: [],
       oauthClient: [],
@@ -21,7 +23,9 @@ export function createTestAuth() {
       verification: [],
     }),
     emailAndPassword: { enabled: true },
+    hooks: { before: preventPersonalApiKeyReactivation },
     plugins: [
+      personalApiKeyPlugin(),
       jwt({ jwt: { audience: "http://localhost:8000/v1" } }),
       oauthProvider({
         scopes: ["openid", "profile", "email", "taskome"],
