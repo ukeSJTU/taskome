@@ -27,6 +27,7 @@ from gateway.core.middleware import (
 )
 from gateway.core.observability import create_observability
 from gateway.core.personal_api_keys import PersonalApiKeyVerifier, WebPersonalApiKeyVerifier
+from gateway.core.public_openapi import public_openapi_schema
 from gateway.core.rate_limit import create_rate_limit_store
 from gateway.db.database import Database
 from gateway.repositories.input_files import InputFileRepository
@@ -113,11 +114,17 @@ def create_app(  # noqa: PLR0913
     application.state.input_file_service = input_file_service
     application.state.rest_token_verifier = rest_verifier
     application.state.personal_api_key_verifier = api_key_verifier
+    application.state.public_openapi_schema = None
     application.state.mcp = mcp_server
     application.state.observability = observability
     register_error_handlers(application)
     application.include_router(health_router)
     application.include_router(api_v1_router)
+
+    @application.get("/internal/openapi.json", include_in_schema=False)
+    async def public_openapi() -> dict[str, Any]:
+        return public_openapi_schema(application)
+
     application.mount("/mcp", mcp_app)
     if app_settings.expose_docs:
         _add_scalar_api_reference(application)
