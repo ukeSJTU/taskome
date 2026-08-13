@@ -7,7 +7,7 @@ packages:
   - packages/env
   - packages/config
 allowBuilds:
-  "@scarf/scarf": set this to true or false
+  "@scarf/scarf": false
   "@swc/core": true
   esbuild: true
   sharp: true
