@@ -20,6 +20,9 @@ _Vendored code_ means our own editable copy (free to modify or trim), not the re
 **Gateway**:
 The front door service. Authenticates callers, routes/aggregates requests to Task Servers, and owns the `jobs` store as the single source of truth for Job state across both REST and MCP.
 
+**Principal**:
+The immutable, transport-neutral identity produced after Gateway authenticates a credential. Contains the canonical User id, the credential kind, and an optional non-secret credential id. REST dependencies, MCP tools, ownership checks, and structured logs consume the Principal rather than parsing credentials or claims independently.
+
 **Access Channel**:
 One of the three user journeys into the platform: the Web App, an MCP Agent, or a Direct API Client. An Access Channel is not an interface: the Web App and Direct API Client both ultimately use REST, while the MCP Agent uses MCP.
 _Avoid_: Interface (reserved here for REST or MCP), Authentication Method (a channel may involve more than one credential across its hops).

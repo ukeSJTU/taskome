@@ -42,7 +42,7 @@ def create_test_app() -> Callable[..., FastAPI]:
     """Build a Gateway app wired to fakes, so `TestClient(app)` never needs real infra.
 
     Pass keyword overrides to swap in a real or different fake for a specific test,
-    e.g. `create_test_app(token_verifier=my_verifier)`.
+    e.g. `create_test_app(rest_token_verifier=my_verifier)`.
     """
 
     def _create(settings: Settings | None = None, **overrides: Any) -> FastAPI:  # noqa: ANN401

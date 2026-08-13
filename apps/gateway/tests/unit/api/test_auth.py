@@ -9,7 +9,7 @@ import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
 from fastmcp.server.auth.providers.jwt import JWTVerifier
-from gateway.core.auth import create_token_verifier
+from gateway.core.auth import create_mcp_token_verifier, create_rest_token_verifier
 from gateway.core.config import Environment, Settings
 
 if TYPE_CHECKING:
@@ -22,7 +22,12 @@ def _base64url(value: bytes) -> str:
     return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
 
 
-def _signed_token(*, issuer: str, audience: str) -> tuple[str, dict[str, list[dict[str, str]]]]:
+def _signed_token(
+    *,
+    issuer: str,
+    audience: str,
+    client_id: str | None = None,
+) -> tuple[str, dict[str, list[dict[str, str]]]]:
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key().public_bytes_raw()
     jwks = {
@@ -37,14 +42,17 @@ def _signed_token(*, issuer: str, audience: str) -> tuple[str, dict[str, list[di
             },
         ],
     }
+    claims = {
+        "aud": audience,
+        "exp": datetime.now(UTC) + timedelta(minutes=5),
+        "iat": datetime.now(UTC),
+        "iss": issuer,
+        "sub": "user-123",
+    }
+    if client_id is not None:
+        claims["azp"] = client_id
     token = jwt.encode(
-        {
-            "aud": audience,
-            "exp": datetime.now(UTC) + timedelta(minutes=5),
-            "iat": datetime.now(UTC),
-            "iss": issuer,
-            "sub": "user-123",
-        },
+        claims,
         private_key,
         algorithm="EdDSA",
         headers={"kid": "test-key"},
@@ -52,155 +60,100 @@ def _signed_token(*, issuer: str, audience: str) -> tuple[str, dict[str, list[di
     return token, jwks
 
 
-def test_authenticated_gateway_route_accepts_jwks_verified_bearer_token(
-    create_test_app: Callable[..., FastAPI],
-) -> None:
-    token, jwks = _signed_token(issuer="http://localhost:3000", audience="http://localhost:3000")
-
+def _verifier(
+    *,
+    jwks: dict[str, list[dict[str, str]]],
+    issuer: str,
+    audience: str,
+) -> JWTVerifier:
     async def jwks_handler(_request: httpx2.Request) -> httpx2.Response:
         return httpx2.Response(200, json=jwks)
 
-    verifier = JWTVerifier(
+    return JWTVerifier(
         jwks_uri="http://auth.test/api/auth/jwks",
-        issuer=["http://localhost:3000"],
-        audience=["http://localhost:3000"],
+        issuer=issuer,
+        audience=audience,
         algorithm="EdDSA",
         http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(jwks_handler)),
     )
+
+
+def test_rest_accepts_session_jwt_as_principal(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    token, jwks = _signed_token(
+        issuer="http://localhost:3000",
+        audience="http://localhost:8000/v1",
+    )
     app = create_test_app(
-        Settings(
-            auth_issuer="http://localhost:3000",
-            auth_jwks_url="http://auth.test/api/auth/jwks",
-            auth_session_audience="http://localhost:3000",
-            auth_oauth_audience="http://localhost:8000",
-            app_environment=Environment.TEST,
+        Settings(app_environment=Environment.TEST),
+        rest_token_verifier=_verifier(
+            jwks=jwks,
+            issuer="http://localhost:3000",
+            audience="http://localhost:8000/v1",
         ),
-        token_verifier=verifier,
     )
 
     with TestClient(app) as client:
-        response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+        response = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
     assert response.json() == {
-        "aud": "http://localhost:3000",
-        "iss": "http://localhost:3000",
-        "sub": "user-123",
+        "user_id": "user-123",
+        "credential_kind": "session_jwt",
+        "credential_id": None,
     }
 
 
-def test_authenticated_gateway_route_rejects_missing_bearer_token(
+def test_rest_rejects_mcp_oauth_access_token(
     create_test_app: Callable[..., FastAPI],
 ) -> None:
+    token, jwks = _signed_token(
+        issuer="http://localhost:3000/api/auth",
+        audience="http://localhost:8000/mcp",
+        client_id="mcp-client",
+    )
+    app = create_test_app(
+        Settings(app_environment=Environment.TEST),
+        rest_token_verifier=_verifier(
+            jwks=jwks,
+            issuer="http://localhost:3000",
+            audience="http://localhost:8000/v1",
+        ),
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+
+
+def test_rest_rejects_missing_bearer_token(create_test_app: Callable[..., FastAPI]) -> None:
     app = create_test_app()
 
     with TestClient(app) as client:
-        response = client.get("/api/v1/auth/me")
+        response = client.get("/v1/me")
 
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
     assert response.headers["content-type"].startswith("application/problem+json")
 
 
-def test_mcp_route_rejects_missing_bearer_token(create_test_app: Callable[..., FastAPI]) -> None:
-    app = create_test_app()
-
-    with TestClient(app) as client:
-        response = client.get("/mcp")
-
-    assert response.status_code == 401
-    assert response.headers["www-authenticate"] == "Bearer"
-
-
-def test_mcp_route_accepts_oauth_jwt_from_the_shared_jwks(
-    create_test_app: Callable[..., FastAPI],
-) -> None:
-    token, jwks = _signed_token(
-        issuer="http://localhost:3000/api/auth",
-        audience="http://localhost:8000",
-    )
-
-    async def jwks_handler(_request: httpx2.Request) -> httpx2.Response:
-        return httpx2.Response(200, json=jwks)
-
-    verifier = JWTVerifier(
-        jwks_uri="http://auth.test/api/auth/jwks",
-        issuer=["http://localhost:3000", "http://localhost:3000/api/auth"],
-        audience=["http://localhost:3000", "http://localhost:8000"],
-        algorithm="EdDSA",
-        http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(jwks_handler)),
-    )
-    app = create_test_app(
-        Settings(
-            auth_issuer="http://localhost:3000",
-            auth_jwks_url="http://auth.test/api/auth/jwks",
-            auth_oauth_issuer="http://localhost:3000/api/auth",
-            auth_session_audience="http://localhost:3000",
-            auth_oauth_audience="http://localhost:8000",
-            app_environment=Environment.TEST,
-        ),
-        token_verifier=verifier,
-    )
-
-    with TestClient(app) as client:
-        response = client.get("/mcp", headers={"Authorization": f"Bearer {token}"})
-
-    assert response.status_code != 401
-
-
-def test_mcp_route_accepts_shared_jwt_when_doubly_gated_outside_test_env(
-    create_test_app: Callable[..., FastAPI],
-) -> None:
-    """Regression test for the double-gate case issue #32 said was never
-    exercised: in a non-TEST environment /mcp is checked twice — once by
-    MCPAuthenticationMiddleware at the edge, once by fastmcp's own
-    auth_provider — and both used to disagree on algorithm (EdDSA vs
-    RS256), so a real better-auth token would pass the first gate and be
-    rejected by the second. With one shared verifier, both gates must
-    agree and a valid token must pass."""
-    token, jwks = _signed_token(issuer="http://localhost:3000", audience="http://localhost:3000")
-
-    async def jwks_handler(_request: httpx2.Request) -> httpx2.Response:
-        return httpx2.Response(200, json=jwks)
-
-    verifier = JWTVerifier(
-        jwks_uri="http://auth.test/api/auth/jwks",
-        issuer=["http://localhost:3000"],
-        audience=["http://localhost:3000"],
-        algorithm="EdDSA",
-        http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(jwks_handler)),
-    )
-    app = create_test_app(
-        Settings(
-            auth_issuer="http://localhost:3000",
-            auth_jwks_url="http://auth.test/api/auth/jwks",
-            auth_session_audience="http://localhost:3000",
-            auth_oauth_audience="http://localhost:8000",
-            app_environment=Environment.PRODUCTION,
-        ),
-        token_verifier=verifier,
-    )
-
-    with TestClient(app) as client:
-        response = client.get("/mcp", headers={"Authorization": f"Bearer {token}"})
-
-    assert response.status_code != 401
-
-
-def test_default_token_verifier_matches_better_auths_eddsa_jwt_plugin_defaults() -> None:
-    """Regression test: create_token_verifier must accept the EdDSA tokens
-    better-auth's jwt() plugin actually signs (its default alg with no
-    keyPairConfig), not fastmcp's own RS256 default."""
+def test_channel_verifiers_derive_distinct_issuers_and_resources() -> None:
     settings = Settings(
-        auth_issuer="http://localhost:3000",
-        auth_oauth_issuer="http://localhost:3000/api/auth",
-        auth_session_audience="http://localhost:3000",
-        auth_oauth_audience="http://localhost:8000",
+        better_auth_url="https://example.com",
+        web_internal_url="http://web:3000",
+        gateway_public_url="https://api.example.com",
         app_environment=Environment.TEST,
     )
 
-    verifier = create_token_verifier(settings)
+    rest_verifier = create_rest_token_verifier(settings)
+    mcp_verifier = create_mcp_token_verifier(settings)
 
-    assert verifier.algorithm == "EdDSA"
-    assert verifier.issuer == ["http://localhost:3000", "http://localhost:3000/api/auth"]
-    assert verifier.audience == ["http://localhost:3000", "http://localhost:8000"]
+    assert rest_verifier.jwks_uri == "http://web:3000/api/auth/jwks"
+    assert rest_verifier.issuer == "https://example.com"
+    assert rest_verifier.audience == "https://api.example.com/v1"
+    assert isinstance(mcp_verifier.token_verifier, JWTVerifier)
+    assert mcp_verifier.token_verifier.jwks_uri == "http://web:3000/api/auth/jwks"
+    assert mcp_verifier.token_verifier.issuer == "https://example.com/api/auth"
+    assert mcp_verifier.token_verifier.audience == "https://api.example.com/mcp"

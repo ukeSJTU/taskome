@@ -15,6 +15,7 @@ services:
         required: false
     environment:
       BETTER_AUTH_URL: http://localhost:3000
+      GATEWAY_PUBLIC_URL: http://localhost:8000
       GATEWAY_INTERNAL_URL: http://gateway:8000
       AUTH_TRUSTED_ORIGIN: http://localhost:3000
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
@@ -51,11 +52,9 @@ services:
         required: false
     environment:
       APP_ENVIRONMENT: production
-      AUTH_JWKS_URL: http://web:3000/api/auth/jwks
-      AUTH_ISSUER: http://localhost:3000
-      AUTH_OAUTH_ISSUER: http://localhost:3000/api/auth
-      AUTH_SESSION_AUDIENCE: http://localhost:3000
-      AUTH_OAUTH_AUDIENCE: http://gateway:8000
+      BETTER_AUTH_URL: http://localhost:3000
+      WEB_INTERNAL_URL: http://web:3000
+      GATEWAY_PUBLIC_URL: http://localhost:8000
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
       RATE_LIMIT_REDIS_URL: redis://redis-rate-limit:6379/0
     depends_on:

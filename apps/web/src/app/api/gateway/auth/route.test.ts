@@ -20,9 +20,9 @@ const { GET } = await import("./route");
 describe("GET /api/gateway/auth", () => {
   it("shapes the gateway identity for the web BFF", async () => {
     getCurrentIdentity.mockResolvedValueOnce({
-      aud: "http://localhost:3000",
-      iss: "http://localhost:3000",
-      sub: "user-1",
+      user_id: "user-1",
+      credential_kind: "session_jwt",
+      credential_id: null,
     });
 
     const response = await GET();
@@ -30,7 +30,11 @@ describe("GET /api/gateway/auth", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       authenticated: true,
-      identity: { aud: "http://localhost:3000", iss: "http://localhost:3000", sub: "user-1" },
+      identity: {
+        user_id: "user-1",
+        credential_kind: "session_jwt",
+        credential_id: null,
+      },
     });
   });
 
@@ -54,7 +58,7 @@ describe("GET /api/gateway/auth", () => {
     getCurrentIdentity.mockRejectedValueOnce(
       new GatewayHttpError(new Response(null, { status: 401 }), {
         detail: "Authentication is required.",
-        instance: "/api/auth/me",
+        instance: "/v1/me",
         request_id: "test-request-id",
         status: 401,
         title: "Unauthorized",

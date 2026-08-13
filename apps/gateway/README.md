@@ -37,8 +37,9 @@ The MCP server exposes the Task-agnostic `prepare_input_file_upload` and
 SeaweedFS URLs, with the upload tool also returning a new Input File id; callers
 transfer bytes directly to or from SeaweedFS. The REST equivalent is
 `POST /v1/input-files`, with presigned download and delete endpoints under
-`/v1/input-files/{id}`. These REST endpoints and the MCP tools require a
-better-auth JWT.
+`/v1/input-files/{id}`. REST accepts Web BFF session JWTs bound to the public
+`/v1` resource; MCP accepts OAuth access tokens bound to the public `/mcp`
+resource. `GET /v1/me` reports the normalized Principal identity for REST calls.
 
 Upload callers must send `If-None-Match: *` with the PUT request. The condition
 is signed into the URL so an Input File's object cannot be overwritten after its
@@ -51,7 +52,9 @@ Application-local settings use `APP_ENVIRONMENT`, `LOG_LEVEL`, and `DOCS_ENABLED
 SeaweedFS uses `SEAWEEDFS_INTERNAL_ENDPOINT` for gateway calls and
 `SEAWEEDFS_PUBLIC_ENDPOINT` for caller-facing presigned URLs; the public endpoint
 defaults to the internal endpoint. See `.env.example` for the full storage and
-JWT settings.
+authentication settings. Gateway derives the session issuer and OAuth issuer from
+`BETTER_AUTH_URL`, its internal JWKS URL from `WEB_INTERNAL_URL`, and the REST and
+MCP resources from `GATEWAY_PUBLIC_URL`.
 Gateway owns only the `gateway` schema; Web/Auth's Drizzle-managed tables remain in
 `public`.
 OpenTelemetry keeps its standard `OTEL_*` names; setting

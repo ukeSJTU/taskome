@@ -5,11 +5,9 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import structlog
-from fastapi.responses import JSONResponse
 from opentelemetry.trace import get_current_span
 
 if TYPE_CHECKING:
-    from fastmcp.server.auth import TokenVerifier
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 _BASE_SECURITY_HEADERS = {
@@ -113,36 +111,3 @@ class SecurityHeadersMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_with_security_headers)
-
-
-def _extract_bearer_token(authorization: str) -> str | None:
-    if not authorization.startswith("Bearer "):
-        return None
-    token = authorization.removeprefix("Bearer ").strip()
-    return token or None
-
-
-class MCPAuthenticationMiddleware:
-    def __init__(self, app: ASGIApp, *, verifier: TokenVerifier) -> None:
-        self.app = app
-        self.verifier = verifier
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not scope.get("path", "").startswith("/mcp"):
-            await self.app(scope, receive, send)
-            return
-
-        authorization = dict(scope.get("headers", [])).get(b"authorization", b"").decode("latin-1")
-        token = _extract_bearer_token(authorization)
-        access_token = await self.verifier.verify_token(token) if token else None
-        if access_token is None:
-            response = JSONResponse(
-                {"detail": "A valid bearer token is required."},
-                status_code=401,
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-            await response(scope, receive, send)
-            return
-
-        scope.setdefault("state", {})["auth"] = access_token.claims
-        await self.app(scope, receive, send)

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi.testclient import TestClient
+from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -62,6 +63,40 @@ def test_access_log_uses_route_template_and_trace_context(
     access_event = next(event for event in events if event["event"] == "http_request")
     assert access_event["path"] == "/items/{item_id}"
     assert re.fullmatch(r"[0-9a-f]{32}", access_event["trace_id"])
+
+
+def test_authenticated_access_log_carries_principal_without_raw_credential(
+    create_test_app: Callable[..., FastAPI],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    raw_token = "session-secret-token"  # noqa: S105 - Deliberate canary for log redaction.
+    app = create_test_app(
+        rest_token_verifier=StaticTokenVerifier(
+            {
+                raw_token: {
+                    "client_id": "ignored-for-session",
+                    "scopes": [],
+                    "sub": "user-123",
+                }
+            }
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/v1/me",
+            headers={"Authorization": f"Bearer {raw_token}"},
+        )
+
+    events = [
+        json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")
+    ]
+    access_event = next(event for event in events if event["event"] == "http_request")
+    assert response.status_code == 200
+    assert access_event["user_id"] == "user-123"
+    assert access_event["credential_kind"] == "session_jwt"
+    assert access_event["credential_id"] is None
+    assert raw_token not in json.dumps(access_event)
 
 
 def test_production_server_logs_are_json(

@@ -32,7 +32,8 @@ const { GET: GETOAuthMetadata } =
 const { GET: GETOpenIDMetadata } = await import("../.well-known/openid-configuration/route");
 
 const baseURL = "http://localhost:3000";
-const gatewayAudience = "http://localhost:8000";
+const gatewayRESTAudience = "http://localhost:8000/v1";
+const gatewayMCPAudience = "http://localhost:8000/mcp";
 const oauthIssuer = `${baseURL}/api/auth`;
 
 function authHeaders(headers: Headers) {
@@ -80,7 +81,7 @@ describe("/api/auth", () => {
     const jwks = await jwksResponse.json();
     const { token } = await tokenResponse.json();
     const verified = await jwtVerify(token, createLocalJWKSet(jwks), {
-      audience: "http://localhost:3000",
+      audience: gatewayRESTAudience,
       issuer: "http://localhost:3000",
     });
 
@@ -171,7 +172,7 @@ describe("/api/auth", () => {
     const verified = await jwtVerify(
       token.access_token,
       createLocalJWKSet(await jwksResponse.json()),
-      { audience: gatewayAudience, issuer: oauthIssuer },
+      { audience: gatewayMCPAudience, issuer: oauthIssuer },
     );
     expect(verified.payload.sub).toBe(user.id);
   });

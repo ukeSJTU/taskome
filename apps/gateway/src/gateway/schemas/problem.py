@@ -15,9 +15,3 @@ class ProblemDetails(BaseModel):
     instance: str
     request_id: str
     errors: list[ValidationIssue] | None = None
-
-
-class Identity(BaseModel):
-    aud: str | list[str]
-    iss: str
-    sub: str
