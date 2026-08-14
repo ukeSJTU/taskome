@@ -112,8 +112,8 @@ const data = {
   ],
   navSecondary: [
     {
-      title: "API reference",
-      url: "/api-reference",
+      title: "API Docs",
+      url: "/api-docs",
       icon: <BookOpenIcon />,
     },
     {

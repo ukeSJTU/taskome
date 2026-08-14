@@ -4,12 +4,20 @@ import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/render";
 
 const scalarProps = vi.fn();
+const { useTheme } = vi.hoisted(() => ({
+  useTheme: vi.fn(() => ({ resolvedTheme: "light" })),
+}));
 
 vi.mock("@scalar/api-reference-react", () => ({
   ApiReferenceReact: (props: unknown) => {
     scalarProps(props);
     return <div data-testid="scalar-reference" />;
   },
+}));
+
+vi.mock("next-themes", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-themes")>()),
+  useTheme,
 }));
 
 const { ApiReferencePanel } = await import("./api-reference-panel");
@@ -21,22 +29,45 @@ const projection = {
 };
 
 describe("ApiReferencePanel", () => {
-  it("renders the live projection with browser execution disabled", async () => {
+  it("renders API Docs with the live projection and its read-only Scalar configuration", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json(projection)));
 
     render(<ApiReferencePanel />);
 
-    expect(screen.getByRole("heading", { name: "API reference" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Loading API reference");
+    expect(screen.getByRole("heading", { name: "API Docs" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading API Docs");
     expect(await screen.findByTestId("scalar-reference")).toBeInTheDocument();
     expect(scalarProps).toHaveBeenCalledWith(
       expect.objectContaining({
         configuration: expect.objectContaining({
+          agent: { disabled: true },
           content: projection,
+          customCss: expect.stringContaining("--scalar-font: var(--font-sans)"),
+          forceDarkModeState: "light",
+          hideDarkModeToggle: true,
           hideClientButton: true,
           hideTestRequestButton: true,
+          layout: "modern",
+          modelsSectionLabel: "Schemas",
           showDeveloperTools: "never",
+          telemetry: false,
+          theme: "kepler",
+          withDefaultFonts: false,
         }),
+      }),
+    );
+  });
+
+  it("uses Scalar dark mode when the app resolves dark", async () => {
+    useTheme.mockReturnValue({ resolvedTheme: "dark" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json(projection)));
+
+    render(<ApiReferencePanel />);
+
+    expect(await screen.findByTestId("scalar-reference")).toBeInTheDocument();
+    expect(scalarProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configuration: expect.objectContaining({ forceDarkModeState: "dark" }),
       }),
     );
   });
@@ -51,7 +82,7 @@ describe("ApiReferencePanel", () => {
     render(<ApiReferencePanel />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The API reference is temporarily unavailable",
+      "API Docs are temporarily unavailable",
     );
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
