@@ -11,6 +11,10 @@ export const env = createEnv({
     GATEWAY_INTERNAL_URL: z.url().default("http://localhost:8000"),
     WEB_GATEWAY_HMAC_SECRET: z.string().min(32),
     AUTH_TRUSTED_ORIGIN: z.url(),
+    E2E_DISABLE_AUTH_RATE_LIMIT: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
   },

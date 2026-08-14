@@ -24,7 +24,7 @@ export default defineConfig({
   webServer: [
     {
       command: production
-        ? `pnpm build && pnpm start --port ${webPort}`
+        ? `pnpm build && mkdir -p .next/standalone/apps/web && cp -R .next/static .next/standalone/apps/web/.next/static && cp -R public .next/standalone/apps/web/public && cd .next/standalone && HOSTNAME=127.0.0.1 PORT=${webPort} node apps/web/server.js`
         : `pnpm dev --port ${webPort}`,
       cwd: ".",
       env: { ...process.env, DATABASE_URL: process.env.E2E_WEB_DATABASE_URL! },

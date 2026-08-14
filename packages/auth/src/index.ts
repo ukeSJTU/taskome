@@ -22,6 +22,12 @@ export function createAuth() {
       schema: schema,
     }),
     trustedOrigins: [env.AUTH_TRUSTED_ORIGIN],
+    rateLimit: {
+      // The disposable Browser E2E stack shares one loopback client address;
+      // retain production protection while preventing test-data setup from
+      // consuming the sensitive endpoint's small per-IP budget.
+      enabled: !env.E2E_DISABLE_AUTH_RATE_LIMIT,
+    },
     emailAndPassword: {
       enabled: true,
     },

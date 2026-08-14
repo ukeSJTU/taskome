@@ -13,7 +13,11 @@ function address(label: string) {
 }
 
 async function waitForClientForm(page: Page) {
-  await expect(page.getByTestId("auth-form")).toHaveAttribute("data-hydrated", "true");
+  const passwordInput = page.getByLabel("Password", { exact: true });
+  await page.getByRole("button", { name: "Show password" }).click();
+  await expect(passwordInput).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Hide password" }).click();
+  await expect(passwordInput).toHaveAttribute("type", "password");
 }
 
 async function signUp(page: Page, name: string, email: string) {
@@ -54,24 +58,19 @@ test("a returning user signs in and sees their identity", async ({ page, request
   await expect(page.getByText("Browser Signin", { exact: true })).toBeVisible();
 });
 
-test("API Docs loads the live Gateway REST contract through the BFF", async ({ page, request }) => {
+test("API Docs loads the live Gateway REST contract through the BFF", async ({ page }) => {
   const email = address("docs");
-  const signup = await request.post("/api/auth/sign-up/email", {
+  const signup = await page.context().request.post("/api/auth/sign-up/email", {
     data: { email, name: "Browser Docs", password },
   });
   await expectOK(signup);
-  await page.goto("/login");
-  await waitForClientForm(page);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Login" }).click();
   await page.goto("/api-docs");
-  await expect(page.getByRole("heading", { name: "API Docs" })).toBeVisible();
-  await expect(page.getByText("Input Files", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "API Docs" }).first()).toBeVisible();
+  await expect(page.getByText("Create Input File", { exact: true })).toBeVisible();
 });
 
 test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ page, request }) => {
-  const callback = "http://127.0.0.1:9876/callback";
+  const callback = new URL("/e2e-oauth-callback", process.env.E2E_WEB_URL).toString();
   const state = randomUUID();
   const verifier = `e2e-${randomUUID()}-pkce-verifier`;
   const challenge = createHash("sha256").update(verifier).digest("base64url");
@@ -111,7 +110,7 @@ test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ pag
   await expect(
     page.getByRole("heading", { name: new RegExp(`Authorize ${clientId}`) }),
   ).toBeVisible();
-  const callbackNavigation = page.waitForURL(new RegExp("^http://127\\.0\\.0\\.1:9876/callback"));
+  const callbackNavigation = page.waitForURL(callback + "?*");
   await page.getByRole("button", { name: "Allow" }).click();
   await callbackNavigation;
   const redirected = new URL(page.url());
