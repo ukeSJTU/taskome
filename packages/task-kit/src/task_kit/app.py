@@ -24,6 +24,7 @@ from fastmcp.server.dependencies import get_http_request
 from fastmcp.tools.base import ToolResult
 from pydantic import BaseModel, ValidationError
 
+from ._middleware import TaskServerBoundaryMiddleware
 from .runtime import SignedGatewayRequest, TaskServerRuntime, ValidatedProducedFile
 from .types import (
     ComputeContext,
@@ -467,5 +468,6 @@ def build_task_server(
         )(call_task)
     mcp_app = mcp.http_app(path="/")
     app.mount("/mcp", mcp_app)
+    app.add_middleware(TaskServerBoundaryMiddleware, runtime=runtime)
 
     return app
