@@ -10,6 +10,7 @@ import time
 from collections.abc import Collection, Mapping
 from functools import partial
 from pathlib import Path
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
@@ -168,7 +169,7 @@ class GatewayInputFileResolver:
             resolved[identifier] = path
         if set(resolved) != set(input_file_ids):
             raise RuntimeError("Gateway omitted requested Input File metadata")
-        return resolved
+        return MappingProxyType(resolved)
 
 
 class S3OutputPublisher:

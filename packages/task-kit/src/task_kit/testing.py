@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from pathlib import Path
+from types import MappingProxyType
 from uuid import UUID
 
 import structlog
@@ -72,9 +73,9 @@ class _TestGatewayVerifier:
 class _NoInputFiles:
     async def materialize(
         self, job_id: UUID, input_file_ids: object, destination_dir: Path
-    ) -> dict:
+    ) -> Mapping[InputFileId, Path]:
         del job_id, input_file_ids, destination_dir
-        return {}
+        return MappingProxyType({})
 
 
 class _InMemoryOutputs:
