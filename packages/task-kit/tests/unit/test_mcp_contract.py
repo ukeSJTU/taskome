@@ -1,6 +1,7 @@
 # ruff: noqa: S101
 
 import json
+from typing import Any
 
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
@@ -22,7 +23,7 @@ class EchoAdapter:
         return ComputeResult(value=EchoResult(message=params.message))
 
 
-def _message(response_text: str) -> dict[str, object]:
+def _message(response_text: str) -> dict[str, Any]:
     return json.loads(response_text.replace("\r\n", "\n").removeprefix("event: message\ndata: "))
 
 

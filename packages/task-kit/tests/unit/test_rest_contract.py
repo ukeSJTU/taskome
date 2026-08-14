@@ -49,6 +49,12 @@ class OutputAdapter:
         )
 
 
+class NestedAdapter:
+    def run(self, params: NestedParams, ctx: ComputeContext) -> ComputeResult[EchoResult]:
+        del ctx
+        return ComputeResult(value=EchoResult(message=params.payload.message))
+
+
 def test_signed_rest_executes_a_flat_params_object() -> None:
     app = build_task_server(
         name="echo",
@@ -136,7 +142,7 @@ def test_rest_rejects_unknown_fields_in_nested_params() -> None:
                 description="Echo a nested message.",
                 params_model=NestedParams,
                 result_model=EchoResult,
-                adapter=EchoAdapter(),
+                adapter=NestedAdapter(),
             ),
         ),
         runtime=fake_runtime(),
