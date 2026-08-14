@@ -310,14 +310,21 @@ def build_task_server(
     async def lifespan(app: FastAPI):
         async with mcp_app.lifespan(app):
             app.state.ready = True
+            runtime.accepting_work = True
             try:
                 yield
             finally:
                 app.state.ready = False
+                runtime.accepting_work = False
                 if runtime.close is not None:
                     await runtime.close()
 
-    app = FastAPI(title=f"{name} Task Server", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(
+        title=f"{name} Task Server",
+        docs_url="/docs" if runtime.docs_enabled else None,
+        redoc_url=None,
+        lifespan=lifespan,
+    )
 
     @app.get("/health/live")
     async def live() -> dict[str, str]:

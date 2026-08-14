@@ -51,7 +51,9 @@ class _InMemoryOutputs:
         )
 
 
-def fake_runtime(*, workdir_root: Path | None = None) -> TaskServerRuntime:
+def fake_runtime(
+    *, workdir_root: Path | None = None, docs_enabled: bool = False
+) -> TaskServerRuntime:
     """Return an external-boundary fake while preserving the real execution core."""
     return TaskServerRuntime(
         gateway_requests=_AllowUnsignedRequests(),
@@ -59,6 +61,7 @@ def fake_runtime(*, workdir_root: Path | None = None) -> TaskServerRuntime:
         outputs=_InMemoryOutputs(),
         logger=structlog.get_logger(),
         workdir_root=workdir_root,
+        docs_enabled=docs_enabled,
     )
 
 

@@ -80,11 +80,13 @@ class TaskServerRuntime:
     max_concurrent_jobs: int = 1
     request_body_max_bytes: int = 4 * 1024 * 1024
     mcp_message_max_bytes: int = 1024 * 1024
+    docs_enabled: bool = False
     limiter: anyio.CapacityLimiter = field(init=False)
     active_jobs: set[UUID] = field(default_factory=set, init=False)
     completed_jobs: OrderedDict[UUID, None] = field(default_factory=OrderedDict, init=False)
     job_lock: anyio.Lock = field(default_factory=anyio.Lock, init=False)
     close: Callable[[], Awaitable[None]] | None = None
+    accepting_work: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
         if (
@@ -96,7 +98,11 @@ class TaskServerRuntime:
 
     async def claim_job(self, job_id: UUID) -> bool:
         async with self.job_lock:
-            if job_id in self.active_jobs or job_id in self.completed_jobs:
+            if (
+                not self.accepting_work
+                or job_id in self.active_jobs
+                or job_id in self.completed_jobs
+            ):
                 return False
             self.active_jobs.add(job_id)
             return True

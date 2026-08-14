@@ -1,5 +1,5 @@
 """Production Gateway HMAC, HTTP input resolution, and S3 output ports."""
-# ruff: noqa: ANN401, EM101, PGH003, PLR0913, TC001, TC003, TRY003, TRY301
+# ruff: noqa: ANN401, EM101, PGH003, PLR0913, TC003, TRY003, TRY301
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from .runtime import (
     ValidatedProducedFile,
     VerifiedGatewayRequest,
 )
-from .settings import TaskServerSettings
+from .settings import Environment, TaskServerSettings
 from .types import InputFileId
 
 MAX_INPUT_FILE_BYTES = 50 * 1024 * 1024
@@ -253,5 +253,10 @@ def build_runtime(settings: TaskServerSettings) -> TaskServerRuntime:
         max_concurrent_jobs=settings.max_concurrent_jobs,
         request_body_max_bytes=settings.request_body_max_bytes,
         mcp_message_max_bytes=settings.mcp_message_max_bytes,
+        docs_enabled=(
+            settings.app_environment is Environment.DEVELOPMENT
+            if settings.docs_enabled is None
+            else settings.docs_enabled
+        ),
         close=close,
     )
