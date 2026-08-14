@@ -4,7 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
 
@@ -35,6 +35,9 @@ const signupSchema = z.object({
 export function SignupForm({ className, ...props }: React.ComponentProps<"form">) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => setIsHydrated(true), []);
 
   const form = useForm({
     defaultValues: {
@@ -69,7 +72,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"form">
   return (
     <form
       className={cn("flex flex-col gap-6", className)}
-      onSubmit={(e) => {
+      onSubmitCapture={(e) => {
         e.preventDefault();
         e.stopPropagation();
         form.handleSubmit();
@@ -155,7 +158,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"form">
             selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
           >
             {({ canSubmit, isSubmitting }) => (
-              <Button type="submit" disabled={!canSubmit || isSubmitting}>
+              <Button type="submit" disabled={!isHydrated || !canSubmit || isSubmitting}>
                 {isSubmitting ? "Creating account..." : "Create Account"}
               </Button>
             )}
