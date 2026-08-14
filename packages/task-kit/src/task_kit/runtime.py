@@ -115,3 +115,11 @@ class TaskServerRuntime:
             self.completed_jobs.move_to_end(job_id)
             while len(self.completed_jobs) > _RECENT_JOB_LIMIT:
                 self.completed_jobs.popitem(last=False)
+
+    async def wait_for_active_jobs(self) -> None:
+        """Wait for claimed work to leave the execution pipeline during shutdown."""
+        while True:
+            async with self.job_lock:
+                if not self.active_jobs:
+                    return
+            await anyio.sleep(0.01)

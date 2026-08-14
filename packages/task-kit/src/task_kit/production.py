@@ -1,5 +1,5 @@
 """Production Gateway HMAC, HTTP input resolution, and S3 output ports."""
-# ruff: noqa: ANN401, EM101, PGH003, PLR0913, TC003, TRY003, TRY301
+# ruff: noqa: ANN401, EM101, PLR0913, TC003, TRY003, TRY301
 
 from __future__ import annotations
 
@@ -16,7 +16,9 @@ from uuid import UUID
 import boto3
 import httpx
 import structlog
+from anyio import to_thread
 from botocore.client import Config
+from opentelemetry import propagate
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
@@ -114,23 +116,26 @@ class GatewayInputFileResolver:
             separators=(",", ":"),
         ).encode()
         timestamp = str(int(time.time()))
+        headers: dict[str, str] = {
+            "content-type": "application/json",
+            "X-Taskome-Timestamp": timestamp,
+            "X-Taskome-Job-Id": str(job_id),
+        }
+        propagate.inject(headers)
+        traceparent = headers.get("traceparent", "")
+        headers["X-Taskome-Signature"] = _signature(
+            self._secret,
+            timestamp=timestamp,
+            method="POST",
+            target=target,
+            job_id=str(job_id),
+            traceparent=traceparent,
+            body=body,
+        )
         response = await self._client.post(
             f"{self._gateway_url}{target}",
             content=body,
-            headers={
-                "content-type": "application/json",
-                "X-Taskome-Timestamp": timestamp,
-                "X-Taskome-Job-Id": str(job_id),
-                "X-Taskome-Signature": _signature(
-                    self._secret,
-                    timestamp=timestamp,
-                    method="POST",
-                    target=target,
-                    job_id=str(job_id),
-                    traceparent="",
-                    body=body,
-                ),
-            },
+            headers=headers,
         )
         response.raise_for_status()
         entries = response.json()["input_files"]
@@ -180,16 +185,7 @@ class S3OutputPublisher:
         try:
             for file in files:
                 key = f"{server_name}/{job_id}/{file.name}"
-                await __import__("anyio").to_thread.run_sync(  # type: ignore
-                    partial(
-                        self._client.put_object,
-                        Bucket=self._bucket,
-                        Key=key,
-                        Body=file.path.read_bytes(),
-                        ContentType=file.media_type,
-                        IfNoneMatch="*",
-                    )
-                )
+                await to_thread.run_sync(self._put_file, key, file)
                 uploaded.append(key)
                 outputs.append(
                     PublishedOutput(
@@ -204,13 +200,23 @@ class S3OutputPublisher:
         except Exception:
             for key in reversed(uploaded):
                 try:
-                    await __import__("anyio").to_thread.run_sync(  # type: ignore
+                    await to_thread.run_sync(
                         partial(self._client.delete_object, Bucket=self._bucket, Key=key)
                     )
                 except Exception:
                     self._logger.exception("task_output_rollback_failed", storage_key=key)
             raise
         return tuple(outputs)
+
+    def _put_file(self, key: str, file: ValidatedProducedFile) -> None:
+        with file.path.open("rb") as body:
+            self._client.put_object(
+                Bucket=self._bucket,
+                Key=key,
+                Body=body,
+                ContentType=file.media_type,
+                IfNoneMatch="*",
+            )
 
 
 def build_runtime(settings: TaskServerSettings) -> TaskServerRuntime:

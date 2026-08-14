@@ -124,7 +124,9 @@ def _validate_definition(definition: TaskDefinition[Any, Any]) -> None:
         definition.result_model, BaseModel
     ):
         raise TypeError("result_model must be a Pydantic BaseModel type")
-    if not callable(getattr(definition.adapter, "run", None)):
+    if inspect.isclass(definition.adapter) or not callable(
+        getattr(definition.adapter, "run", None)
+    ):
         raise TypeError("adapter must provide a run(params, ctx) method")
     _schema(definition.params_model)
     _schema(definition.result_model)
@@ -234,50 +236,53 @@ async def _execute(
     traceparent: str | None,
 ) -> dict[str, Any]:
     async with runtime.limiter:
-        with tempfile.TemporaryDirectory(
-            prefix=f"{server_name}-{job_id}-", dir=runtime.workdir_root
-        ) as directory:
-            os.chmod(directory, 0o700)
-            root = Path(directory)
-            inputs, work = root / "inputs", root / "work"
-            inputs.mkdir()
-            work.mkdir()
-            try:
-                input_paths = await runtime.input_files.materialize(
-                    job_id, _discover_input_files(params), inputs
+        with anyio.CancelScope(shield=True):
+            with tempfile.TemporaryDirectory(
+                prefix=f"{server_name}-{job_id}-", dir=runtime.workdir_root
+            ) as directory:
+                os.chmod(directory, 0o700)
+                root = Path(directory)
+                inputs, work = root / "inputs", root / "work"
+                inputs.mkdir()
+                work.mkdir()
+                try:
+                    input_paths = await runtime.input_files.materialize(
+                        job_id, _discover_input_files(params), inputs
+                    )
+                except Exception as error:
+                    raise _InputMaterializationError from error
+                context = ComputeContext(
+                    workdir=work,
+                    logger=runtime.logger.bind(
+                        server_name=server_name,
+                        task_name=definition.name,
+                        job_id=str(job_id),
+                        traceparent=traceparent,
+                    ),
+                    _input_paths=input_paths,
                 )
-            except Exception as error:
-                raise _InputMaterializationError from error
-            context = ComputeContext(
-                workdir=work,
-                logger=runtime.logger.bind(
-                    server_name=server_name,
-                    task_name=definition.name,
-                    job_id=str(job_id),
-                    traceparent=traceparent,
-                ),
-                _input_paths=input_paths,
-            )
-            result = await anyio.to_thread.run_sync(  # type: ignore
-                definition.adapter.run, params, context
-            )
-            if not isinstance(result, ComputeResult):
-                raise ComputeExecutionError("Adapter must return ComputeResult")
-            try:
-                value = definition.result_model.model_validate(
-                    result.value.model_dump(mode="json"), strict=True
+                result = await anyio.to_thread.run_sync(  # type: ignore
+                    definition.adapter.run, params, context
                 )
-            except (AttributeError, ValidationError) as error:
-                raise ComputeExecutionError("Adapter returned an invalid result value") from error
-            files = _validated_outputs(result.files, work)
-            try:
-                outputs = await runtime.outputs.publish(server_name, job_id, files)
-            except Exception as error:
-                raise _OutputPublicationError from error
-            return {
-                "value": value.model_dump(mode="json", by_alias=True),
-                "outputs": [asdict(output) for output in outputs],
-            }
+                if not isinstance(result, ComputeResult):
+                    raise ComputeExecutionError("Adapter must return ComputeResult")
+                try:
+                    value = definition.result_model.model_validate(
+                        result.value.model_dump(mode="json"), strict=True
+                    )
+                except (AttributeError, ValidationError) as error:
+                    raise ComputeExecutionError(
+                        "Adapter returned an invalid result value"
+                    ) from error
+                files = _validated_outputs(result.files, work)
+                try:
+                    outputs = await runtime.outputs.publish(server_name, job_id, files)
+                except Exception as error:
+                    raise _OutputPublicationError from error
+                return {
+                    "value": value.model_dump(mode="json", by_alias=True),
+                    "outputs": [asdict(output) for output in outputs],
+                }
 
 
 def build_task_server(
@@ -318,6 +323,7 @@ def build_task_server(
             finally:
                 app.state.ready = False
                 runtime.accepting_work = False
+                await runtime.wait_for_active_jobs()
                 if runtime.close is not None:
                     await runtime.close()
 

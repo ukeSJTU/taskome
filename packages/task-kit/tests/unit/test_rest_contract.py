@@ -1,6 +1,8 @@
 # ruff: noqa: PLR2004, S101
 
+import json
 from pathlib import Path
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
@@ -11,7 +13,7 @@ from task_kit import (
     TaskDefinition,
     build_task_server,
 )
-from task_kit.testing import fake_runtime
+from task_kit.testing import fake_runtime, signed_request_headers
 
 
 class EchoParams(BaseModel):
@@ -55,6 +57,15 @@ class NestedAdapter:
         return ComputeResult(value=EchoResult(message=params.payload.message))
 
 
+def _signed_json(payload: object, job_id: str) -> tuple[bytes, dict[str, str]]:
+    body = json.dumps(payload, separators=(",", ":")).encode()
+    headers = signed_request_headers(
+        method="POST", target="/internal/tasks/echo", body=body, job_id=UUID(job_id)
+    )
+    headers["content-type"] = "application/json"
+    return body, headers
+
+
 def test_signed_rest_executes_a_flat_params_object() -> None:
     app = build_task_server(
         name="echo",
@@ -71,11 +82,8 @@ def test_signed_rest_executes_a_flat_params_object() -> None:
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/internal/tasks/echo",
-            headers={"X-Taskome-Job-Id": "00000000-0000-0000-0000-000000000001"},
-            json={"text": "hello"},
-        )
+        body, headers = _signed_json({"text": "hello"}, "00000000-0000-0000-0000-000000000001")
+        response = client.post("/internal/tasks/echo", headers=headers, content=body)
 
     assert response.status_code == 200
     assert response.json() == {"value": {"message": "hello"}, "outputs": []}
@@ -97,7 +105,10 @@ def test_manifest_describes_the_flat_alias_schema() -> None:
     )
 
     with TestClient(app) as client:
-        response = client.get("/internal/manifest")
+        response = client.get(
+            "/internal/manifest",
+            headers=signed_request_headers(method="GET", target="/internal/manifest", body=b""),
+        )
 
     assert response.status_code == 200
     assert response.json()["schema_version"] == 1
@@ -123,14 +134,85 @@ def test_rest_rejects_unknown_or_coerced_params() -> None:
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/internal/tasks/echo",
-            headers={"X-Taskome-Job-Id": "00000000-0000-0000-0000-000000000001"},
-            json={"text": "hello", "unexpected": True},
+        body, headers = _signed_json(
+            {"text": "hello", "unexpected": True}, "00000000-0000-0000-0000-000000000001"
         )
+        response = client.post("/internal/tasks/echo", headers=headers, content=body)
 
     assert response.status_code == 422
     assert response.headers["content-type"] == "application/problem+json"
+
+
+def test_rest_requires_a_valid_raw_body_signature() -> None:
+    app = build_task_server(
+        name="echo",
+        tasks=(
+            TaskDefinition(
+                name="echo",
+                description="Echo a message.",
+                params_model=EchoParams,
+                result_model=EchoResult,
+                adapter=EchoAdapter(),
+            ),
+        ),
+        runtime=fake_runtime(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/internal/tasks/echo",
+            headers={"X-Taskome-Job-Id": "00000000-0000-0000-0000-000000000006"},
+            json={"text": "hello"},
+        )
+
+    assert response.status_code == 401
+
+
+def test_rest_rejects_an_oversized_raw_body_before_json_parsing() -> None:
+    app = build_task_server(
+        name="echo",
+        tasks=(
+            TaskDefinition(
+                name="echo",
+                description="Echo a message.",
+                params_model=EchoParams,
+                result_model=EchoResult,
+                adapter=EchoAdapter(),
+            ),
+        ),
+        runtime=fake_runtime(request_body_max_bytes=10),
+    )
+    body, headers = _signed_json({"text": "too large"}, "00000000-0000-0000-0000-000000000008")
+
+    with TestClient(app) as client:
+        response = client.post("/internal/tasks/echo", headers=headers, content=body)
+
+    assert response.status_code == 413
+
+
+def test_rest_rejects_a_recently_completed_job_id() -> None:
+    app = build_task_server(
+        name="echo",
+        tasks=(
+            TaskDefinition(
+                name="echo",
+                description="Echo a message.",
+                params_model=EchoParams,
+                result_model=EchoResult,
+                adapter=EchoAdapter(),
+            ),
+        ),
+        runtime=fake_runtime(),
+    )
+    body, headers = _signed_json({"text": "hello"}, "00000000-0000-0000-0000-000000000007")
+
+    with TestClient(app) as client:
+        first = client.post("/internal/tasks/echo", headers=headers, content=body)
+        assert first.status_code == 200
+        replay = client.post("/internal/tasks/echo", headers=headers, content=body)
+
+    assert replay.status_code == 409
+    assert replay.json()["type"] == "urn:taskome:error:duplicate_job"
 
 
 def test_rest_rejects_unknown_fields_in_nested_params() -> None:
@@ -149,11 +231,11 @@ def test_rest_rejects_unknown_fields_in_nested_params() -> None:
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/internal/tasks/echo",
-            headers={"X-Taskome-Job-Id": "00000000-0000-0000-0000-000000000002"},
-            json={"payload": {"text": "hello", "unexpected": True}},
+        body, headers = _signed_json(
+            {"payload": {"text": "hello", "unexpected": True}},
+            "00000000-0000-0000-0000-000000000002",
         )
+        response = client.post("/internal/tasks/echo", headers=headers, content=body)
 
     assert response.status_code == 422
 
@@ -174,11 +256,15 @@ def test_rest_publishes_validated_produced_files_and_cleans_the_workdir(tmp_path
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/internal/tasks/write",
-            headers={"X-Taskome-Job-Id": "00000000-0000-0000-0000-000000000003"},
-            json={"text": "hello"},
+        body = json.dumps({"text": "hello"}, separators=(",", ":")).encode()
+        headers = signed_request_headers(
+            method="POST",
+            target="/internal/tasks/write",
+            body=body,
+            job_id=UUID("00000000-0000-0000-0000-000000000003"),
         )
+        headers["content-type"] = "application/json"
+        response = client.post("/internal/tasks/write", headers=headers, content=body)
 
     assert response.json()["outputs"] == [
         {
