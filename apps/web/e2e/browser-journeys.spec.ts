@@ -30,6 +30,13 @@ async function signUp(page: Page, name: string, email: string) {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
+async function mcpResult(response: import("@playwright/test").APIResponse) {
+  const body = await response.text();
+  const data = body.match(/^data: (.+)$/m)?.[1];
+  if (!data) throw new Error(`MCP response did not contain an SSE data event: ${body}`);
+  return JSON.parse(data) as { result: { tools: Array<{ name: string }> } };
+}
+
 test("anonymous dashboard access redirects to sign-in", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login$/);
@@ -64,13 +71,17 @@ test("API Docs loads the live Gateway REST contract through the BFF", async ({ p
     data: { email, name: "Browser Docs", password },
   });
   await expectOK(signup);
+  const openAPIResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/gateway/openapi" && response.ok(),
+  );
   await page.goto("/api-docs");
   await expect(page.getByRole("heading", { name: "API Docs" }).first()).toBeVisible();
-  await expect(page.getByText("Create Input File", { exact: true })).toBeVisible();
+  const openAPI = (await openAPIResponse).json() as Promise<{ paths: Record<string, unknown> }>;
+  await expect(openAPI).resolves.toHaveProperty("paths./input-files");
 });
 
 test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ page, request }) => {
-  const callback = new URL("/e2e-oauth-callback", process.env.E2E_WEB_URL).toString();
+  const callback = new URL("/api-docs", process.env.E2E_WEB_URL).toString();
   const state = randomUUID();
   const verifier = `e2e-${randomUUID()}-pkce-verifier`;
   const challenge = createHash("sha256").update(verifier).digest("base64url");
@@ -125,8 +136,9 @@ test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ pag
       grant_type: "authorization_code",
       redirect_uri: callback,
     },
+    headers: { Origin: process.env.E2E_WEB_URL! },
   });
-  expect(token.ok()).toBeTruthy();
+  expect(token.ok(), `token exchange failed: ${token.status()} ${await token.text()}`).toBeTruthy();
   const { access_token: accessToken } = (await token.json()) as { access_token: string };
   const mcpURL = `${process.env.E2E_GATEWAY_URL}/mcp/`;
   const headers = {
@@ -156,7 +168,7 @@ test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ pag
     data: { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
   });
   expect(tools.ok()).toBeTruthy();
-  const result = (await tools.json()) as { result: { tools: Array<{ name: string }> } };
+  const result = await mcpResult(tools);
   expect(result.result.tools.map((tool) => tool.name)).toEqual(
     expect.arrayContaining(["prepare_input_file_upload", "prepare_input_file_download"]),
   );

@@ -24,7 +24,7 @@ export function oauthGatewayAudience(audience: string): BetterAuthPlugin {
       body.set("resource", audience);
       const headers = new Headers(request.headers);
       headers.delete("content-length");
-      return { request: new Request(request, { body, headers, method: "POST" }) };
+      return { request: new Request(request.url, { body, headers, method: "POST" }) };
     },
   };
 }
