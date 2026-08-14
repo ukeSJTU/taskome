@@ -1,0 +1,73 @@
+# Product
+
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+web
+
+## Users
+
+`apps/web` serves two distinct audiences under one Next.js app:
+
+- **Internal tool platform** (`(app)` route group and auth flows): XDenovo's own internal teams doing binder/de novo protein design work. The audience is mixed — computational/ML researchers comfortable with a tool's real configuration surface, alongside wet-lab scientists who may need more guidance. Accounts are flat and individual (no team-scoped sharing/visibility yet). "Internal only, no billing" is a v1 implementation-scope constraint on _this_ surface specifically (deliberately avoiding over-building account/billing infrastructure this platform doesn't need yet) — it does not describe the company or the public website below.
+- **Public corporate website** (`(public)` route group): genuinely public-facing. Primary visitors are biology-field professionals and researchers (the same kind of user the tool platform itself serves — computational biology, wet-lab, pharma R&D) evaluating XDenovo's actual technology and credibility, since the platform exists to provide real biology-research tools. Secondary visitors: broader potential research/pharma partners, collaborators, and the AI4Bio-interested public. Not scoped to recruiting specifically.
+
+## Product Purpose
+
+Two independent surfaces sharing one app:
+
+1. **Tool platform** — a GPU-backed compute platform that puts XDenovo's internal protein-design tools (initially PepMimic, BindCraft, GraphPep, extended opportunistically) behind a single reachable interface, exposed identically over a Web UI, MCP, and REST. Success is a researcher or agent running a real job with the tool's actual config surface, without needing direct server/CLI access.
+2. **Public website** — communicates XDenovo's AI4Bio positioning outward. Success is a visitor understanding what XDenovo does and why it's differentiated.
+
+## Positioning
+
+- **Tool platform**: modeled on two references, each contributing a different piece — tamarind.bio's GPU-backed compute tools behind one platform, reached from a web UI, combined with subseq.bio's power-user posture (expose a tool's real configuration surface, not a no-code abstraction). A neighboring "no-code" wrapper product could not truthfully copy the power-user parameter surface; a bare internal script runner could not truthfully copy the unified Web/MCP/REST access model.
+- **Public website**: positions XDenovo within AI4Bio (AI-native biotech / de novo protein design). The `(public)` route currently contains only Next.js/Better-T-Stack placeholder scaffolding (an ASCII "BETTER T STACK" banner and an empty "API Status" card) — no real copy has been built into `apps/web` yet, but real company content exists in `references/old-website` (the previous site, kept as content/structure reference only per root AGENTS.md — never reused as code).
+
+## Operating Context
+
+- **Access Channels** (ADR-0023): Web App uses REST through `apps/web`'s own BFF API routes; MCP Agents use MCP directly against `apps/gateway`; Direct API Clients use REST directly against `apps/gateway`. Browser code never bypasses the BFF.
+- **Domain terms** (root `CONTEXT.md`): Task, Job, Task Server, Gateway, Principal, Personal API Key, Input File. "taskome" = Task + -ome.
+- **Data ownership**: `apps/web` owns the auth Postgres schema; `apps/gateway` owns jobs and input files. Cross-service access goes through gateway's REST API, never direct SQL.
+- **Auth**: better-auth (`packages/auth`), consumed via `apps/web/src/lib/auth-client.ts`. Plugins: personal API keys (named, revocable), JWT (short-lived session tokens for BFF→Gateway calls), two-factor auth (issuer "taskome"). Also handles OAuth consent and an OAuth authorization server `.well-known` endpoint for MCP Agent auth.
+- **Routes**: `(public)` public site; `(auth)` login/signup; `(app)` authenticated dashboard, account/API keys, API reference; `oauth/consent`, `security/two-factor`, `two-factor` auth flows.
+
+## Capabilities and Constraints
+
+- Each Task's MCP and REST parameters are a curated subset of the underlying tool's real config, designed per tool (not a full passthrough), including vendored-code changes where needed. No CLI is offered.
+- Both MCP and REST are required for every Task — neither ships alone as "done."
+- Job chaining (piping one Job's output into the next Job's input) is explicitly out of scope for now; it's on the roadmap and not designed around yet.
+- No fixed tool catalog boundary — PepMimic, BindCraft, GraphPep are the initial set, extended opportunistically.
+- No team-scoped sharing/visibility yet (flat individual accounts); storage layer is ownership-agnostic so this can land later without a storage migration (ADR-0011).
+- `apps/docs` is a separate static public content site with no Gateway access — out of scope for `apps/web`.
+
+## Brand Commitments
+
+- Product/company name: "taskome" (page title and OTel service name) is the internal platform's name. The public-facing company brand name is confirmed as **XDeNovo** (matches the old site's legal name, Shanghai XDeNovo Biotechnology Co., Ltd.) — use "XDeNovo" casing on the public website, not "XDenovo."
+- No logo or brand asset files exist yet in `apps/web` (no `public/` directory beyond the default `favicon.ico`).
+
+## Evidence on Hand
+
+- No copy has been built into `apps/web`'s `(public)` route yet — it is unmodified scaffold placeholder. But real company facts exist in `references/old-website` (previous site's copy, kept as content/structure reference only, never reused as code):
+    - **Company**: XDeNovo / 纽肽生物 (Shanghai XDeNovo Biotechnology Co., Ltd.), founded 2025.
+    - **Mission**: accelerate drug development through AI-designed novel peptides, addressing difficult-to-drug targets and unmet clinical needs.
+    - **Team**: core members from David Baker Laboratory and Shanghai Jiao Tong University; combines peptide engineering expertise with AI.
+    - **Products** (previous framing, predates this repo's PepMimic/BindCraft/GraphPep tool set): de novo peptide/antibody design, PDC/PRC drug targeting heads, antimicrobial peptides, cosmetic peptides, industrial enzymes, custom protein design.
+    - **Platform validation cases**: metabolic diseases, tumor immunity, neurodegenerative diseases, autoimmune diseases, cardiovascular diseases — each with a stated affinity/specificity claim from internal experimental data.
+    - **Locations**: HQ Shanghai (Minhang District); R&D presence in Shanghai, Beijing, Hong Kong, Seattle.
+    - **Industry timeline** (2018 AlphaFold → 2021 AlphaFold2 → 2022 first AI-antibody in clinical trials → 2023 RFdiffusion → 2024 Nobel Prize in Chemistry for computational protein design → 2025 company founded).
+    - These are real historical facts, not synthetic placeholders — reusable as real content. Confirm with the user before publishing anything time-sensitive (team roster, locations, specific numeric claims) in case it has changed since the old site was written.
+- No screenshots, demos, or sample job data beyond a placeholder `data.json` in the dashboard route.
+- No logo or brand asset files exist in `apps/web` (the old site's `public/NewPeptide_logo.png` predates the current name and is not to be reused as an asset).
+
+## Product Principles
+
+- Expose real tool configuration, not a no-code abstraction — power users over convenience defaults.
+- Every Task is reachable identically through Web, MCP, and REST; no channel is a second-class citizen.
+- Internal tool, not a commercial product — no billing, no external-customer assumptions baked into the platform.
+- Durable architecture over roadmap-shaped shortcuts: features not yet built (team sharing, job chaining) stay behind stable boundaries rather than leaking into today's contracts.
+
+## Accessibility & Inclusion
+
+WCAG 2.1 AA is the required baseline for both the internal tool platform and the public website.

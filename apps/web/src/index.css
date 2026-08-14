@@ -1,3 +1,187 @@
 @layer theme, base, scalar-theme, components, utilities;
 @import "@taskome/ui/globals.css";
 @import "@scalar/api-reference-react/style.css" layer(scalar-theme);
+
+/*
+ * Public-site design world (XDeNovo corporate site, `(public)` route group).
+ * Scoped as additional named tokens so `packages/ui`'s shared shadcn theme
+ * (also consumed by apps/docs) is untouched.
+ */
+@theme {
+  --color-lab: #f7f5ee;
+  --color-lab-100: #efece0;
+  --color-lab-200: #e3ded0;
+
+  --color-bio-50: #eaf3ea;
+  --color-bio-100: #d3e8d6;
+  --color-bio-200: #b0d6b6;
+  --color-bio-300: #8bc294;
+  --color-bio-400: #66aa71;
+  --color-bio-500: #4a8f57;
+  --color-bio-600: #397445;
+  --color-bio-700: #2c5936;
+  --color-bio-800: #1f4127;
+  --color-bio-900: #142c1a;
+
+  --color-signal: #d9642a;
+  --color-signal-600: #bf5320;
+  --color-signal-700: #a8481c;
+  --color-signal-800: #8f3c17;
+  --color-signal-100: #f8e2d2;
+  /* text-on-page role, distinct from signal-700's button-background role, because the two need to move in opposite directions between themes */
+  --color-signal-ink: #a8481c;
+
+  --color-ink: #16241b;
+  --color-ink-muted: #48594c;
+
+  /* always-light, theme-invariant: text set against a surface that is already dark in both themes (filled buttons, the permanently-dark pipeline section) */
+  --color-paper: #f7f5ee;
+
+  --font-display: var(--font-display-src), "Archivo", sans-serif;
+  --font-copy: var(--font-copy-src), "Inter", sans-serif;
+  --font-data: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/*
+ * Dark theme, derived from the light world above: the same lab-register identity
+ * at night. bio-100/200/300 (pale hairlines + illustration highlights) and the
+ * signal-700/800 button pair are left theme-invariant on purpose — they already
+ * read correctly against both a light and a dark ground.
+ */
+.dark {
+  --color-lab: #0f1e15;
+  --color-lab-100: #16301c;
+  --color-lab-200: #1f3d26;
+
+  --color-bio-50: #15281b;
+  --color-bio-500: #5fa06d;
+  --color-bio-600: #7cc98c;
+  --color-bio-700: #4a8f57;
+  --color-bio-900: #081209;
+
+  --color-signal-ink: #e2884f;
+
+  --color-ink: #f3efe4;
+  --color-ink-muted: #b7c7b9;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* offsets the sticky public-site header (h-16) so anchored sections aren't hidden under it */
+    scroll-padding-top: 4.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+/* Graceful light/dark crossfade instead of an instant, mechanical swap on toggle. */
+.xdenovo-public,
+.xdenovo-public * {
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease,
+    fill 220ms ease,
+    stroke 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xdenovo-public,
+  .xdenovo-public * {
+    transition: none;
+  }
+}
+
+.xdenovo-public ::selection {
+  background-color: var(--color-bio-300);
+  color: var(--color-ink);
+}
+
+.xdenovo-public :focus-visible {
+  outline: 2px solid var(--color-signal-700);
+  outline-offset: 2px;
+}
+
+/*
+ * Tool platform (`(app)` route group). Same lab-register world as the public
+ * site, restrained for Operate mode: brand rides the shared shadcn tokens
+ * (packages/ui's --background/--primary/etc.) rather than a bespoke component
+ * layer, so every shadcn component already in the dashboard inherits it for
+ * free. `packages/ui`'s own tokens (also used by apps/docs) are untouched;
+ * this only overrides them within `.xdenovo-app`'s scope.
+ */
+.xdenovo-app {
+  --background: #f7f5ee;
+  --foreground: #16241b;
+  --card: #fbfaf5;
+  --card-foreground: #16241b;
+  --popover: #fbfaf5;
+  --popover-foreground: #16241b;
+  --primary: #a8481c;
+  --primary-foreground: #f7f5ee;
+  --secondary: #eaf3ea;
+  --secondary-foreground: #16241b;
+  --muted: #efece0;
+  --muted-foreground: #48594c;
+  --accent: #eaf3ea;
+  --accent-foreground: #16241b;
+  --border: #e3ded0;
+  --input: #e3ded0;
+  --ring: #a8481c;
+  --sidebar: #efece0;
+  --sidebar-foreground: #16241b;
+  --sidebar-primary: #397445;
+  --sidebar-primary-foreground: #f7f5ee;
+  --sidebar-accent: #eaf3ea;
+  --sidebar-accent-foreground: #16241b;
+  --sidebar-border: #e3ded0;
+  --sidebar-ring: #a8481c;
+}
+
+.dark .xdenovo-app {
+  --background: #0f1e15;
+  --foreground: #f3efe4;
+  --card: #16301c;
+  --card-foreground: #f3efe4;
+  --popover: #16301c;
+  --popover-foreground: #f3efe4;
+  --primary: #a8481c;
+  --primary-foreground: #f7f5ee;
+  --secondary: #15281b;
+  --secondary-foreground: #f3efe4;
+  --muted: #16301c;
+  --muted-foreground: #b7c7b9;
+  --accent: #15281b;
+  --accent-foreground: #f3efe4;
+  --border: #1f3d26;
+  --input: #1f3d26;
+  --ring: #e2884f;
+  --sidebar: #16301c;
+  --sidebar-foreground: #f3efe4;
+  --sidebar-primary: #7cc98c;
+  --sidebar-primary-foreground: #16241b;
+  --sidebar-accent: #15281b;
+  --sidebar-accent-foreground: #f3efe4;
+  --sidebar-border: #1f3d26;
+  --sidebar-ring: #e2884f;
+}
+
+.xdenovo-app,
+.xdenovo-app * {
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xdenovo-app,
+  .xdenovo-app * {
+    transition: none;
+  }
+}

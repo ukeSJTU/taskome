@@ -1,30 +1,27 @@
-"use client";
+import type { Metadata } from "next";
 
-const TITLE_TEXT = `
- ██████╗ ███████╗████████╗████████╗███████╗██████╗
- ██╔══██╗██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
- ██████╔╝█████╗     ██║      ██║   █████╗  ██████╔╝
- ██╔══██╗██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗
- ██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║
- ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝
+import { HeroSection } from "@/components/public/hero-section";
+import { MissionSection } from "@/components/public/mission-section";
+import { PipelineSection } from "@/components/public/pipeline-section";
+import { ProductsSection } from "@/components/public/products-section";
+import { TeamSection } from "@/components/public/team-section";
+import { ValidationSection } from "@/components/public/validation-section";
 
- ████████╗    ███████╗████████╗ █████╗  ██████╗██╗  ██╗
- ╚══██╔══╝    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
-    ██║       ███████╗   ██║   ███████║██║     █████╔╝
-    ██║       ╚════██║   ██║   ██╔══██║██║     ██╔═██╗
-    ██║       ███████║   ██║   ██║  ██║╚██████╗██║  ██╗
-    ╚═╝       ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
- `;
+export const metadata: Metadata = {
+  title: "XDeNovo — AI-designed peptides and proteins",
+  description:
+    "XDeNovo designs de novo peptides and proteins from scratch with AI, validated at the molecular interface.",
+};
 
 export default function Home() {
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-2">
-      <pre className="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
-      <div className="grid gap-6">
-        <section className="rounded-lg border p-4">
-          <h2 className="mb-2 font-medium">API Status</h2>
-        </section>
-      </div>
-    </div>
+    <main>
+      <HeroSection />
+      <MissionSection />
+      <ValidationSection />
+      <PipelineSection />
+      <TeamSection />
+      <ProductsSection />
+    </main>
   );
 }

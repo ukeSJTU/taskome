@@ -64,3 +64,8 @@ apps/web/e2e/.auth/
 .cache
 tmp
 temp
+
+# Impeccable ephemeral output (config.json/design.json/settings.json stay tracked)
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/live/

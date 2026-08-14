@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider
+      className="xdenovo-app"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 72)",
