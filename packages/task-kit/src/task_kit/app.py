@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+import json
 import os
 import re
 import tempfile
@@ -86,6 +87,27 @@ def _problem(status: int, code: str, detail: str) -> JSONResponse:
             "status": status,
             "detail": detail,
         },
+    )
+
+
+async def _bounded_body(request: Request, limit: int) -> bytes:
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > limit:
+            raise ValueError("request body exceeds configured limit")
+    return bytes(body)
+
+
+def _signed_request(request: Request, body: bytes) -> SignedGatewayRequest:
+    return SignedGatewayRequest(
+        timestamp=request.headers.get("X-Taskome-Timestamp"),
+        signature=request.headers.get("X-Taskome-Signature"),
+        method=request.method,
+        target=request.url.path + (f"?{request.url.query}" if request.url.query else ""),
+        body=body,
+        job_id=request.headers.get("X-Taskome-Job-Id"),
+        traceparent=request.headers.get("traceparent"),
     )
 
 
@@ -237,35 +259,37 @@ def build_task_server(
         )
 
     @app.get("/internal/manifest")
-    async def get_manifest() -> dict[str, Any]:
-        return manifest
+    async def get_manifest(request: Request) -> JSONResponse:
+        try:
+            runtime.gateway_requests.verify(_signed_request(request, b""))
+        except TypeError, ValueError:
+            return _problem(401, "unauthorized", "Invalid Gateway request.")
+        return JSONResponse(manifest)
 
     @app.post("/internal/tasks/{local_task_name}")
     async def run_task(local_task_name: str, request: Request) -> JSONResponse:
         definition = registry.get(local_task_name)
         if definition is None:
             return _problem(404, "task_not_found", "Task not found.")
-        body = await request.body()
-        signed = SignedGatewayRequest(
-            timestamp=request.headers.get("X-Taskome-Timestamp"),
-            signature=request.headers.get("X-Taskome-Signature"),
-            method=request.method,
-            target=request.url.path + (f"?{request.url.query}" if request.url.query else ""),
-            body=body,
-            job_id=request.headers.get("X-Taskome-Job-Id"),
-            traceparent=request.headers.get("traceparent"),
-        )
+        try:
+            body = await _bounded_body(request, 4 * 1024 * 1024)
+        except ValueError:
+            return _problem(413, "body_too_large", "Request body is too large.")
+        signed = _signed_request(request, body)
         try:
             verified = runtime.gateway_requests.verify(signed)
             job_id = verified.job_id or UUID(signed.job_id or "")
         except ValueError, TypeError:
             return _problem(401, "unauthorized", "Invalid Gateway request.")
+        if not await runtime.claim_job(job_id):
+            return _problem(409, "duplicate_job", "Job has already been processed.")
         try:
-            payload = await request.json()
+            payload = json.loads(body)
             params = definition.params_model.model_validate(
                 payload, strict=True, extra="forbid", by_alias=True, by_name=False
             )
         except ValidationError, ValueError:
+            await runtime.complete_job(job_id)
             return _problem(422, "invalid_input", "Params do not match this Task's contract.")
         try:
             return JSONResponse(
@@ -280,6 +304,8 @@ def build_task_server(
                 "task_execution_failed", task_name=definition.name, job_id=str(job_id)
             )
             return _problem(502, "input_materialization_failed", "Task infrastructure failed.")
+        finally:
+            await runtime.complete_job(job_id)
 
     mcp = FastMCP(name=f"{name} Task Server")
 

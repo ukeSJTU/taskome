@@ -1,6 +1,7 @@
 """The stable, framework-independent public API for Task Server authors."""
 
 from .app import build_task_server
+from .runtime import TaskServerRuntime
 from .types import (
     ComputeAdapter,
     ComputeContext,
@@ -23,5 +24,6 @@ __all__ = [
     "InputFileId",
     "ProducedFile",
     "TaskDefinition",
+    "TaskServerRuntime",
     "build_task_server",
 ]
