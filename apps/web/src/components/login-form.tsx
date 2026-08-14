@@ -69,7 +69,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"form">)
   return (
     <form
       className={cn("flex flex-col gap-6", className)}
-      onSubmitCapture={(e) => {
+      data-hydrated={isHydrated || undefined}
+      data-testid="auth-form"
+      onSubmit={(e) => {
         e.preventDefault();
         e.stopPropagation();
         form.handleSubmit();
@@ -136,7 +138,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"form">)
             selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
           >
             {({ canSubmit, isSubmitting }) => (
-              <Button type="submit" disabled={!isHydrated || !canSubmit || isSubmitting}>
+              <Button type="submit" disabled={!canSubmit || isSubmitting}>
                 {isSubmitting ? "Signing in..." : "Login"}
               </Button>
             )}

@@ -72,7 +72,9 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"form">
   return (
     <form
       className={cn("flex flex-col gap-6", className)}
-      onSubmitCapture={(e) => {
+      data-hydrated={isHydrated || undefined}
+      data-testid="auth-form"
+      onSubmit={(e) => {
         e.preventDefault();
         e.stopPropagation();
         form.handleSubmit();
@@ -158,7 +160,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"form">
             selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
           >
             {({ canSubmit, isSubmitting }) => (
-              <Button type="submit" disabled={!isHydrated || !canSubmit || isSubmitting}>
+              <Button type="submit" disabled={!canSubmit || isSubmitting}>
                 {isSubmitting ? "Creating account..." : "Create Account"}
               </Button>
             )}

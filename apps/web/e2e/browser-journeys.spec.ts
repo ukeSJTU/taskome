@@ -12,8 +12,13 @@ function address(label: string) {
   return `${label}-${randomUUID()}@e2e.taskome.test`;
 }
 
+async function waitForClientForm(page: Page) {
+  await expect(page.getByTestId("auth-form")).toHaveAttribute("data-hydrated", "true");
+}
+
 async function signUp(page: Page, name: string, email: string) {
   await page.goto("/signup");
+  await waitForClientForm(page);
   await page.getByLabel("Full Name").fill(name);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -41,6 +46,7 @@ test("a returning user signs in and sees their identity", async ({ page, request
   });
   await expectOK(signup);
   await page.goto("/login");
+  await waitForClientForm(page);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Login" }).click();
@@ -55,6 +61,7 @@ test("API Docs loads the live Gateway REST contract through the BFF", async ({ p
   });
   await expectOK(signup);
   await page.goto("/login");
+  await waitForClientForm(page);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Login" }).click();
@@ -92,6 +99,7 @@ test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ pag
     state,
   }).toString();
   await page.goto(authorize.toString());
+  await waitForClientForm(page);
   const email = address("mcp");
   const signup = await request.post("/api/auth/sign-up/email", {
     data: { email, name: "MCP Browser User", password },
