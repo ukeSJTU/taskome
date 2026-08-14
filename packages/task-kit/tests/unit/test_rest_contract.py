@@ -3,6 +3,7 @@
 import json
 import shutil
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -106,15 +107,17 @@ class AliasedResultAdapter:
 
 
 class WrongResultClassAdapter:
-    def run(self, params: EchoParams, ctx: ComputeContext) -> ComputeResult[WrongEchoResult]:
+    def run(self, params: EchoParams, ctx: ComputeContext) -> ComputeResult[EchoResult]:
         del ctx
-        return ComputeResult(value=WrongEchoResult(message=params.message))
+        wrong_result: Any = WrongEchoResult(message=params.message)
+        return ComputeResult(value=wrong_result)
 
 
 class ResultSubclassAdapter:
-    def run(self, params: EchoParams, ctx: ComputeContext) -> ComputeResult[EchoResultSubclass]:
+    def run(self, params: EchoParams, ctx: ComputeContext) -> ComputeResult[EchoResult]:
         del ctx
-        return ComputeResult(value=EchoResultSubclass(message=params.message))
+        result: EchoResult = EchoResultSubclass(message=params.message)
+        return ComputeResult(value=result)
 
 
 class InvalidOutputNameAdapter:

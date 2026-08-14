@@ -156,14 +156,14 @@ REST uses RFC 9457 Problem Details. MCP uses JSON-RPC `InvalidParams` for model 
 
 ## Internal interfaces
 
-| Route                              | Authentication                               | Purpose                               |
-| ---------------------------------- | -------------------------------------------- | ------------------------------------- |
-| `GET /health/live`                 | none                                         | process liveness                      |
+| Route                              | Authentication                               | Purpose                              |
+| ---------------------------------- | -------------------------------------------- | ------------------------------------ |
+| `GET /health/live`                 | none                                         | process liveness                     |
 | `GET /health/ready`                | none                                         | completed startup and accepting work |
-| `GET /internal/manifest`           | Gateway HMAC, no Job id                      | immutable Task catalog                |
-| `POST /internal/tasks/{task_name}` | Gateway HMAC + Job id                        | REST execution                        |
-| `/mcp/`                            | tool discovery unsigned; `tools/call` signed | FastMCP Streamable HTTP               |
-| `GET /docs`                        | none, development only by default            | Scalar REST reference                 |
+| `GET /internal/manifest`           | Gateway HMAC, no Job id                      | immutable Task catalog               |
+| `POST /internal/tasks/{task_name}` | Gateway HMAC + Job id                        | REST execution                       |
+| `/mcp/`                            | tool discovery unsigned; `tools/call` signed | FastMCP Streamable HTTP              |
+| `GET /docs`                        | none, development only by default            | Scalar REST reference                |
 
 Successful REST and MCP calls return `value` plus `outputs`. Every output has `name`, `storage_key`, `media_type`, nullable `download_name`, `size_bytes`, and `sha256`. REST failures use RFC 9457 Problem Details: invalid input 422, compute failure 500, Input File/output infrastructure failure 502, duplicate Job 409, oversized body 413, and invalid authentication 401. MCP model errors are JSON-RPC `InvalidParams`; execution errors use `isError=true` and `_meta.taskome.error_code`.
 

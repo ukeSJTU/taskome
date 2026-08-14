@@ -64,7 +64,9 @@ def test_lifespan_owned_observability_exports_server_spans() -> None:
 
     server_spans = [span for span in exporter.get_finished_spans() if span.kind.name == "SERVER"]
     assert len(server_spans) == 1
-    assert server_spans[0].attributes["http.route"] == "/health/live"
+    attributes = server_spans[0].attributes
+    assert attributes is not None
+    assert attributes["http.route"] == "/health/live"
 
 
 def test_compute_failure_logs_safe_classification_without_sensitive_content() -> None:
