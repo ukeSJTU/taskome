@@ -69,3 +69,6 @@ temp
 .impeccable/review/
 .impeccable/mocks/
 .impeccable/live/
+
+# Local scratch work (specs, tickets) not meant for version control
+.scratch/
