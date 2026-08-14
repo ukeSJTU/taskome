@@ -306,6 +306,12 @@
       "sourceType": "github",
       "skillPath": "skills/productivity/writing-for-agents/SKILL.md",
       "computedHash": "ccfa1e94d8f6ab5c6a1edd55293ca477faf93c39207771331efdb1e798ed21d6"
+    },
+    "writing-web-documentation": {
+      "source": "onmax/nuxt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/writing-web-documentation/SKILL.md",
+      "computedHash": "78d28a486868c980c3962f459ddd18e9444cad0d8941b88778ee47489059c099"
     }
   }
 }
