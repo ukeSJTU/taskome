@@ -1,0 +1,25 @@
+[project]
+name = "fpocket-server"
+version = "0.1.0"
+description = "Taskome fpocket Task Server"
+requires-python = ">=3.14"
+authors = [{ name = "ukeSJTU", email = "uke_sjtu@sjtu.edu.cn" }]
+dependencies = ["fastapi[standard]>=0.141.1", "fastmcp==4.0.0b2", "structlog>=25.5.0", "task-kit"]
+
+[project.scripts]
+fpocket-server = "fpocket_server:main"
+
+[dependency-groups]
+dev = [{ include-group = "lint" }, { include-group = "test" }]
+lint = ["ruff>=0.16.3", "ty>=0.0.71"]
+test = ["pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0", "pytest-mock>=3.15.1"]
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.uv.sources]
+task-kit = { path = "../../packages/task-kit", editable = true }

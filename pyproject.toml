@@ -20,7 +20,8 @@ members = ["apps/gateway", "packages/task-kit"]
 [tool.ruff]
 target-version = "py314"
 line-length = 100
-extend-exclude = ["references"]
+extend-exclude = ["references", "apps/task-*/compute"]
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -32,10 +33,10 @@ ignore = ["D", "COM812", "ISC001", "CPY001"]
 "apps/gateway/tests/**" = ["S101", "PLR2004", "ANN001", "ANN201", "INP001"]
 
 [tool.ty.src]
-exclude = ["references", ".agents"]
+exclude = ["references", ".agents", "apps/task-*/compute"]
 
 [tool.ty.environment]
 python-version = "3.14"
 
 [tool.pytest.ini_options]
-norecursedirs = ["references"]
+norecursedirs = ["references", "apps/task-*/compute"]

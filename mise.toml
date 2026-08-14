@@ -2,7 +2,7 @@
 monorepo_root = true
 
 [monorepo]
-config_roots = ["apps/gateway", "apps/docs", "packages/task-kit"]
+config_roots = ["apps/gateway", "apps/docs", "apps/task-fpocket", "packages/task-kit"]
 
 [tools]
 node = "24"
@@ -21,6 +21,7 @@ UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
 
 [tasks.setup]
 description = "Install locked project dependencies, initialize local env files, and install Git hooks"
+depends = ["//apps/task-fpocket:sync"]
 run = [
   "pnpm install --frozen-lockfile",
   "uv sync --locked",
@@ -195,22 +196,27 @@ run = [
 
 [tasks.lint]
 description = "Lint the whole repo (TS + Python), safe autofixes"
-depends = ["ts:lint", "gateway:lint", "//packages/task-kit:lint"]
+depends = ["ts:lint", "gateway:lint", "//apps/task-fpocket:lint", "//packages/task-kit:lint"]
 output = "prefix"
 
 [tasks.format]
 description = "Format the whole repo (TS + Python)"
-depends = ["ts:format", "gateway:format", "//packages/task-kit:format"]
+depends = [
+  "ts:format",
+  "gateway:format",
+  "//apps/task-fpocket:format",
+  "//packages/task-kit:format",
+]
 output = "prefix"
 
 [tasks.check]
 description = "Read-only check across the whole repo (lint + format + types)"
-depends = ["ts:check", "gateway:check", "//packages/task-kit:check"]
+depends = ["ts:check", "gateway:check", "//apps/task-fpocket:check", "//packages/task-kit:check"]
 output = "prefix"
 
 [tasks.test]
 description = "Run tests across the repo"
-depends = ["ts:test", "gateway:test", "//packages/task-kit:test"]
+depends = ["ts:test", "gateway:test", "//apps/task-fpocket:test", "//packages/task-kit:test"]
 output = "prefix"
 
 [tasks."dev:up"]

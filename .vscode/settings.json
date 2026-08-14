@@ -1,10 +1,12 @@
 {
   // Performance and indexing
   "files.exclude": {
-    "**/.worktrees": true
+    "**/.worktrees": true,
+    "**/apps/task-*/compute": true
   },
   "files.watcherExclude": {
     "**/references/**": true,
+    "**/apps/task-*/compute/**": true,
     "**/.worktrees/**": true,
     "**/.next/**": true,
     "**/.venv/**": true,
@@ -14,6 +16,7 @@
   },
   "search.exclude": {
     "**/.next/**": true,
+    "**/apps/task-*/compute/**": true,
     "**/.worktrees/**": true,
     "**/.venv/**": true,
     "**/__pycache__/**": true,
@@ -25,17 +28,22 @@
   // Package management and TypeScript
   "npm.packageManager": "pnpm",
   "npm.scriptRunner": "pnpm",
-  "npm.exclude": ["**/references/**", "**/.worktrees/**"],
+  "npm.exclude": ["**/references/**", "**/apps/task-*/compute/**", "**/.worktrees/**"],
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "js/ts.updateImportsOnFileMove.enabled": "always",
   "js/ts.preferences.preferTypeOnlyAutoImports": true,
-  "js/ts.preferences.autoImportFileExcludePatterns": ["**/references/**", "**/.worktrees/**"],
+  "js/ts.preferences.autoImportFileExcludePatterns": [
+    "**/references/**",
+    "**/apps/task-*/compute/**",
+    "**/.worktrees/**"
+  ],
 
   // Python
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
   "python.analysis.exclude": [
     "**/references/**",
+    "**/apps/task-*/compute/**",
     "**/node_modules",
     "**/__pycache__",
     "**/.*",
@@ -47,7 +55,7 @@
   "python.testing.unittestEnabled": false,
 
   // Other language services
-  "rust-analyzer.files.exclude": ["references", ".worktrees"],
+  "rust-analyzer.files.exclude": ["references", "apps/task-*/compute", ".worktrees"],
 
   // Project tooling
   "oxc.requireConfig": true,

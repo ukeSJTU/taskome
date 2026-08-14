@@ -4,6 +4,7 @@
     ".agents/**",
     ".claude/**",
     "references/**",
+    "apps/task-*/compute/**",
     "packages/db/src/migrations/**",
     "packages/api-client/openapi.json",
     "skills-lock.json"

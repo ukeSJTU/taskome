@@ -1,0 +1,34 @@
+[env]
+# Ignore the monorepo's activated virtual environment so uv selects this
+# project's own .venv.
+VIRTUAL_ENV = false
+
+[tasks.sync]
+description = "Synchronize the fpocket Task Server environment"
+hide = true
+run = "uv sync --locked --all-groups"
+
+[tasks.build]
+description = "Build the fpocket Task Server image"
+hide = true
+run = "docker build --platform linux/amd64 --file Dockerfile --tag taskome/task-fpocket:dev ../.."
+
+[tasks.lint]
+description = "Lint fpocket Task Server (safe autofixes)"
+hide = true
+run = "uv run ruff check --fix"
+
+[tasks.format]
+description = "Format fpocket Task Server"
+hide = true
+run = "uv run ruff format"
+
+[tasks.check]
+description = "Read-only check: lint, format, types"
+hide = true
+run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check src"]
+
+[tasks.test]
+description = "Smoke-test the fpocket Task Server entry point until API tests exist"
+hide = true
+run = "uv run fpocket-server"

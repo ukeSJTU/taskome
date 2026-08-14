@@ -29,6 +29,22 @@
 **/coverage
 **/tests
 **/README.md
+!packages/task-kit/README.md
+
+# Vendored fpocket content outside the compiled fpocket target's build inputs.
+apps/task-fpocket/compute/.github
+apps/task-fpocket/compute/data
+apps/task-fpocket/compute/doc
+apps/task-fpocket/compute/man
+apps/task-fpocket/compute/scripts
+apps/task-fpocket/compute/bin
+apps/task-fpocket/compute/obj
+apps/task-fpocket/compute/plugins/noarch
+apps/task-fpocket/compute/plugins/LINUXAMD64/molfile/*.so
+apps/task-fpocket/compute/Dockerfile*
+apps/task-fpocket/compute/INSTALL.txt
+apps/task-fpocket/compute/Makefile.am
+apps/task-fpocket/compute/azure-pipelines.yml
 
 Dockerfile
 **/Dockerfile
