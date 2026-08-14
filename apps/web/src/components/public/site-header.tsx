@@ -2,20 +2,22 @@
 
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { PublicThemeToggle } from "./theme-toggle";
 
 const NAV_LINKS = [
-  { href: "#mission", label: "Mission" },
-  { href: "#platform", label: "Platform" },
-  { href: "#products", label: "Products" },
-  { href: "#team", label: "Team" },
-  { href: "#contact", label: "Contact" },
+  { href: "/technology", label: "Technology" },
+  { href: "/products", label: "Products" },
+  { href: "/platform-cases", label: "Platform Cases" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
 ] as const;
 
 export function PublicSiteHeader() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-40 border-b border-bio-200/70 bg-lab/90 backdrop-blur-sm">
@@ -29,13 +31,16 @@ export function PublicSiteHeader() {
         </Link>
         <nav className="hidden items-center gap-8 md:flex">
           {NAV_LINKS.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
-              className="font-copy text-sm text-ink-muted transition-colors hover:text-bio-700"
+              aria-current={pathname === link.href ? "page" : undefined}
+              className={`font-copy text-sm transition-colors hover:text-bio-700 ${
+                pathname === link.href ? "font-medium text-bio-700" : "text-ink-muted"
+              }`}
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="hidden items-center gap-5 md:flex">
@@ -64,24 +69,31 @@ export function PublicSiteHeader() {
 
       <nav
         id="public-mobile-nav"
+        aria-hidden={!open}
+        inert={!open || undefined}
         className={`grid overflow-hidden border-t border-bio-200/70 bg-lab transition-[grid-template-rows] duration-300 ease-out md:hidden ${
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr] border-t-0"
         }`}
       >
         <div className="flex min-h-0 flex-col px-6 py-2">
           {NAV_LINKS.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="font-copy border-b border-bio-100 py-3 text-sm text-ink-muted transition-colors hover:text-bio-700"
+              tabIndex={open ? undefined : -1}
+              aria-current={pathname === link.href ? "page" : undefined}
+              className={`font-copy border-b border-bio-100 py-3 text-sm transition-colors hover:text-bio-700 ${
+                pathname === link.href ? "font-medium text-bio-700" : "text-ink-muted"
+              }`}
             >
               {link.label}
-            </a>
+            </Link>
           ))}
           <Link
             href="/login"
             onClick={() => setOpen(false)}
+            tabIndex={open ? undefined : -1}
             className="font-copy py-3 text-sm font-medium text-ink-muted transition-colors hover:text-bio-700"
           >
             Platform sign in

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const STAGES = [
   {
     label: "Target definition",
@@ -44,6 +46,12 @@ export function PipelineSection() {
             </li>
           ))}
         </ol>
+        <Link
+          href="/technology"
+          className="font-copy mt-12 inline-block text-sm font-medium text-bio-200 transition-colors hover:text-paper"
+        >
+          More on the platform →
+        </Link>
       </div>
     </section>
   );
