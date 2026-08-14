@@ -1,5 +1,5 @@
 """FastAPI assembly and the single synchronous Task execution pipeline."""
-# ruff: noqa: ANN202, ANN401, C901, EM101, EM102, PGH003, PLR0911, PLR0913, PLR0915, PLR0917, PLR2004, PTH101, TC003, TRY003
+# ruff: noqa: ANN202, ANN401, C901, EM101, EM102, PGH003, PLR0911, PLR0912, PLR0913, PLR0915, PLR0917, PLR2004, PTH101, TC003, TRY003, TRY300
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Union, get_args, get_origin
 from uuid import UUID
 
 import anyio
@@ -21,6 +21,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_request
+from fastmcp.tools.base import ToolResult
 from pydantic import BaseModel, ValidationError
 
 from .runtime import SignedGatewayRequest, TaskServerRuntime, ValidatedProducedFile
@@ -35,6 +36,14 @@ from .types import (
 )
 
 _NAME = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
+
+
+class _InputMaterializationError(Exception):
+    pass
+
+
+class _OutputPublicationError(Exception):
+    pass
 
 
 def _assert_name(value: str, label: str) -> None:
@@ -57,6 +66,48 @@ def _schema(model: type[BaseModel]) -> dict[str, Any]:
 
     strict_objects(schema)
     return schema
+
+
+def _reject_nested_extras(value: Any, annotation: Any) -> None:
+    """Reject unknown object keys before Pydantic can discard them in nested models."""
+    origin = get_origin(annotation)
+    if origin is Union:
+        for candidate in get_args(annotation):
+            try:
+                _reject_nested_extras(value, candidate)
+                return
+            except ValueError:
+                continue
+        return
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        if not isinstance(value, dict):
+            return
+        fields = annotation.model_fields
+        aliases = {
+            field.alias or field_name: (field_name, field) for field_name, field in fields.items()
+        }
+        unknown = set(value) - set(aliases)
+        if unknown:
+            raise ValueError("Params contain unknown nested fields")
+        for key, child in value.items():
+            _, field = aliases[key]
+            _reject_nested_extras(child, field.annotation)
+        return
+    if origin in (list, tuple, set, frozenset) and isinstance(value, list):
+        args = get_args(annotation)
+        if args:
+            for child in value:
+                _reject_nested_extras(child, args[0])
+    elif origin is dict and isinstance(value, dict):
+        args = get_args(annotation)
+        if len(args) == 2:
+            for child in value.values():
+                _reject_nested_extras(child, args[1])
+
+
+def _validate_params(model: type[BaseModel], payload: Any) -> BaseModel:
+    _reject_nested_extras(payload, model)
+    return model.model_validate(payload, strict=True, extra="forbid", by_alias=True, by_name=False)
 
 
 def _validate_definition(definition: TaskDefinition[Any, Any]) -> None:
@@ -87,6 +138,14 @@ def _problem(status: int, code: str, detail: str) -> JSONResponse:
             "status": status,
             "detail": detail,
         },
+    )
+
+
+def _mcp_error(code: str, message: str) -> ToolResult:
+    return ToolResult(
+        content=message,
+        meta={"taskome": {"error_code": code}},
+        is_error=True,
     )
 
 
@@ -181,18 +240,21 @@ async def _execute(
             inputs, work = root / "inputs", root / "work"
             inputs.mkdir()
             work.mkdir()
-            input_paths = await runtime.input_files.materialize(
-                job_id, _discover_input_files(params), inputs
-            )
+            try:
+                input_paths = await runtime.input_files.materialize(
+                    job_id, _discover_input_files(params), inputs
+                )
+            except Exception as error:
+                raise _InputMaterializationError from error
             context = ComputeContext(
                 workdir=work,
-                input_paths=input_paths,
                 logger=runtime.logger.bind(
                     server_name=server_name,
                     task_name=definition.name,
                     job_id=str(job_id),
                     traceparent=traceparent,
                 ),
+                _input_paths=input_paths,
             )
             result = await anyio.to_thread.run_sync(  # type: ignore
                 definition.adapter.run, params, context
@@ -206,7 +268,10 @@ async def _execute(
             except (AttributeError, ValidationError) as error:
                 raise ComputeExecutionError("Adapter returned an invalid result value") from error
             files = _validated_outputs(result.files, work)
-            outputs = await runtime.outputs.publish(server_name, job_id, files)
+            try:
+                outputs = await runtime.outputs.publish(server_name, job_id, files)
+            except Exception as error:
+                raise _OutputPublicationError from error
             return {
                 "value": value.model_dump(mode="json", by_alias=True),
                 "outputs": [asdict(output) for output in outputs],
@@ -239,12 +304,18 @@ def build_task_server(
             for item in definitions
         ],
     }
+    mcp = FastMCP(name=f"{name} Task Server")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        app.state.ready = True
-        yield
-        app.state.ready = False
+        async with mcp_app.lifespan(app):
+            app.state.ready = True
+            try:
+                yield
+            finally:
+                app.state.ready = False
+                if runtime.close is not None:
+                    await runtime.close()
 
     app = FastAPI(title=f"{name} Task Server", docs_url=None, redoc_url=None, lifespan=lifespan)
 
@@ -272,7 +343,7 @@ def build_task_server(
         if definition is None:
             return _problem(404, "task_not_found", "Task not found.")
         try:
-            body = await _bounded_body(request, 4 * 1024 * 1024)
+            body = await _bounded_body(request, runtime.request_body_max_bytes)
         except ValueError:
             return _problem(413, "body_too_large", "Request body is too large.")
         signed = _signed_request(request, body)
@@ -285,9 +356,7 @@ def build_task_server(
             return _problem(409, "duplicate_job", "Job has already been processed.")
         try:
             payload = json.loads(body)
-            params = definition.params_model.model_validate(
-                payload, strict=True, extra="forbid", by_alias=True, by_name=False
-            )
+            params = _validate_params(definition.params_model, payload)
         except ValidationError, ValueError:
             await runtime.complete_job(job_id)
             return _problem(422, "invalid_input", "Params do not match this Task's contract.")
@@ -299,6 +368,10 @@ def build_task_server(
             return _problem(422, "invalid_input", str(error))
         except ComputeExecutionError:
             return _problem(500, "compute_failed", "Task execution failed.")
+        except _InputMaterializationError:
+            return _problem(502, "input_materialization_failed", "Input materialization failed.")
+        except _OutputPublicationError:
+            return _problem(502, "output_publish_failed", "Output publication failed.")
         except Exception:
             runtime.logger.exception(
                 "task_execution_failed", task_name=definition.name, job_id=str(job_id)
@@ -307,28 +380,50 @@ def build_task_server(
         finally:
             await runtime.complete_job(job_id)
 
-    mcp = FastMCP(name=f"{name} Task Server")
-
     def mcp_handler(task_definition: TaskDefinition[Any, Any]) -> Any:
-        async def call_task(**arguments: Any) -> dict[str, Any]:
+        async def call_task(**arguments: Any) -> ToolResult:
             request = get_http_request()
+            body = await request.body()
+            if len(body) > runtime.mcp_message_max_bytes:
+                return _mcp_error("invalid_input", "MCP message is too large.")
             signed = SignedGatewayRequest(
                 timestamp=request.headers.get("X-Taskome-Timestamp"),
                 signature=request.headers.get("X-Taskome-Signature"),
                 method=request.method,
                 target=request.url.path + (f"?{request.url.query}" if request.url.query else ""),
-                body=await request.body(),
+                body=body,
                 job_id=request.headers.get("X-Taskome-Job-Id"),
                 traceparent=request.headers.get("traceparent"),
             )
-            verified = runtime.gateway_requests.verify(signed)
-            job_id = verified.job_id or UUID(signed.job_id or "")
-            params = task_definition.params_model.model_validate(
-                arguments, strict=True, extra="forbid", by_alias=True, by_name=False
-            )
-            return await _execute(
-                task_definition, runtime, name, job_id, params, verified.traceparent
-            )
+            try:
+                verified = runtime.gateway_requests.verify(signed)
+                job_id = verified.job_id or UUID(signed.job_id or "")
+            except TypeError, ValueError:
+                return _mcp_error("unauthorized", "Invalid Gateway request.")
+            if not await runtime.claim_job(job_id):
+                return _mcp_error("duplicate_job", "Job has already been processed.")
+            try:
+                params = _validate_params(task_definition.params_model, arguments)
+                envelope = await _execute(
+                    task_definition, runtime, name, job_id, params, verified.traceparent
+                )
+                return ToolResult(
+                    content=json.dumps(envelope, separators=(",", ":")),
+                    structured_content=envelope,
+                )
+            except ValidationError, ValueError, ComputeInputError:
+                return _mcp_error("invalid_input", "Params do not match this Task's contract.")
+            except ComputeExecutionError:
+                return _mcp_error("compute_failed", "Task execution failed.")
+            except _InputMaterializationError:
+                return _mcp_error("input_materialization_failed", "Input materialization failed.")
+            except _OutputPublicationError:
+                return _mcp_error("output_publish_failed", "Output publication failed.")
+            except Exception:
+                runtime.logger.exception("task_execution_failed", task_name=task_definition.name)
+                return _mcp_error("compute_failed", "Task execution failed.")
+            finally:
+                await runtime.complete_job(job_id)
 
         return call_task
 
@@ -350,7 +445,20 @@ def build_task_server(
             for field_name, field_info in definition.params_model.model_fields.items()
         }
         call_task.__signature__ = inspect.Signature(fields)  # type: ignore[attr-defined]
-        mcp.tool(name=definition.name, description=definition.description)(call_task)
-    app.mount("/mcp", mcp.http_app(path="/"))
+        mcp.tool(
+            name=definition.name,
+            description=definition.description,
+            output_schema={
+                "type": "object",
+                "required": ["value", "outputs"],
+                "properties": {
+                    "value": _schema(definition.result_model),
+                    "outputs": {"type": "array"},
+                },
+                "additionalProperties": False,
+            },
+        )(call_task)
+    mcp_app = mcp.http_app(path="/")
+    app.mount("/mcp", mcp_app)
 
     return app

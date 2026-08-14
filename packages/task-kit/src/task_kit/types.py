@@ -9,23 +9,13 @@ from typing import Generic, Mapping, Protocol, TypeVar
 from uuid import UUID
 
 import structlog
-from pydantic import BaseModel
-from pydantic_core import core_schema
+from pydantic import BaseModel, ConfigDict, RootModel
 
 
-class InputFileId(UUID):
+class InputFileId(RootModel[UUID]):
     """Opaque Gateway-owned Input File identifier, represented as a UUID in JSON."""
 
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source_type: object, handler: object
-    ) -> core_schema.CoreSchema:
-        del source_type, handler
-        return core_schema.no_info_after_validator_function(
-            lambda value: cls(str(value)),
-            core_schema.uuid_schema(),
-            serialization=core_schema.to_string_ser_schema(),
-        )
+    model_config = ConfigDict(frozen=True)
 
 
 ParamsT = TypeVar("ParamsT", bound=BaseModel)
@@ -61,12 +51,12 @@ class ComputeResult(Generic[ResultT]):
 @dataclass(frozen=True, slots=True)
 class ComputeContext:
     workdir: Path
-    input_paths: Mapping[InputFileId, Path]
     logger: structlog.stdlib.BoundLogger
+    _input_paths: Mapping[InputFileId, Path]
 
     def input_path(self, input_file_id: InputFileId) -> Path:
         try:
-            return self.input_paths[input_file_id]
+            return self._input_paths[input_file_id]
         except KeyError as error:
             raise ComputeInputError(f"Input File {input_file_id} was not materialized.") from error
 

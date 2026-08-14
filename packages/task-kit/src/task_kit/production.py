@@ -1,10 +1,11 @@
 """Production Gateway HMAC, HTTP input resolution, and S3 output ports."""
-# ruff: noqa: ANN401, EM101, PGH003, TC001, TC003, TRY003
+# ruff: noqa: ANN401, EM101, PGH003, PLR0913, TC001, TC003, TRY003
 
 from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import time
 from collections.abc import Collection, Mapping
 from pathlib import Path
@@ -14,6 +15,7 @@ from uuid import UUID
 import boto3
 import httpx
 import structlog
+from botocore.client import Config
 
 from .runtime import (
     PublishedOutput,
@@ -24,6 +26,30 @@ from .runtime import (
 )
 from .settings import TaskServerSettings
 from .types import InputFileId
+
+
+def _signature(
+    secret: str,
+    *,
+    timestamp: str,
+    method: str,
+    target: str,
+    job_id: str,
+    traceparent: str,
+    body: bytes,
+) -> str:
+    canonical = "\n".join(
+        (
+            "taskome-v1",
+            timestamp,
+            method.upper(),
+            target,
+            job_id,
+            traceparent,
+            hashlib.sha256(body).hexdigest(),
+        )
+    )
+    return hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).hexdigest()
 
 
 class GatewayHMACVerifier:
@@ -61,8 +87,9 @@ class GatewayHMACVerifier:
 
 
 class GatewayInputFileResolver:
-    def __init__(self, gateway_url: str, client: httpx.AsyncClient) -> None:
+    def __init__(self, gateway_url: str, secret: str, client: httpx.AsyncClient) -> None:
         self._gateway_url = gateway_url.rstrip("/")
+        self._secret = secret
         self._client = client
 
     async def materialize(
@@ -73,16 +100,36 @@ class GatewayInputFileResolver:
     ) -> Mapping[InputFileId, Path]:
         if not input_file_ids:
             return {}
+        target = f"/internal/jobs/{job_id}/input-files/resolve"
+        body = json.dumps(
+            {"input_file_ids": [str(identifier.root) for identifier in input_file_ids]},
+            separators=(",", ":"),
+        ).encode()
+        timestamp = str(int(time.time()))
         response = await self._client.post(
-            f"{self._gateway_url}/internal/jobs/{job_id}/input-files/resolve",
-            json={"input_file_ids": [str(identifier) for identifier in input_file_ids]},
+            f"{self._gateway_url}{target}",
+            content=body,
+            headers={
+                "content-type": "application/json",
+                "X-Taskome-Timestamp": timestamp,
+                "X-Taskome-Job-Id": str(job_id),
+                "X-Taskome-Signature": _signature(
+                    self._secret,
+                    timestamp=timestamp,
+                    method="POST",
+                    target=target,
+                    job_id=str(job_id),
+                    traceparent="",
+                    body=body,
+                ),
+            },
         )
         response.raise_for_status()
         entries = response.json()["input_files"]
         resolved: dict[InputFileId, Path] = {}
         for entry in entries:
             identifier = InputFileId(entry["id"])
-            path = destination_dir / str(identifier)
+            path = destination_dir / str(identifier.root)
             partial = path.with_suffix(".part")
             written = 0
             async with self._client.stream("GET", entry["url"]) as download:
@@ -114,11 +161,12 @@ class S3OutputPublisher:
             for file in files:
                 key = f"{server_name}/{job_id}/{file.name}"
                 await __import__("anyio").to_thread.run_sync(  # type: ignore
-                    self._client.upload_file,
-                    str(file.path),
-                    self._bucket,
-                    key,
-                    {"ExtraArgs": {"ContentType": file.media_type}},
+                    self._client.put_object,
+                    Bucket=self._bucket,
+                    Key=key,
+                    Body=file.path.read_bytes(),
+                    ContentType=file.media_type,
+                    IfNoneMatch="*",
                 )
                 uploaded.append(key)
                 outputs.append(
@@ -158,15 +206,35 @@ def build_runtime(settings: TaskServerSettings) -> TaskServerRuntime:
         endpoint_url=str(settings.seaweedfs_internal_endpoint),
         aws_access_key_id=settings.seaweedfs_access_key,
         aws_secret_access_key=settings.seaweedfs_secret_key.get_secret_value(),
+        region_name="us-east-1",
+        config=Config(
+            signature_version="s3v4",
+            connect_timeout=settings.seaweedfs_connect_timeout_seconds,
+            read_timeout=settings.seaweedfs_io_timeout_seconds,
+            retries={"mode": "standard", "total_max_attempts": 2},
+            s3={"addressing_style": "path"},
+        ),
     )
+
+    async def close() -> None:
+        await client.aclose()
+        s3.close()
+
     return TaskServerRuntime(
         gateway_requests=GatewayHMACVerifier(
             settings.gateway_task_hmac_secret.get_secret_value(),
             settings.gateway_signature_max_age_seconds,
         ),
-        input_files=GatewayInputFileResolver(str(settings.gateway_internal_url), client),
+        input_files=GatewayInputFileResolver(
+            str(settings.gateway_internal_url),
+            settings.gateway_task_hmac_secret.get_secret_value(),
+            client,
+        ),
         outputs=S3OutputPublisher(s3, settings.seaweedfs_bucket, logger),
         logger=logger,
         workdir_root=settings.workdir_root,
         max_concurrent_jobs=settings.max_concurrent_jobs,
+        request_body_max_bytes=settings.request_body_max_bytes,
+        mcp_message_max_bytes=settings.mcp_message_max_bytes,
+        close=close,
     )

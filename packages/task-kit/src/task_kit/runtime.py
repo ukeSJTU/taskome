@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Collection, Mapping, Protocol
+from typing import Awaitable, Callable, Collection, Mapping, Protocol
 from uuid import UUID
 
 import anyio
@@ -78,14 +78,20 @@ class TaskServerRuntime:
     logger: structlog.stdlib.BoundLogger = field(default_factory=structlog.get_logger)
     workdir_root: Path | None = None
     max_concurrent_jobs: int = 1
+    request_body_max_bytes: int = 4 * 1024 * 1024
+    mcp_message_max_bytes: int = 1024 * 1024
     limiter: anyio.CapacityLimiter = field(init=False)
     active_jobs: set[UUID] = field(default_factory=set, init=False)
     completed_jobs: OrderedDict[UUID, None] = field(default_factory=OrderedDict, init=False)
     job_lock: anyio.Lock = field(default_factory=anyio.Lock, init=False)
+    close: Callable[[], Awaitable[None]] | None = None
 
     def __post_init__(self) -> None:
-        if self.max_concurrent_jobs < 1:
-            raise ValueError("max_concurrent_jobs must be positive")
+        if (
+            min(self.max_concurrent_jobs, self.request_body_max_bytes, self.mcp_message_max_bytes)
+            < 1
+        ):
+            raise ValueError("Runtime budgets must be positive")
         self.limiter = anyio.CapacityLimiter(self.max_concurrent_jobs)
 
     async def claim_job(self, job_id: UUID) -> bool:

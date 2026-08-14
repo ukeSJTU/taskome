@@ -16,6 +16,7 @@ from .runtime import (
     ValidatedProducedFile,
     VerifiedGatewayRequest,
 )
+from .types import ComputeContext, InputFileId
 
 
 class _AllowUnsignedRequests:
@@ -58,4 +59,15 @@ def fake_runtime(*, workdir_root: Path | None = None) -> TaskServerRuntime:
         outputs=_InMemoryOutputs(),
         logger=structlog.get_logger(),
         workdir_root=workdir_root,
+    )
+
+
+def compute_context(
+    *, workdir: Path, input_paths: dict[InputFileId, Path] | None = None
+) -> ComputeContext:
+    """Build a legitimate adapter context without importing runtime internals."""
+    return ComputeContext(
+        workdir=workdir,
+        logger=structlog.get_logger(),
+        _input_paths={} if input_paths is None else input_paths,
     )
