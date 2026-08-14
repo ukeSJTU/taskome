@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PageHero } from "@/components/public/page-hero";
+import { PageHero } from "@/app/(public)/_components/page-hero";
 import { TechnologyAdvantagesSection } from "@/components/public/technology-advantages-section";
 import { TechnologyPipelineSection } from "@/components/public/technology-pipeline-section";
 

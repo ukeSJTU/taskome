@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { ContactInfoSection } from "@/components/public/contact-info-section";
-import { PageHero } from "@/components/public/page-hero";
+import { ContactInfoSection } from "@/app/(public)/_components/contact-info-section";
+import { PageHero } from "@/app/(public)/_components/page-hero";
 
 export const metadata: Metadata = {
   title: "Contact — XDeNovo",

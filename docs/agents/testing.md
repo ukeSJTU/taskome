@@ -57,7 +57,7 @@ test: {
     { resolve: { alias: { ...sharedAlias, "next/headers": ... } },
       test: { name: "node", include: ["src/app/**/*.test.ts", "src/lib/**/*.test.ts"], environment: "node", setupFiles: ["./src/test/setup.ts"] } },
     { resolve: { alias: sharedAlias },
-      test: { name: "jsdom", include: ["src/components/**/*.test.tsx"], environment: "jsdom", environmentOptions: { jsdom: { url: "http://localhost:3000" } }, setupFiles: ["./src/test/setup.jsdom.ts"] } },
+      test: { name: "jsdom", include: ["src/components/**/*.test.tsx", "src/app/**/_components/**/*.test.tsx"], environment: "jsdom", environmentOptions: { jsdom: { url: "http://localhost:3000" } }, setupFiles: ["./src/test/setup.jsdom.ts"] } },
   ],
 }
 ```

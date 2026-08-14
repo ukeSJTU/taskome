@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { HeroSection } from "@/components/public/hero-section";
-import { MissionSection } from "@/components/public/mission-section";
-import { PipelineSection } from "@/components/public/pipeline-section";
-import { ProductsSection } from "@/components/public/products-section";
-import { TeamSection } from "@/components/public/team-section";
-import { ValidationSection } from "@/components/public/validation-section";
+import { HeroSection } from "@/app/(public)/_components/hero-section";
+import { MissionSection } from "@/app/(public)/_components/mission-section";
+import { PipelineSection } from "@/app/(public)/_components/pipeline-section";
+import { ProductsSection } from "@/app/(public)/_components/products-section";
+import { TeamSection } from "@/app/(public)/_components/team-section";
+import { ValidationSection } from "@/app/(public)/_components/validation-section";
 
 export const metadata: Metadata = {
   title: "XDeNovo — AI-designed peptides and proteins",
