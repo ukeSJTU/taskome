@@ -4,8 +4,8 @@ import { auth } from "@taskome/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { AppSidebar } from "./_components/app-sidebar";
-import { SiteHeader } from "./_components/site-header";
+import { AppSidebar } from "@/app/(app)/_components/app-sidebar";
+import { SiteHeader } from "@/app/(app)/_components/site-header";
 import { SidebarInset, SidebarProvider } from "@taskome/ui/components/sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

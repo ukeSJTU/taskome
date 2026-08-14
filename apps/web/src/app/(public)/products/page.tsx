@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { PageHero } from "../_components/page-hero";
-import { ProductsIndexSection } from "../_components/products-index-section";
+import { PageHero } from "@/app/(public)/_components/page-hero";
+import { ProductsIndexSection } from "@/app/(public)/_components/products-index-section";
 
 export const metadata: Metadata = {
   title: "Products — XDeNovo",

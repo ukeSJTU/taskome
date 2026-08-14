@@ -1,7 +1,7 @@
 import { GalleryVerticalEndIcon } from "lucide-react";
 import Link from "next/link";
 
-import { SignupForm } from "../_components/signup-form";
+import { SignupForm } from "@/app/(auth)/_components/signup-form";
 
 export default function SignupPage() {
   return (
