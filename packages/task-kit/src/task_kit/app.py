@@ -207,8 +207,9 @@ def _validated_outputs(
         names.add(file.name)
         if file.path.is_absolute() or ".." in file.path.parts:
             raise ComputeExecutionError("Adapter returned an output path outside its workdir")
-        path = (root / file.path).resolve()
-        if root not in path.parents or not path.is_file():
+        candidate = root / file.path
+        path = candidate.resolve()
+        if candidate.is_symlink() or root not in path.parents or not path.is_file():
             raise ComputeExecutionError("Adapter returned an invalid output file")
         digest = hashlib.sha256()
         with path.open("rb") as handle:

@@ -51,6 +51,17 @@ class OutputAdapter:
         )
 
 
+class SymlinkOutputAdapter:
+    def run(self, params: EchoParams, ctx: ComputeContext) -> ComputeResult[EchoResult]:
+        source = ctx.workdir / "source.txt"
+        source.write_text(params.message)
+        (ctx.workdir / "result.txt").symlink_to(source)
+        return ComputeResult(
+            value=EchoResult(message=params.message),
+            files=(ProducedFile(name="result", path=Path("result.txt"), media_type="text/plain"),),
+        )
+
+
 class NestedAdapter:
     def run(self, params: NestedParams, ctx: ComputeContext) -> ComputeResult[EchoResult]:
         del ctx
@@ -301,4 +312,34 @@ def test_rest_publishes_validated_produced_files_and_cleans_the_workdir(tmp_path
             "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
         }
     ]
+    assert not list(tmp_path.iterdir())
+
+
+def test_rest_rejects_symlinked_produced_files(tmp_path: Path) -> None:
+    app = build_task_server(
+        name="echo",
+        tasks=(
+            TaskDefinition(
+                name="write",
+                description="Write a message.",
+                params_model=EchoParams,
+                result_model=EchoResult,
+                adapter=SymlinkOutputAdapter(),
+            ),
+        ),
+        runtime=fake_runtime(workdir_root=tmp_path),
+    )
+    body = b'{"text":"hello"}'
+    headers = signed_request_headers(
+        method="POST",
+        target="/internal/tasks/write",
+        body=body,
+        job_id=UUID("00000000-0000-0000-0000-000000000009"),
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/internal/tasks/write", headers=headers, content=body)
+
+    assert response.status_code == 500
+    assert response.json()["type"] == "urn:taskome:error:compute_failed"
     assert not list(tmp_path.iterdir())
