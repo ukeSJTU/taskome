@@ -1,4 +1,4 @@
-import { ChartAreaInteractive } from "@/app/(app)/_components/chart-area-interactive";
+import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/app/(app)/_components/data-table";
 import { SectionCards } from "@/app/(app)/_components/section-cards";
 

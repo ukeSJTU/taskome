@@ -2,7 +2,7 @@
 
 import { Toaster } from "@taskome/ui/components/sonner";
 
-import { ThemeProvider } from "@/app/(app)/_components/theme-provider";
+import { ThemeProvider } from "./theme-provider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (

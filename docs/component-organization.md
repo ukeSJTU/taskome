@@ -35,14 +35,7 @@ apps/web/src/
 │   │       ├── nav-documents.tsx
 │   │       ├── site-header.tsx
 │   │       ├── data-table.tsx
-│   │       ├── section-cards.tsx
-│   │       ├── api-keys-panel.tsx
-│   │       ├── api-reference-panel.tsx
-│   │       ├── chart-area-interactive.tsx
-│   │       ├── header.tsx
-│   │       ├── mode-toggle.tsx
-│   │       ├── theme-provider.tsx
-│   │       └── user-menu.tsx
+│   │       └── section-cards.tsx
 │   ├── (public)/
 │   │   ├── page.tsx
 │   │   ├── about/page.tsx
@@ -70,9 +63,7 @@ apps/web/src/
 │   │       ├── products-index-section.tsx
 │   │       ├── site-footer.tsx
 │   │       ├── site-header.tsx
-│   │       ├── theme-toggle.tsx
-│   │       ├── technology-advantages-section.tsx
-│   │       └── technology-pipeline-section.tsx
+│   │       └── theme-toggle.tsx
 │   ├── oauth/consent/page.tsx
 │   ├── security/two-factor/page.tsx
 │   ├── two-factor/page.tsx
