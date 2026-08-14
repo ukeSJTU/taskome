@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0027
+---
+
 # Async Job dispatch via Taskiq (RedisStreamBroker), completion via callback + reconciliation sweep
 
 Scope: this covers **async** Task Jobs only. A sync Task's Job still resolves directly within its REST/MCP call — no queue involved (see `CONTEXT.md`'s `Job` definition).

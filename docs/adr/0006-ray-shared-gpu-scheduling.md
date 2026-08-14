@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0027
+---
+
 # Ray, in cluster mode, for GPU/CPU scheduling shared across all Task Servers
 
 Each Task Server's Taskiq worker submits the actual compute execution (the subprocess call into its `compute/` conda environment) as a Ray remote task (`@ray.remote(num_gpus=1)` or `num_cpus=N`, matching that Task's fixed resource profile) to **one shared Ray cluster spanning the whole machine**, not an isolated `ray.init()` per container. A Ray head node is its own docker-compose service; every Task Server container runs Ray workers connecting to it.

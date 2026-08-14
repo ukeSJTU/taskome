@@ -1,8 +1,8 @@
-# Testing conventions: `apps/web` and `apps/gateway`
+# Testing conventions
 
 How this repo's two apps organize tests. Read this alongside the `tdd` skill (seams, anti-patterns, the red-green loop) — this file is the project-specific answer to "where do seams live and how is the infrastructure wired," not a replacement for that skill.
 
-`packages/*` is out of scope for these conventions — those packages are consumed as-is (e.g. `packages/auth`'s `createTestAuth()`), not rebuilt here.
+Most TypeScript `packages/*` remain consumed as-is (for example `packages/auth`'s `createTestAuth()`). `packages/task-kit` is the exception because it is a Python runtime library with external HTTP/S3 boundaries and is the shared contract every Task Server consumes.
 
 ## Governing principle: a hard-to-test seam is a design smell, not a testing problem
 
@@ -39,6 +39,41 @@ No `@pytest.mark.unit`/`integration` markers — the directory split already doe
 **Dependencies**: `pytest-asyncio` (`asyncio_mode = "auto"`, required — service/repository methods are `async def`), `pytest-mock` (the `mocker` fixture, replacing ad hoc `monkeypatch`/`unittest.mock.patch`), `polyfactory` (test data for Pydantic/SQLAlchemy models), `time-machine` (freezing time for `storage.py`'s presigned-URL expiry math). Not yet — `pytest-xdist` (suite is too small to need parallelism), `respx`/`pytest-httpx` (gateway makes no outbound `httpx` calls yet; add when a Task Server/compute-adapter integration does).
 
 **CI**: `mise.toml`'s `test` task splits into `test:unit` and `test:integration`; CI runs them as separate parallel jobs (`test-unit`, `test-integration`) so unit failures report back fast without waiting on container startup.
+
+## `packages/task-kit` and `apps/task-*` (pytest)
+
+Tests use exactly three public seams agreed in ADR-0026:
+
+| Owner                         | Seam                                                                       | Tier                     | What it proves                                                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| each Task Server              | direct `ComputeAdapter.run(params, ctx)`                                   | unit or tool integration | curated translation to the real in-process/subprocess compute tool, error classification, Result and Produced Files |
+| task-kit and each Task Server | app returned by `build_task_server` over REST and a real FastMCP client    | unit/contract            | strict flat Params, REST/MCP parity, errors, manifest, lifecycle, workdir behavior                                  |
+| task-kit only                 | production verifier/resolver/publisher through external HTTP and SeaweedFS | integration              | canonical HMAC, streaming and exact sizes, conditional object writes, metadata, rollback, and client lifespan       |
+
+`task_kit.testing` provides supported builders for a ComputeContext and fake TaskServerRuntime. Task Server tests use those helpers rather than constructing private DTOs, monkeypatching task-kit modules, or recreating HMAC/storage implementations. A fake runtime is an external-boundary replacement, not a mock of the shared execution core; tests still enter through the adapter or app seam and observe returned behavior.
+
+Task Server adapter tests may use `tmp_path` and local fixture files. They should invoke the real compute binary/library when doing so is fast and hermetic; otherwise put that boundary behind the Task's ComputeAdapter and cover the real tool in the app's integration tier. A test must not inspect task-kit's private registry, execution outcome, workdir manager, or transport objects.
+
+task-kit uses a physical split because its production port suite needs services:
+
+```text
+packages/task-kit/tests/
+├── unit/
+│   ├── test_rest_contract.py
+│   ├── test_mcp_contract.py
+│   ├── test_manifest_contract.py
+│   └── test_execution_contract.py
+└── integration/
+    ├── conftest.py
+    ├── test_input_file_resolver.py
+    └── test_output_publisher.py
+```
+
+Unit tests use known literal schemas, signed-request examples, and fixed hashes rather than recomputing expectations with production helpers. Integration tests use the pinned SeaweedFS image already used by browser E2E, plus a fake external Gateway HTTP service; they do not import `apps/gateway` or query its database. Gateway's later Task dispatch integration tests should consume a Task Server through its signed public internal interface, not import task-kit internals.
+
+Each `apps/task-*` keeps its own lockfile and test configuration. Its unit suite covers adapter semantics and one REST/MCP parity example; it does not repeat task-kit's exhaustive HMAC, path traversal, rollback, or FastMCP compatibility matrix. Unit and integration directories select tiers directly, with no duplicate pytest markers.
+
+Apply TDD as vertical slices: confirm the seam, write one failing behavior test, implement only that behavior, and repeat. Do not write all transport/schema tests up front against an imagined implementation, and do not add tests for private helpers merely to raise coverage.
 
 ## `apps/web` (Vitest)
 

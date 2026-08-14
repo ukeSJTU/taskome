@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0026
 ---
 
 # `ComputeAdapter` is a Ports & Adapters port; `register_task` is the one place REST and MCP wiring gets generated from it

@@ -4,6 +4,8 @@ status: superseded by ADR-0015 (directory shape only — no `server/` subdirecto
 
 # Isolate each Task Server in its own environment
 
+ADR-0027 additionally supersedes this ADR's separate Taskiq worker and async status-lookup process shape for synchronous v1. The container, dependency-isolation, subprocess-boundary, `apps/` placement, and independent-lockfile decisions remain in force; Taskiq and Ray will be redesigned together later.
+
 Each Task Server is its own process/container with two separate Python environments inside, bridged by subprocess rather than sharing an interpreter:
 
 - **conda**, running the vendored upstream compute code (PepMimic, BindCraft, …) as-is. These tools pin conflicting CUDA/PyRosetta/native-binary versions that can't coexist with each other, let alone with the rest of the monorepo's toolchain.
