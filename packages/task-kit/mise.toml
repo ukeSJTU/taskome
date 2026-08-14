@@ -1,17 +1,21 @@
 [tasks.lint]
 description = "Lint task-kit (safe autofixes)"
+hide = true
 run = "uv run ruff check --fix"
 
 [tasks.format]
 description = "Format task-kit"
+hide = true
 run = "uv run ruff format"
 
 [tasks.check]
 description = "Read-only check: lint, format, types"
+hide = true
 run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check src"]
 
 [tasks.test]
 description = "Smoke-test the task-kit public API. TODO: change to pytest later"
+hide = true
 run = '''
 uv run python -c '
 from task_kit import register_task

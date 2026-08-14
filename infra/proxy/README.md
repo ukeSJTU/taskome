@@ -24,7 +24,6 @@ examples (database, object storage, and observability settings). Then start the
 stack:
 
 ```bash
-mise run deployment:check
 mise run prod:up
 ```
 
@@ -32,7 +31,3 @@ Caddy obtains and renews the three certificates automatically. Its `/data` and
 `/config` directories use named volumes, so certificate state survives container
 replacement. MCP Streamable HTTP needs no buffering override because Caddy's
 reverse proxy streams responses by default.
-
-`mise run deployment:check` renders the merged Compose model, validates the
-Caddyfile with the pinned Caddy image, and runs the real Host/path routing smoke
-matrix against disposable upstreams.

@@ -15,33 +15,30 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 
 ## Getting Started
 
-First, install the dependencies:
+Initialize the locked dependencies, local environment files, and Git hooks:
 
 ```bash
-pnpm install
+mise run setup
 ```
 
-## Database Setup
+`setup` creates missing `apps/web/.env` and `apps/gateway/.env` with generated
+local secrets, without printing or overwriting them. If both files already
+exist, their `WEB_GATEWAY_HMAC_SECRET` values must be non-placeholder and
+identical. Review either file before continuing; the root `.env` is optional and
+only overrides Compose defaults from [`.env.example`](.env.example).
 
-This project uses PostgreSQL with Drizzle ORM.
-
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/web/.env` file with your PostgreSQL connection details.
-
-3. Start postgres, then apply the schema to your database:
+Start the supporting services, apply the Gateway schema, then run all three
+native applications:
 
 ```bash
 mise run dev:up
-pnpm run db:push
-```
-
-Then, run the development server:
-
-```bash
+mise run gateway:db:migrate
 mise run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the fullstack application.
+Web runs at [localhost:3000](http://localhost:3000), Gateway at
+[localhost:8000](http://localhost:8000), and Docs at
+[localhost:3001](http://localhost:3001).
 
 ## UI Customization
 
@@ -75,18 +72,19 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 
 Two files, not one — see [ADR-0013](docs/adr/0013-dev-support-base-and-prod-overlay-compose.md):
 
-- `compose.yml` — dev-support services only (postgres, SeaweedFS, a local otel-gui trace/log viewer). `web` and `gateway` run natively in development (`mise run dev`), not in containers.
+- `compose.yml` — dev-support services only (PostgreSQL, Redis, SeaweedFS, and a local otel-gui trace/log viewer). Web, Gateway, and Docs run natively in development (`mise run dev`), not in containers.
 - `compose.prod.yml` — overlay adding the three deployables (`web`, `docs`, and one `gateway`) plus Caddy on top of `compose.yml`. App Dockerfiles live in `apps/*/Dockerfile`.
 - `infra/` — shared infrastructure compose fragments (`include:`-d from one of the files above), plus placeholders for the eventual reverse proxy and GPU server provisioning. See `infra/README.md`.
 
 Commands:
 
 - Start dev-support services: `mise run dev:up`
+- Stop dev-support services: `mise run dev:down`
+- Tail dev-support logs: `mise run dev:logs`
 - Build prod images: `mise run prod:build`
 - Start the full prod-shaped stack: `mise run prod:up`
 - Logs: `mise run prod:logs`
 - Stop: `mise run prod:down`
-- Validate Compose and the public Caddy routing boundary: `mise run deployment:check`
 
 Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in the compose files for container networking.
 
@@ -139,21 +137,17 @@ taskome/
 
 ## Available Scripts
 
-`mise run <task>` is the primary entry point across the whole repo (TS + Python). `pnpm run <script>` still works underneath for TS-only scripts.
+`mise run <task>` is the repository's primary command surface. Application and
+package `pnpm` scripts remain implementation details; root `package.json` does
+not proxy repository workflows.
 
-- `mise run dev`: Start all applications in development mode
-- `mise run lint`: Lint the whole repo (TS + Python) with safe autofixes
-- `mise run format`: Format the whole repo (TS + Python)
-- `mise run check`: Read-only lint + format + type check across the whole repo
-- `pnpm run build`: Build all applications
-- `pnpm run dev:web`: Start only the web application
-- `pnpm run check-types`: Check TypeScript types across all apps
-- `pnpm run db:push`: Push schema changes to database
-- `pnpm run db:generate`: Generate database client/types
-- `pnpm run db:migrate`: Run database migrations
-- `pnpm run db:studio`: Open database studio UI
-- `mise run dev:up`: Start dev-support services in the background (postgres, SeaweedFS, otel-gui)
-- `mise run prod:build`: Build the production-shaped stack's images (web, gateway)
-- `mise run prod:up`: Build and start the full production-shaped stack
-- `mise run prod:logs`: Tail logs from the production-shaped stack
-- `mise run prod:down`: Stop the production-shaped stack
+- `mise run setup`, `mise run env:init`: prepare dependencies, hooks, and local configuration
+- `mise run dev`, `mise run web:dev`, `mise run gateway:dev`, `mise run docs:dev`: start all or one native application
+- `mise run dev:up`, `mise run dev:down`, `mise run dev:logs`: manage local support services
+- `mise run build`: build Web and Docs
+- `mise run lint`, `mise run format`, `mise run check`, `mise run test`: repository-wide quality tasks
+- `mise run web:db:push|generate|migrate|studio`: operate on the Web-owned Drizzle schema
+- `mise run gateway:db:migrate|revision`: operate on the Gateway-owned Alembic schema
+- `mise run api-client:generate`, `mise run api-client:verify`: update or verify generated Gateway client code
+- `mise run deps:outdated`: report Node, Python, GitHub Action, and mise tool updates without changing lockfiles
+- `mise run prod:build|up|down|logs`: operate on the production-shaped Compose stack

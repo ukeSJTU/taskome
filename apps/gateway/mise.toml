@@ -1,43 +1,54 @@
 [tasks.dev]
 description = "Run gateway with development reload on port 8000"
+hide = true
 run = "uv run fastapi dev --port 8000"
 
 [tasks.start]
 description = "Run gateway in production mode on port 8000"
+hide = true
 run = "APP_ENVIRONMENT=production uv run gunicorn gateway.main:app --config gunicorn.conf.py"
 
 [tasks.lint]
 description = "Lint gateway (safe autofixes)"
+hide = true
 run = "uv run ruff check --fix"
 
 [tasks.format]
 description = "Format gateway"
+hide = true
 run = "uv run ruff format"
 
 [tasks.check]
 description = "Read-only check: lint, format, types"
+hide = true
 run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check"]
 
 [tasks."test:unit"]
 description = "Run gateway unit tests (fast, no external services)"
+hide = true
 run = "uv run pytest tests/unit"
 
 [tasks."test:integration"]
 description = "Run gateway integration tests (real Postgres/SeaweedFS via testcontainers)"
+hide = true
 run = "uv run pytest tests/integration"
 
 [tasks.test]
 description = "Run all gateway tests"
+hide = true
 depends = ["test:unit", "test:integration"]
 
 [tasks."openapi:export"]
 description = "Export the gateway OpenAPI contract for TypeScript client generation"
+hide = true
 run = "uv run python scripts/export_openapi.py"
 
 [tasks."db:migrate"]
 description = "Upgrade the Gateway schema through checked-in Alembic revisions"
+hide = true
 run = "uv run python -m scripts.database migrate"
 
 [tasks."db:revision"]
 description = "Generate a reviewed Gateway Alembic revision in disposable PostgreSQL"
+hide = true
 run = "uv run python -m scripts.database revision"

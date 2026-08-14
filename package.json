@@ -2,19 +2,7 @@
   "name": "taskome",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "pnpm -r dev",
-    "build": "pnpm -r build",
-    "check-types": "pnpm -r check-types",
-    "test": "pnpm -r test",
-    "db:push": "pnpm --filter @taskome/db db:push",
-    "db:studio": "pnpm --filter @taskome/db db:studio",
-    "db:generate": "pnpm --filter @taskome/db db:generate",
-    "db:migrate": "pnpm --filter @taskome/db db:migrate",
-    "lint": "oxlint --fix",
-    "format": "oxfmt --write",
-    "check": "oxlint && oxfmt --check && pnpm check-types"
-  },
+  "scripts": {},
   "dependencies": {
     "@taskome/env": "workspace:*",
     "dotenv": "catalog:",

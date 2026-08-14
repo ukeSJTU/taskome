@@ -89,7 +89,7 @@ depends = ["ts:test", "//apps/gateway:test"]
 
 ### 6. CI（`.github/workflows/ci.yml`）—— 不需要新增 job，但依赖前面几步做对
 
-CI 目前三个 job（`check`/`test`/`build`）都是：`mise-action` 装工具链 → `pnpm install --frozen-lockfile` + `uv sync --locked` → `mise run check` / `mise run test` / `pnpm run build`。没有针对某个 app/package 的专门 job，全部通过 `mise run check`/`mise run test` 的 `depends` 扇出（第 5 条）和 `uv sync --locked`（因为 task-kit 已进 `uv.workspace.members`，第 2 条）自动覆盖。
+CI 的 `check` 与 `build` job 分别运行 `mise run check`、`mise run build`；测试按 unit 与 Gateway integration job 分开，以便较快报告不需要 testcontainer 的失败。它们都先通过 `mise-action` 安装工具链，再安装所需的 pnpm/uv 依赖。task-kit 由根质量任务的显式 `depends` 覆盖。
 —— 出处：`.github/workflows/ci.yml`。**前提**：第 5 条的 `depends` 必须手动加上，否则 CI 会"绿"但实际没有跑 task-kit 的检查（`uv sync` 会装它,但没人调用它的 lint/test 任务）。
 
 ### 7. 根 `pyproject.toml` 的 `[tool.ruff]` / `[tool.ty]` —— 不需要改
@@ -163,27 +163,27 @@ task-kit 是纯 Python，没有 `package.json`/`tsconfig.json`，与 TS 的 tsco
 新 app 只需要有自己的 `tsconfig.json` extend `@taskome/config/tsconfig.base.json`，`packages/config/tsconfig.base.json` 本身**不需要改动**——它是共享基座，不是按 app 登记的列表。
 —— 出处：`tsconfig.json`、`packages/config/tsconfig.base.json`。
 
-### 4. 根 `pyproject.toml` 的 `[tool.uv.workspace]` / 根 `mise.toml` 的 `[monorepo].config_roots` —— 不适用
+### 4. 根 `pyproject.toml` 的 `[tool.uv.workspace]` / 根 `mise.toml` 的 `[monorepo].config_roots` —— Python workspace 不适用；mise config root 视 app-local task 而定
 
-`apps/docs` 是 Next.js/TS，不是 Python 项目，不需要加入 `uv.workspace.members`，也不需要在 `[monorepo].config_roots` 里登记。佐证：现有的 `apps/web` 同样是 TS app，`config_roots` 目前只有 `["apps/gateway"]`，`apps/web` 从未被列入过——说明 `config_roots` 这套机制是 mise 用来发现 **Python** 子项目（自身有 `mise.toml`）的，TS app 走的是 `pnpm-workspace.yaml` + 根 `package.json` 的 `pnpm -r` 扇出（第 1、2 条），两套机制并行、互不覆盖。
-—— 出处：`mise.toml`（`config_roots = ["apps/gateway"]`，不含 `apps/web`）；`apps/web` 目录下无 `mise.toml`（对比 `apps/gateway/mise.toml` 存在）。
+`apps/docs` 是 Next.js/TS，不需要加入 `uv.workspace.members`。它有自己的 `mise.toml`，因此列在 `config_roots` 中；该 app-local task 实现被隐藏，仓库公开入口是根任务 `docs:dev`、`docs:build` 等。`apps/web` 没有 app-local mise 配置，根任务直接调用其 pnpm scripts。
+—— 出处：`mise.toml`（`config_roots = ["apps/gateway", "apps/docs", "packages/task-kit"]`）；`apps/docs/mise.toml` 与根公开 task 定义。
 
 ### 5. 根 `mise.toml` 的 `lint`/`format`/`check`/`test` 聚合任务 —— 不需要改
 
-这四个任务对 TS 侧的依赖是 `"ts:lint"`/`"ts:format"`/`"ts:check"`/`"ts:test"`，分别 `run = "pnpm run lint"` 等，而根 `package.json` 里：
+这四个任务对 TS 侧的依赖是隐藏的 `"ts:lint"`/`"ts:format"`/`"ts:check"`/`"ts:test"`；它们直接调用 pnpm 工具与 workspace scripts，而不是经由根 `package.json` 转发：
 
-```json
-"lint": "oxlint --fix",
-"format": "oxfmt --write",
-"check": "oxlint && oxfmt --check && pnpm check-types"
+```toml
+run = "pnpm exec oxlint --fix"
+run = "pnpm exec oxfmt --write"
+run = ["pnpm exec oxlint", "pnpm exec oxfmt --check", "pnpm -r run check-types"]
 ```
 
-`oxlint`/`oxfmt` 是对整个仓库扫描的（不按 workspace 成员逐个列举），`check-types` 走的是 `pnpm -r check-types` 扇出（第 2 条已覆盖）。所以新增一个 TS app 会被**自动**纳入，不需要像第一节第 5 条那样手动改 `depends` 列表——这是 TS 侧与 Python 侧（`config_roots` + 显式 `depends`）的一个关键不对称，值得注意。
-—— 出处：`mise.toml`（`ts:lint`/`ts:format`/`ts:check`/`ts:test` 任务定义）、根 `package.json`（`lint`/`format`/`check` 脚本实现）。
+`oxlint`/`oxfmt` 是对整个仓库扫描的（不按 workspace 成员逐个列举），`check-types` 走的是 `pnpm -r run check-types` 扇出（第 2 条已覆盖）。所以新增一个 TS app 会被**自动**纳入，不需要像第一节第 5 条那样手动改 `depends` 列表——这是 TS 侧与 Python 侧（`config_roots` + 显式 `depends`）的一个关键不对称，值得注意。
+—— 出处：`mise.toml`（隐藏的 `ts:lint`/`ts:format`/`ts:check`/`ts:test` 实现任务）。
 
 ### 6. CI（`.github/workflows/ci.yml`）—— 不需要新 job，但 `build` job 需要新 app 有可用的 `build` 脚本和必要 env
 
-`build` job 跑的是 `pnpm run build`（即 `pnpm -r build`），一旦 `apps/docs` 成为 workspace 成员且有 `build` 脚本（第 1、2 条），会自动被跑到。当前 `build` job 注入的 env（`DATABASE_URL`/`BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`/`AUTH_TRUSTED_ORIGIN`）是为 `apps/web` 构建准备的；ADR-0020 说 `apps/docs` 是"static content ... no gateway access"，大概率不需要这些 env 才能 build，但**具体 build 是否需要新增环境变量，现有资料未覆盖**，需要在实际接入时验证（不是本清单能替它下结论的地方）。
+`build` job 跑的是 `mise run build`，它显式并发调用 `web:build` 与 `docs:build`。构建需要的 Web 环境变量仍由 CI job 注入；Docs 是静态内容站点且没有 Gateway 访问，通常不需要这些变量。
 —— 出处：`.github/workflows/ci.yml`（`build` job）；ADR-0020（"static content with no gateway access"）。
 
 ### 7. `apps/docs/Dockerfile`（新文件）—— 需要新建，照抄 `apps/web/Dockerfile` 的多阶段模式
