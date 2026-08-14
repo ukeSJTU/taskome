@@ -8,32 +8,30 @@ REST/MCP layers that only care whether they delegate correctly.
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from gateway.repositories.input_files import InputFileRecord
 from gateway.services.input_files import DownloadUrl, InputFileNotFoundError, UploadUrl
 
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-
 
 class FakeInputFileRepository:
-    def __init__(self) -> None:
+    def __init__(self, events: list[str] | None = None) -> None:
         self._owner_by_id: dict[UUID, str] = {}
         self._deleted_ids: set[UUID] = set()
+        self._events = events
 
-    @asynccontextmanager
     async def create(
         self,
+        input_file_id: UUID,
         owner_user_id: str,
         original_filename: str,  # noqa: ARG002 - part of the port's signature
-    ) -> AsyncIterator[InputFileRecord]:
-        record = InputFileRecord(id=uuid4())
+    ) -> InputFileRecord:
+        if self._events is not None:
+            self._events.append("repository.create")
+        record = InputFileRecord(id=input_file_id)
         self._owner_by_id[record.id] = owner_user_id
-        yield record
+        return record
 
     async def find_active_owned(
         self,
@@ -44,17 +42,17 @@ class FakeInputFileRepository:
             return InputFileRecord(id=input_file_id)
         return None
 
-    @asynccontextmanager
     async def mark_deleted(
         self,
         owner_user_id: str,
         input_file_id: UUID,
-    ) -> AsyncIterator[InputFileRecord | None]:
+    ) -> InputFileRecord | None:
         if not self._is_active_owned(owner_user_id, input_file_id):
-            yield None
-            return
+            return None
         self._deleted_ids.add(input_file_id)
-        yield InputFileRecord(id=input_file_id)
+        if self._events is not None:
+            self._events.append("repository.mark_deleted")
+        return InputFileRecord(id=input_file_id)
 
     def _is_active_owned(self, owner_user_id: str, input_file_id: UUID) -> bool:
         return (
@@ -64,17 +62,29 @@ class FakeInputFileRepository:
 
 
 class FakeStorage:
-    def __init__(self) -> None:
+    def __init__(self, events: list[str] | None = None) -> None:
         self.ensure_bucket_calls = 0
         self.uploaded_keys: list[str] = []
+        self.uploaded_sizes: list[int] = []
         self.downloaded_keys: list[str] = []
         self.deleted_keys: list[str] = []
+        self._events = events
 
     def ensure_bucket(self) -> None:
         self.ensure_bucket_calls += 1
+        if self._events is not None:
+            self._events.append("storage.ensure_bucket")
 
-    def mint_upload_url(self, key: str, expires_in: int) -> tuple[str, datetime]:
+    def mint_upload_url(
+        self,
+        key: str,
+        expires_in: int,
+        size_bytes: int,
+    ) -> tuple[str, datetime]:
         self.uploaded_keys.append(key)
+        self.uploaded_sizes.append(size_bytes)
+        if self._events is not None:
+            self._events.append("storage.mint_upload_url")
         return f"http://fake-storage/upload/{key}", datetime.now(UTC) + timedelta(
             seconds=expires_in
         )
@@ -87,19 +97,26 @@ class FakeStorage:
 
     def delete(self, key: str) -> None:
         self.deleted_keys.append(key)
+        if self._events is not None:
+            self._events.append("storage.delete")
 
 
 class FakeInputFileService:
     """Stands in for the whole `InputFileService` in REST/MCP-layer tests."""
 
     def __init__(self) -> None:
-        self.uploaded_for: tuple[str, str] | None = None
+        self.uploaded_for: tuple[str, str, int] | None = None
         self.downloaded_for: tuple[str, UUID] | None = None
         self.deleted_for: tuple[str, UUID] | None = None
         self.input_file_id = uuid4()
 
-    async def mint_upload_url(self, owner_user_id: str, original_filename: str) -> UploadUrl:
-        self.uploaded_for = (owner_user_id, original_filename)
+    async def mint_upload_url(
+        self,
+        owner_user_id: str,
+        original_filename: str,
+        size_bytes: int,
+    ) -> UploadUrl:
+        self.uploaded_for = (owner_user_id, original_filename, size_bytes)
         return UploadUrl(
             id=self.input_file_id,
             upload_url="http://seaweedfs/upload",

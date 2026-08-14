@@ -1,3 +1,5 @@
+"""REST identity endpoint."""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -18,4 +20,6 @@ router = APIRouter(tags=["auth"])
 async def current_identity(
     principal: Annotated[Principal, Depends(current_principal)],
 ) -> Identity:
-    return Identity.model_validate(principal, from_attributes=True)
+    """Return the authenticated caller's normalized identity."""
+
+    return Identity.model_validate(principal)

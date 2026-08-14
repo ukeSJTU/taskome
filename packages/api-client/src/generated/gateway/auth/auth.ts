@@ -13,6 +13,7 @@ export const getGetCurrentIdentityUrl = () => {
 };
 
 /**
+ * Return the authenticated caller's normalized identity.
  * @summary Current Identity
  */
 export const getCurrentIdentity = async (

@@ -27,10 +27,11 @@ with open(sys.argv[1]) as file:
 with open(sys.argv[2]) as file:
     production = json.load(file)["services"]
 
-assert local["web"]["environment"]["BETTER_AUTH_URL"] == "http://localhost:3000"
-assert local["web"]["environment"]["GATEWAY_PUBLIC_URL"] == "http://localhost:8000"
-assert local["gateway"]["environment"]["BETTER_AUTH_URL"] == "http://localhost:3000"
-assert local["gateway"]["environment"]["GATEWAY_PUBLIC_URL"] == "http://localhost:8000"
+assert local["web"]["environment"]["BETTER_AUTH_URL"] == "http://localhost"
+assert local["web"]["environment"]["GATEWAY_PUBLIC_URL"] == "http://api.localhost"
+assert local["web"]["environment"]["AUTH_TRUSTED_ORIGIN"] == "http://localhost"
+assert local["gateway"]["environment"]["BETTER_AUTH_URL"] == "http://localhost"
+assert local["gateway"]["environment"]["GATEWAY_PUBLIC_URL"] == "http://api.localhost"
 
 assert production["web"]["environment"]["BETTER_AUTH_URL"] == "https://example.com"
 assert production["web"]["environment"]["GATEWAY_PUBLIC_URL"] == "https://api.example.com"
@@ -38,6 +39,13 @@ assert production["web"]["environment"]["GATEWAY_INTERNAL_URL"] == "http://gatew
 assert production["gateway"]["environment"]["BETTER_AUTH_URL"] == "https://example.com"
 assert production["gateway"]["environment"]["WEB_INTERNAL_URL"] == "http://web:3000"
 assert production["gateway"]["environment"]["GATEWAY_PUBLIC_URL"] == "https://api.example.com"
+
+assert "ports" not in local["web"]
+assert "ports" not in local["gateway"]
+assert "ports" not in production["web"]
+assert "ports" not in production["gateway"]
+
+assert "-s3.allowedOrigins=http://localhost:3000,http://localhost" in local["seaweedfs"]["command"]
 
 deployable_dockerfiles = {
     service["build"]["dockerfile"]

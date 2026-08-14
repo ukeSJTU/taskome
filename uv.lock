@@ -701,7 +701,8 @@ dependencies = [
     { name = "boto3" },
     { name = "fastapi", extra = ["standard"] },
     { name = "fastmcp" },
-    { name = "httpx" },
+    { name = "gunicorn" },
+    { name = "httpx2" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-instrumentation-logging" },
@@ -709,10 +710,11 @@ dependencies = [
     { name = "opentelemetry-sdk" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pyjwt", extra = ["crypto"] },
+    { name = "redis" },
     { name = "scalar-fastapi" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "structlog" },
-    { name = "throttled-py", extra = ["redis"] },
+    { name = "uvicorn-worker" },
 ]
 
 [package.metadata]
@@ -721,7 +723,8 @@ requires-dist = [
     { name = "boto3", specifier = ">=1.42,<2" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.141.1" },
     { name = "fastmcp", specifier = "==4.0.0b2" },
-    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "gunicorn", specifier = ">=26,<27" },
+    { name = "httpx2", specifier = ">=2.10,<3" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.44.0" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.65b0" },
     { name = "opentelemetry-instrumentation-logging", specifier = ">=0.65b0" },
@@ -729,10 +732,11 @@ requires-dist = [
     { name = "opentelemetry-sdk", specifier = ">=1.44.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3,<4" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10,<3" },
+    { name = "redis", specifier = ">=7.4,<8" },
     { name = "scalar-fastapi", specifier = ">=1.8,<2" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0,<2.1" },
     { name = "structlog", specifier = ">=25.5.0" },
-    { name = "throttled-py", extras = ["redis"], specifier = ">=3.4,<4" },
+    { name = "uvicorn-worker", specifier = ">=0.4,<0.5" },
 ]
 
 [[package]]
@@ -801,6 +805,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/33/e4/8d187ea29c2e30b3a09505c567513077d6117861bde1fbd997a167f262ec/griffelib-2.1.0.tar.gz", hash = "sha256:762a186d2c6fd6794d4ea20d428d597ffb857cb56b66421651cbba15bdd5e813", size = 216234, upload-time = "2026-06-19T12:05:42.278Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e4/d3/5268aeabf2ad82658c4e2ff3a060648d0f02f3926cb53247c0e4d0dab49e/griffelib-2.1.0-py3-none-any.whl", hash = "sha256:cc7b3d2d2865ad0b909fcc38086e3f554b5ea7acbaa7bbb7ecaa3f5dfb7d9f00", size = 142560, upload-time = "2026-06-19T12:05:38.742Z" },
+]
+
+[[package]]
+name = "gunicorn"
+version = "26.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/b7/a4a3f632f823e432ce6bc65f62961b7980c898c77f075a2f7118cb3846fe/gunicorn-26.0.0.tar.gz", hash = "sha256:ca9346f85e3a4aeeb64d491045c16b9a35647abd37ea15efe53080eb8b090baf", size = 727286, upload-time = "2026-05-05T06:38:25.529Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/40/9c2384fc2be4ad25dd4a49decd5ad9ea5a3639814c11bd40ab77cb9f0a14/gunicorn-26.0.0-py3-none-any.whl", hash = "sha256:40233d26a5f0d1872916188c276e21641155111c2853f0c2cd55260aec0d24fc", size = 212009, upload-time = "2026-05-05T06:38:23.007Z" },
 ]
 
 [[package]]
@@ -2136,20 +2152,6 @@ wheels = [
 ]
 
 [[package]]
-name = "throttled-py"
-version = "3.4.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fb/40/f26c9594d00f35cee000f4e9e87a2a6fc10d8eeeb3529439f587e1e1c553/throttled_py-3.4.1.tar.gz", hash = "sha256:b13f03b57d514c0e269ef442f7aeebc601cfe5661820579fdd8d5179039e52fd", size = 902802, upload-time = "2026-08-01T17:18:38.943Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/7d/c8c772258ff394bc0b5135a396a20cda2b85f6ad600784a992bc39f99c75/throttled_py-3.4.1-py3-none-any.whl", hash = "sha256:6d6cdab9e0d8ada93b0387b62875850dd2f02873e66682f55b0d23e18e80ca89", size = 83069, upload-time = "2026-08-01T17:18:37.49Z" },
-]
-
-[package.optional-dependencies]
-redis = [
-    { name = "redis" },
-]
-
-[[package]]
 name = "time-machine"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2307,6 +2309,19 @@ standard = [
     { name = "uvloop", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'" },
     { name = "watchfiles" },
     { name = "websockets" },
+]
+
+[[package]]
+name = "uvicorn-worker"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "gunicorn" },
+    { name = "uvicorn" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/80/59/9101b9c0680fd80e9d26c07deb822a5d18a324339fcf9cd017885ee808ad/uvicorn_worker-0.4.0.tar.gz", hash = "sha256:8ee5306070d8f38dce124adce488c3c0b50f20cf0c0222b12c66188da7214493", size = 9361, upload-time = "2025-09-20T10:47:01.218Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/90/25/09cd7a90c8bb7fb693be0d6704fccd5f9778d5513214b7a01cc4a94ff314/uvicorn_worker-0.4.0-py3-none-any.whl", hash = "sha256:e2ed952cef976f5e9e429d7269640bbcafbd36c80aa80f1003c8c77a6797abde", size = 5364, upload-time = "2025-09-20T10:46:59.776Z" },
 ]
 
 [[package]]

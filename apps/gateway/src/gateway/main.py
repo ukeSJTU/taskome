@@ -1,18 +1,20 @@
+"""Gateway application assembly without allocating process I/O resources."""
+
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastmcp.utilities.lifespan import combine_lifespans
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from redis.asyncio import Redis
 from scalar_fastapi import get_scalar_api_reference
 
 from gateway.api.health import router as health_router
 from gateway.api.mcp import create_mcp_server
 from gateway.api.v1.router import router as api_v1_router
 from gateway.core.auth import (
+    ManagedJWTVerifier,
     MCPPrincipalVerifier,
     create_mcp_auth_provider,
     create_mcp_token_verifier,
@@ -23,13 +25,14 @@ from gateway.core.errors import register_error_handlers
 from gateway.core.lifespan import lifespan
 from gateway.core.middleware import (
     AccessLoggingMiddleware,
+    MCPAuthRequestIDMiddleware,
+    RequestBodyLimitMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
 )
-from gateway.core.observability import create_observability
+from gateway.core.observability import DeferredTelemetryMiddleware
 from gateway.core.personal_api_keys import PersonalApiKeyVerifier, WebPersonalApiKeyVerifier
 from gateway.core.public_openapi import public_openapi_schema
-from gateway.core.rate_limit import create_rate_limit_store
 from gateway.db.database import Database
 from gateway.repositories.input_files import InputFileRepository
 from gateway.schemas.problem import ProblemDetails
@@ -41,7 +44,7 @@ if TYPE_CHECKING:
     from fastmcp.server.auth import TokenVerifier
     from opentelemetry.sdk._logs.export import LogRecordExporter
     from opentelemetry.sdk.trace.export import SpanExporter
-    from throttled.asyncio.store import RedisStore
+    from redis.asyncio import Redis
 
 
 def create_app(  # noqa: PLR0913
@@ -52,27 +55,35 @@ def create_app(  # noqa: PLR0913
     log_exporter: LogRecordExporter | None = None,
     rest_token_verifier: TokenVerifier | None = None,
     mcp_token_verifier: TokenVerifier | None = None,
-    rate_limit_redis: Redis | None = None,
-    rate_limit_store: RedisStore | None = None,
+    redis: Redis | None = None,
+    storage: SeaweedFSStorage | None = None,
     personal_api_key_verifier: PersonalApiKeyVerifier | None = None,
 ) -> FastAPI:
+    """Assemble an app whose external resources are allocated by lifespan.
+
+    Args:
+        settings: Optional validated runtime configuration.
+        database: Optional database seam for tests.
+        span_exporter: Optional trace exporter seam for tests.
+        log_exporter: Optional log exporter seam for tests.
+        rest_token_verifier: Optional REST authentication seam.
+        mcp_token_verifier: Optional MCP authentication seam.
+        redis: Optional Redis seam for tests.
+        storage: Optional object-storage seam for tests.
+        personal_api_key_verifier: Optional Personal API Key verification seam.
+
+    Returns:
+        A fully routed FastAPI application ready for lifespan startup.
+    """
+
     app_settings = settings or Settings()
     openapi_url = "/openapi.json" if app_settings.expose_docs else None
-    observability = create_observability(
-        app_settings,
-        span_exporter=span_exporter,
-        log_exporter=log_exporter,
-    )
     app_database = database or Database(
         app_settings.database_url.get_secret_value(),
-        tracer_provider=observability.tracer_provider,
+        timeout_seconds=app_settings.database_timeout_seconds,
+        defer_start=True,
     )
-    app_rate_limit_redis = rate_limit_redis or Redis.from_url(
-        app_settings.rate_limit_redis_url.get_secret_value()
-    )
-    app_rate_limit_store = rate_limit_store or create_rate_limit_store(
-        app_settings.rate_limit_redis_url.get_secret_value()
-    )
+    app_redis = redis
     rest_verifier = rest_token_verifier or create_rest_token_verifier(app_settings)
     mcp_verifier = (
         MCPPrincipalVerifier(mcp_token_verifier)
@@ -84,22 +95,32 @@ def create_app(  # noqa: PLR0913
         url=app_settings.personal_api_key_verification_url,
         secret=app_settings.web_gateway_hmac_secret.get_secret_value(),
     )
+    storage_factory = partial(
+        SeaweedFSStorage,
+        internal_endpoint=app_settings.seaweedfs_internal_endpoint,
+        public_endpoint=app_settings.resolved_seaweedfs_public_endpoint,
+        access_key=app_settings.seaweedfs_access_key,
+        secret_key=app_settings.seaweedfs_secret_key.get_secret_value(),
+        bucket=app_settings.seaweedfs_bucket,
+        connect_timeout=app_settings.seaweedfs_connect_timeout_seconds,
+        io_timeout=app_settings.seaweedfs_io_timeout_seconds,
+    )
     input_file_service = InputFileService(
         repository=InputFileRepository(app_database),
-        storage=SeaweedFSStorage(
-            internal_endpoint=app_settings.seaweedfs_internal_endpoint,
-            public_endpoint=app_settings.resolved_seaweedfs_public_endpoint,
-            access_key=app_settings.seaweedfs_access_key,
-            secret_key=app_settings.seaweedfs_secret_key.get_secret_value(),
-            bucket=app_settings.seaweedfs_bucket,
-        ),
+        storage=storage,
     )
     mcp_server = create_mcp_server(
         app_settings,
         input_file_service,
         auth_provider=mcp_auth_provider,
     )
-    mcp_app = mcp_server.http_app(path="/")
+    mcp_protocol_app = mcp_server.http_app(path="/")
+    mcp_app = MCPAuthRequestIDMiddleware(
+        RequestBodyLimitMiddleware(
+            mcp_protocol_app,
+            max_body_size=app_settings.mcp_message_max_bytes,
+        )
+    )
 
     application = FastAPI(
         title=app_settings.app_name,
@@ -107,18 +128,29 @@ def create_app(  # noqa: PLR0913
         docs_url=None,
         redoc_url=None,
         openapi_url=openapi_url,
-        lifespan=combine_lifespans(lifespan, mcp_app.lifespan),
+        lifespan=combine_lifespans(lifespan, mcp_protocol_app.lifespan),
     )
     application.state.settings = app_settings
     application.state.database = app_database
-    application.state.rate_limit_redis = app_rate_limit_redis
-    application.state.rate_limit_store = app_rate_limit_store
+    application.state.redis = app_redis
+    application.state.storage = storage
+    application.state.storage_factory = storage_factory
     application.state.input_file_service = input_file_service
+    application.state.owned_input_file_service = input_file_service
     application.state.rest_token_verifier = rest_verifier
     application.state.personal_api_key_verifier = api_key_verifier
     application.state.public_openapi_schema = None
     application.state.mcp = mcp_server
-    application.state.observability = observability
+    application.state.span_exporter = span_exporter
+    application.state.log_exporter = log_exporter
+    application.state.managed_token_verifiers = tuple(
+        verifier
+        for verifier in (
+            rest_verifier,
+            mcp_verifier.token_verifier,
+        )
+        if isinstance(verifier, ManagedJWTVerifier)
+    )
     register_error_handlers(application)
     application.include_router(health_router)
     application.include_router(api_v1_router)
@@ -131,15 +163,19 @@ def create_app(  # noqa: PLR0913
     application.mount("/mcp", mcp_app)
     if app_settings.expose_docs:
         _add_scalar_api_reference(application)
+    application.add_middleware(
+        RequestBodyLimitMiddleware,
+        max_body_size=app_settings.request_body_max_bytes,
+    )
     application.add_middleware(AccessLoggingMiddleware)
     application.add_middleware(RequestIDMiddleware)
     application.add_middleware(
         SecurityHeadersMiddleware,
         include_hsts=app_settings.app_environment is Environment.PRODUCTION,
     )
-    FastAPIInstrumentor.instrument_app(
-        application,
-        tracer_provider=observability.tracer_provider,
+    application.add_middleware(
+        DeferredTelemetryMiddleware,
+        application=application,
     )
     _configure_openapi(application)
     return application

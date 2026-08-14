@@ -19,6 +19,7 @@ export const getCreateInputFileUrl = () => {
 };
 
 /**
+ * Allocate an Input File and return its constrained upload URL.
  * @summary Create Input File
  */
 export const createInputFile = async (
@@ -38,6 +39,7 @@ export const getDeleteInputFileUrl = ({ inputFileId }: DeleteInputFilePathParame
 };
 
 /**
+ * Soft-delete an Input File and remove its object.
  * @summary Delete Input File
  */
 export const deleteInputFile = async (
@@ -57,6 +59,7 @@ export const getGetInputFileDownloadUrlUrl = ({
 };
 
 /**
+ * Return a download URL for a caller-owned Input File.
  * @summary Download Input File Url
  */
 export const getInputFileDownloadUrl = async (

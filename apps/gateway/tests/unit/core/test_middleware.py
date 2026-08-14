@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -55,3 +56,38 @@ def test_production_gateway_adds_hsts(create_test_app: Callable[..., FastAPI]) -
         response = client.get("/health/live")
 
     assert response.headers["Strict-Transport-Security"] == ("max-age=63072000; includeSubDomains")
+
+
+def test_access_log_uses_warning_for_4xx_and_error_for_5xx(
+    create_test_app: Callable[..., FastAPI],
+    capsys,
+) -> None:
+    app = create_test_app()
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        client.get("/missing")
+
+        @app.get("/broken")
+        def broken() -> None:
+            message = "boom"
+            raise RuntimeError(message)
+
+        client.get("/broken")
+
+    events = [
+        json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")
+    ]
+    requests = [event for event in events if event["event"] == "http_request"]
+    assert any(event["status_code"] == 404 and event["level"] == "warning" for event in requests)
+    assert any(event["status_code"] == 500 and event["level"] == "error" for event in requests)
+
+
+def test_body_limit_applies_to_delete_requests(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app(Settings(request_body_max_bytes=8))
+
+    with TestClient(app) as client:
+        response = client.request("DELETE", "/health/live", content=b"x" * 9)
+
+    assert response.status_code == 413

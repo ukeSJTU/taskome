@@ -5,9 +5,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Caller-visible upload id, signed URL, and expiry.
+ */
 export interface UploadUrlResponse {
   expires_at: string;
   id: string;
-  /** PUT with If-None-Match: *; the condition prevents overwrites. */
+  /** PUT with the declared Content-Length and If-None-Match: *; both headers are signed. */
   upload_url: string;
 }

@@ -9,7 +9,8 @@ dependencies = [
   "boto3>=1.42,<2",
   "fastapi[standard]>=0.141.1",
   "fastmcp==4.0.0b2",
-  "httpx>=0.28.1",
+  "gunicorn>=26,<27",
+  "httpx2>=2.10,<3",
   "opentelemetry-exporter-otlp-proto-http>=1.44.0",
   "opentelemetry-instrumentation-fastapi>=0.65b0",
   "opentelemetry-instrumentation-logging>=0.65b0",
@@ -17,10 +18,11 @@ dependencies = [
   "opentelemetry-sdk>=1.44.0",
   "psycopg[binary]>=3,<4",
   "pyjwt[crypto]>=2.10,<3",
+  "redis>=7.4,<8",
   "scalar-fastapi>=1.8,<2",
   "sqlalchemy[asyncio]>=2.0,<2.1",
   "structlog>=25.5.0",
-  "throttled-py[redis]>=3.4,<4",
+  "uvicorn-worker>=0.4,<0.5",
 ]
 
 [build-system]

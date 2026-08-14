@@ -7,13 +7,14 @@ ENV UV_LINK_MODE=copy
 # Manifests only, so this layer (and the sync below) survives source-only changes
 COPY pyproject.toml uv.lock ./
 COPY apps/gateway/pyproject.toml apps/gateway/pyproject.toml
+COPY packages/task-kit/pyproject.toml packages/task-kit/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-install-workspace
 
 FROM deps AS builder
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev
+    uv sync --locked --no-dev --package gateway
 
 FROM python:3.14-slim AS runner
 RUN groupadd --gid 1001 gateway \
@@ -28,4 +29,4 @@ COPY --from=builder --chown=gateway:gateway /app/apps/gateway /app/apps/gateway
 EXPOSE 8000
 USER gateway
 
-CMD ["uvicorn", "gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-config", "logging.prod.json"]
+CMD ["gunicorn", "gateway.main:app", "--config", "gunicorn.conf.py"]
