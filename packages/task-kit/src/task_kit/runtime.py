@@ -86,6 +86,7 @@ class TaskServerRuntime:
     completed_jobs: OrderedDict[UUID, None] = field(default_factory=OrderedDict, init=False)
     job_lock: anyio.Lock = field(default_factory=anyio.Lock, init=False)
     close: Callable[[], Awaitable[None]] | None = None
+    instrument: Callable[[object], None] | None = None
     accepting_work: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:

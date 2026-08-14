@@ -326,6 +326,8 @@ def build_task_server(
         redoc_url=None,
         lifespan=lifespan,
     )
+    if runtime.instrument is not None:
+        runtime.instrument(app)
 
     @app.get("/health/live")
     async def live() -> dict[str, str]:

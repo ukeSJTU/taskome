@@ -10,13 +10,15 @@ import time
 from collections.abc import Collection, Mapping
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 import boto3
 import httpx
 import structlog
 from botocore.client import Config
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
 from .runtime import (
     PublishedOutput,
@@ -27,6 +29,9 @@ from .runtime import (
 )
 from .settings import Environment, TaskServerSettings
 from .types import InputFileId
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 MAX_INPUT_FILE_BYTES = 50 * 1024 * 1024
 
@@ -237,6 +242,10 @@ def build_runtime(settings: TaskServerSettings) -> TaskServerRuntime:
         await client.aclose()
         s3.close()
 
+    def instrument(app: object) -> None:
+        FastAPIInstrumentor.instrument_app(cast("FastAPI", app))
+        HTTPXClientInstrumentor.instrument_client(client)
+
     return TaskServerRuntime(
         gateway_requests=GatewayHMACVerifier(
             settings.gateway_task_hmac_secret.get_secret_value(),
@@ -259,4 +268,5 @@ def build_runtime(settings: TaskServerSettings) -> TaskServerRuntime:
             else settings.docs_enabled
         ),
         close=close,
+        instrument=instrument,
     )
