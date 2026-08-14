@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const inCI = Boolean(process.env.CI);
+const inCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
 const webURL = process.env.E2E_WEB_URL ?? "http://127.0.0.1:3100";
 const gatewayURL = process.env.E2E_GATEWAY_URL ?? "http://127.0.0.1:8100";
 const webPort = new URL(webURL).port;

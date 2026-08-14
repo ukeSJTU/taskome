@@ -4,6 +4,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 const password = "browser-e2e-password";
 
+async function expectOK(response: import("@playwright/test").APIResponse) {
+  expect(response.ok(), `HTTP ${response.status()} creating the disposable test user`).toBeTruthy();
+}
+
 function address(label: string) {
   return `${label}-${randomUUID()}@e2e.taskome.test`;
 }
@@ -35,7 +39,7 @@ test("a returning user signs in and sees their identity", async ({ page, request
   const signup = await request.post("/api/auth/sign-up/email", {
     data: { email, name: "Browser Signin", password },
   });
-  expect(signup.ok()).toBeTruthy();
+  await expectOK(signup);
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -49,7 +53,7 @@ test("API Docs loads the live Gateway REST contract through the BFF", async ({ p
   const signup = await request.post("/api/auth/sign-up/email", {
     data: { email, name: "Browser Docs", password },
   });
-  expect(signup.ok()).toBeTruthy();
+  await expectOK(signup);
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -92,7 +96,7 @@ test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ pag
   const signup = await request.post("/api/auth/sign-up/email", {
     data: { email, name: "MCP Browser User", password },
   });
-  expect(signup.ok()).toBeTruthy();
+  await expectOK(signup);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Login" }).click();
