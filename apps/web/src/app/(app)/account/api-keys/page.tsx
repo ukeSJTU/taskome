@@ -1,4 +1,4 @@
-import { ApiKeysPanel } from "@/components/api-keys-panel";
+import { ApiKeysPanel } from "../../_components/api-keys-panel";
 
 export default function PersonalApiKeysPage() {
   return <ApiKeysPanel />;

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
-import { PageHero } from "@/components/public/page-hero";
-import { PlatformCasesSection } from "@/components/public/platform-cases-section";
-import { PlatformCasesStatsSection } from "@/components/public/platform-cases-stats-section";
+import { PageHero } from "../_components/page-hero";
+import { PlatformCasesSection } from "../_components/platform-cases-section";
+import { PlatformCasesStatsSection } from "../_components/platform-cases-stats-section";
 
 export const metadata: Metadata = {
   title: "Platform Cases — XDeNovo",

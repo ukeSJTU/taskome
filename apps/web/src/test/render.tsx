@@ -1,7 +1,7 @@
 import { render as rtlRender, type RenderOptions } from "@testing-library/react";
 import type { ReactElement } from "react";
 
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/app/(app)/_components/theme-provider";
 
 function AllProviders({ children }: { children: React.ReactNode }) {
   return (

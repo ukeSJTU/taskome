@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
-import { PageHero } from "@/components/public/page-hero";
-import { TechnologyAdvantagesSection } from "@/components/public/technology-advantages-section";
-import { TechnologyPipelineSection } from "@/components/public/technology-pipeline-section";
+import { PageHero } from "../_components/page-hero";
+import { TechnologyAdvantagesSection } from "../_components/technology-advantages-section";
+import { TechnologyPipelineSection } from "../_components/technology-pipeline-section";
 
 export const metadata: Metadata = {
   title: "Technology — XDeNovo",

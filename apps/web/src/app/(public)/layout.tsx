@@ -1,7 +1,7 @@
 import { Archivo, Inter } from "next/font/google";
 
-import { PublicSiteHeader } from "@/components/public/site-header";
-import { PublicSiteFooter } from "@/components/public/site-footer";
+import { PublicSiteHeader } from "./_components/site-header";
+import { PublicSiteFooter } from "./_components/site-footer";
 
 const displayFont = Archivo({
   variable: "--font-display-src",

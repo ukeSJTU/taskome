@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { AboutMissionSection } from "@/components/public/about-mission-section";
-import { AboutTeamSection } from "@/components/public/about-team-section";
-import { AboutTimelineSection } from "@/components/public/about-timeline-section";
-import { PageHero } from "@/components/public/page-hero";
+import { AboutMissionSection } from "../_components/about-mission-section";
+import { AboutTeamSection } from "../_components/about-team-section";
+import { AboutTimelineSection } from "../_components/about-timeline-section";
+import { PageHero } from "../_components/page-hero";
 
 export const metadata: Metadata = {
   title: "About — XDeNovo",

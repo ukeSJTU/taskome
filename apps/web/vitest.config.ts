@@ -48,7 +48,7 @@ export default defineConfig({
           environment: "jsdom",
           environmentOptions: { jsdom: { url: "http://localhost:3000" } },
           globals: false,
-          include: ["src/components/**/*.test.tsx"],
+          include: ["src/app/**/_components/**/*.test.tsx"],
           setupFiles: ["./src/test/setup.jsdom.ts"],
         },
       },
