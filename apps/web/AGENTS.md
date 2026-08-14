@@ -24,6 +24,7 @@ The company website may support brand, partnership, and commercial communication
 - Keep product UI in `(app)`. It is an internal power-user interface: expose the curated, meaningful configuration surface of each Task rather than creating a no-code abstraction or an unbounded upstream-config passthrough.
 - `(auth)`, `oauth/consent`, `security/two-factor`, and `two-factor` are security-sensitive authentication flows. Preserve redirect, session, consent, and recovery behavior when changing them.
 - `apps/docs` is a separate static public documentation deployment, not another `apps/web` route group.
+- No feature/domain component folders. Route-private components go in Next.js `_components/` at the nearest common ancestor route of everything that imports them. Cross-route shared components, and global singletons like `providers.tsx`, go flat in top-level `src/components/` — no domain subfolders there either.
 
 ## Gateway-backed data and BFF
 

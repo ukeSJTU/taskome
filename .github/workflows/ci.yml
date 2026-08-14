@@ -71,8 +71,6 @@ jobs:
           mise run ts:test
           mise run gateway:test:unit
           mise run //packages/task-kit:test:unit
-      - name: Run temporary MCP OAuth contract test
-        run: mise run test:mcp-oauth-contract
       - name: Minimize uv cache
         run: uv cache prune --ci
 

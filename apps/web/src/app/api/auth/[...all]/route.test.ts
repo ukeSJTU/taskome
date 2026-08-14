@@ -2,7 +2,6 @@ import { createTestAuth } from "@taskome/auth/test";
 import { base32 } from "@better-auth/utils/base32";
 import { createLocalJWKSet, jwtVerify } from "jose";
 import { createHash, randomUUID } from "node:crypto";
-import { writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 type TestAuth = ReturnType<typeof createTestAuth>;
@@ -461,13 +460,6 @@ describe("/api/auth", () => {
       issuer: oauthIssuer,
     });
     expect(verified.payload.sub).toBe(user.id);
-
-    const fixturePath = process.env.MCP_ONBOARDING_FIXTURE_PATH;
-    if (fixturePath) {
-      writeFileSync(fixturePath, JSON.stringify({ accessToken: token.access_token, jwks }), {
-        mode: 0o600,
-      });
-    }
   });
 
   it("enables TOTP, gates password sign-in, and accepts a backup code", async () => {

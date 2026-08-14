@@ -175,10 +175,6 @@ run = "bash scripts/browser-e2e.sh --ui"
 description = "Run Browser E2E headed with the Playwright Inspector"
 run = "bash scripts/browser-e2e.sh --debug"
 
-[tasks."test:mcp-oauth-contract"]
-description = "Temporary cross-language OAuth/MCP contract test; replace with Playwright E2E"
-run = "bash scripts/test-mcp-oauth-contract.sh"
-
 [tasks."deps:outdated"]
 description = "Report available dependency and tool updates without changing lockfiles"
 run = "bash scripts/deps-outdated.sh"

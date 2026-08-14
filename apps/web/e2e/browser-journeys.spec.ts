@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { expect, test, type Page } from "@playwright/test";
 
 const password = "browser-e2e-password";
@@ -28,13 +30,6 @@ async function signUp(page: Page, name: string, email: string) {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Create Account" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-}
-
-async function mcpResult(response: import("@playwright/test").APIResponse) {
-  const body = await response.text();
-  const data = body.match(/^data: (.+)$/m)?.[1];
-  if (!data) throw new Error(`MCP response did not contain an SSE data event: ${body}`);
-  return JSON.parse(data) as { result: { tools: Array<{ name: string }> } };
 }
 
 test("anonymous dashboard access redirects to sign-in", async ({ page }) => {
@@ -140,36 +135,20 @@ test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ pag
   });
   expect(token.ok(), `token exchange failed: ${token.status()} ${await token.text()}`).toBeTruthy();
   const { access_token: accessToken } = (await token.json()) as { access_token: string };
-  const mcpURL = `${process.env.E2E_GATEWAY_URL}/mcp/`;
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    Accept: "application/json, text/event-stream",
-    "Content-Type": "application/json",
-  };
-  const initialized = await request.post(mcpURL, {
-    headers,
-    data: {
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: {
-        protocolVersion: "2025-03-26",
-        capabilities: {},
-        clientInfo: { name: "browser-e2e", version: "1" },
-      },
+  const client = new Client({ name: "taskome-browser-e2e", version: "1" });
+  const transport = new StreamableHTTPClientTransport(
+    new URL("/mcp/", process.env.E2E_GATEWAY_URL),
+    {
+      requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
     },
-  });
-  expect(initialized.ok()).toBeTruthy();
-  const session = initialized.headers()["mcp-session-id"];
-  expect(session).toBeTruthy();
-  if (!session) throw new Error("Gateway did not return an MCP session ID");
-  const tools = await request.post(mcpURL, {
-    headers: { ...headers, "mcp-session-id": session },
-    data: { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
-  });
-  expect(tools.ok()).toBeTruthy();
-  const result = await mcpResult(tools);
-  expect(result.result.tools.map((tool) => tool.name)).toEqual(
-    expect.arrayContaining(["prepare_input_file_upload", "prepare_input_file_download"]),
   );
+  try {
+    await client.connect(transport);
+    const { tools } = await client.listTools();
+    expect(tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining(["prepare_input_file_upload", "prepare_input_file_download"]),
+    );
+  } finally {
+    await client.close();
+  }
 });

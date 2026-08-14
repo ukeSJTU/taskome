@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@better-auth/utils": "0.4.2",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "catalog:",
     "@taskome/config": "workspace:*",
