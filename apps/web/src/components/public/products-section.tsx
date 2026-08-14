@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const PRODUCTS = [
   {
     name: "De novo peptide & antibody design",
@@ -48,6 +50,12 @@ export function ProductsSection() {
             </div>
           ))}
         </div>
+        <Link
+          href="/products"
+          className="font-copy mt-8 inline-block text-sm font-medium text-ink-muted transition-colors hover:text-bio-700"
+        >
+          View all products →
+        </Link>
       </div>
     </section>
   );

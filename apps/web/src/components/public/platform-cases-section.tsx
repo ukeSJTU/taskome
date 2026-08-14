@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 const CASES = [
   {
     domain: "Metabolic diseases",
@@ -28,23 +26,14 @@ const CASES = [
   },
 ] as const;
 
-export function ValidationSection() {
+export function PlatformCasesSection() {
   return (
-    <section id="platform" className="mx-auto max-w-4xl px-6 py-24">
-      <h2 className="font-display text-3xl font-semibold text-ink md:text-4xl">
-        Validated across five therapeutic domains.
-      </h2>
-      <p className="font-copy mt-4 max-w-2xl text-ink-muted">
-        Cross-dimensional de novo design against innovative targets, each case producing
-        high-affinity candidate molecules and confirming design accuracy in complex biological
-        space.
-      </p>
-
-      <div className="mt-12 divide-y divide-bio-200 border-y border-bio-200">
+    <section className="mx-auto max-w-4xl px-6 pb-24">
+      <div className="divide-y divide-bio-200 border-y border-bio-200">
         {CASES.map((item) => (
           <div
             key={item.domain}
-            className="grid gap-2 py-6 md:grid-cols-[1.4fr_2fr_1fr] md:items-center md:gap-6"
+            className="grid gap-2 py-7 md:grid-cols-[1.4fr_2fr_1fr] md:items-center md:gap-6"
           >
             <p className="font-display text-lg font-medium text-ink">{item.domain}</p>
             <p className="font-copy text-sm text-ink-muted">{item.description}</p>
@@ -57,12 +46,6 @@ export function ValidationSection() {
       <p className="font-copy mt-4 text-xs text-ink-muted">
         Figures reflect internal experimental data and process comparisons.
       </p>
-      <Link
-        href="/platform-cases"
-        className="font-copy mt-8 inline-block text-sm font-medium text-ink-muted transition-colors hover:text-bio-700"
-      >
-        View all platform cases →
-      </Link>
     </section>
   );
 }

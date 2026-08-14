@@ -15,9 +15,7 @@ export function PublicSiteFooter() {
             </p>
           </div>
           <div>
-            <p className="font-copy text-xs font-medium tracking-wide text-ink-muted uppercase">
-              R&amp;D presence
-            </p>
+            <p className="font-copy text-xs font-medium text-ink-muted">R&amp;D presence</p>
             <ul className="mt-3 space-y-1.5 font-copy text-sm text-ink">
               {OFFICES.map((city) => (
                 <li key={city}>{city}</li>
@@ -25,9 +23,7 @@ export function PublicSiteFooter() {
             </ul>
           </div>
           <div>
-            <p className="font-copy text-xs font-medium tracking-wide text-ink-muted uppercase">
-              Platform
-            </p>
+            <p className="font-copy text-xs font-medium text-ink-muted">Platform</p>
             <ul className="mt-3 space-y-1.5 font-copy text-sm text-ink">
               <li>
                 <a href="/login" className="hover:text-bio-700">
@@ -40,8 +36,16 @@ export function PublicSiteFooter() {
             </ul>
           </div>
         </div>
-        <div className="mt-12 border-t border-bio-200 pt-6 font-copy text-xs text-ink-muted">
-          Shanghai XDeNovo Biotechnology Co., Ltd. All rights reserved.
+        <div className="mt-12 flex flex-col gap-4 border-t border-bio-200 pt-6 font-copy text-xs text-ink-muted md:flex-row md:items-center md:justify-between">
+          <p>Shanghai XDeNovo Biotechnology Co., Ltd. All rights reserved.</p>
+          <div className="flex gap-6">
+            <a href="/legal" className="hover:text-bio-700">
+              Legal
+            </a>
+            <a href="/privacy" className="hover:text-bio-700">
+              Privacy
+            </a>
+          </div>
         </div>
       </div>
     </footer>
