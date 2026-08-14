@@ -8,6 +8,7 @@ import hmac
 import json
 import time
 from collections.abc import Collection, Mapping
+from functools import partial
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -175,12 +176,14 @@ class S3OutputPublisher:
             for file in files:
                 key = f"{server_name}/{job_id}/{file.name}"
                 await __import__("anyio").to_thread.run_sync(  # type: ignore
-                    self._client.put_object,
-                    Bucket=self._bucket,
-                    Key=key,
-                    Body=file.path.read_bytes(),
-                    ContentType=file.media_type,
-                    IfNoneMatch="*",
+                    partial(
+                        self._client.put_object,
+                        Bucket=self._bucket,
+                        Key=key,
+                        Body=file.path.read_bytes(),
+                        ContentType=file.media_type,
+                        IfNoneMatch="*",
+                    )
                 )
                 uploaded.append(key)
                 outputs.append(
@@ -197,7 +200,7 @@ class S3OutputPublisher:
             for key in reversed(uploaded):
                 try:
                     await __import__("anyio").to_thread.run_sync(  # type: ignore
-                        self._client.delete_object, Bucket=self._bucket, Key=key
+                        partial(self._client.delete_object, Bucket=self._bucket, Key=key)
                     )
                 except Exception:
                     self._logger.exception("task_output_rollback_failed", storage_key=key)
