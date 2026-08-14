@@ -14,16 +14,6 @@ hide = true
 run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check src"]
 
 [tasks.test]
-description = "Smoke-test the task-kit public API. TODO: change to pytest later"
+description = "Run task-kit contract tests"
 hide = true
-run = '''
-uv run python -c '
-from task_kit import register_task
-try:
-    register_task()
-except NotImplementedError as error:
-    assert str(error) == "task-kit registration is not implemented yet"
-else:
-    raise AssertionError("register_task must raise NotImplementedError")
-'
-'''
+run = "uv run pytest tests"
