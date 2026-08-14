@@ -168,6 +168,31 @@ def test_rest_requires_a_valid_raw_body_signature() -> None:
     assert response.status_code == 401
 
 
+def test_rest_rejects_a_signed_but_non_uuid_job_id() -> None:
+    app = build_task_server(
+        name="echo",
+        tasks=(
+            TaskDefinition(
+                name="echo",
+                description="Echo a message.",
+                params_model=EchoParams,
+                result_model=EchoResult,
+                adapter=EchoAdapter(),
+            ),
+        ),
+        runtime=fake_runtime(),
+    )
+    body = b'{"text":"hello"}'
+    headers = signed_request_headers(method="POST", target="/internal/tasks/echo", body=body)
+    headers["X-Taskome-Job-Id"] = "not-a-uuid"
+    headers["content-type"] = "application/json"
+
+    with TestClient(app) as client:
+        response = client.post("/internal/tasks/echo", headers=headers, content=body)
+
+    assert response.status_code == 401
+
+
 def test_rest_rejects_an_oversized_raw_body_before_json_parsing() -> None:
     app = build_task_server(
         name="echo",

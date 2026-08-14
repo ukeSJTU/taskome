@@ -44,8 +44,8 @@ class TaskServerBoundaryMiddleware:
                 traceparent=headers.get("traceparent"),
             )
             try:
-                self.runtime.gateway_requests.verify(request)
-                if path != "/internal/manifest" and request.job_id is None:
+                verified = self.runtime.gateway_requests.verify(request)
+                if path != "/internal/manifest" and verified.job_id is None:
                     await self._response(send, 401, b'{"detail":"Invalid Gateway request."}')
                     return
             except TypeError, ValueError:
