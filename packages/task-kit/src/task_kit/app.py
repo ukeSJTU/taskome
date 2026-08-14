@@ -23,6 +23,7 @@ from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_request
 from fastmcp.tools.base import ToolResult
 from pydantic import BaseModel, ValidationError
+from scalar_fastapi import get_scalar_api_reference
 
 from ._middleware import TaskServerBoundaryMiddleware
 from .runtime import SignedGatewayRequest, TaskServerRuntime, ValidatedProducedFile
@@ -322,12 +323,22 @@ def build_task_server(
 
     app = FastAPI(
         title=f"{name} Task Server",
-        docs_url="/docs" if runtime.docs_enabled else None,
+        docs_url=None,
         redoc_url=None,
         lifespan=lifespan,
     )
     if runtime.instrument is not None:
         runtime.instrument(app)
+
+    if runtime.docs_enabled:
+
+        @app.get("/docs", include_in_schema=False)
+        async def docs() -> object:
+            return get_scalar_api_reference(
+                openapi_url=app.openapi_url,
+                title=f"{name} Task Server API",
+                telemetry=False,
+            )
 
     @app.get("/health/live")
     async def live() -> dict[str, str]:
