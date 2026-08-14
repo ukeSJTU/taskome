@@ -1,0 +1,156 @@
+"""Runtime ports shared by production and test Task Server assembly."""
+# ruff: noqa: EM101, TC001, TC003, TRY003, UP035
+
+from __future__ import annotations
+
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import TYPE_CHECKING, Awaitable, Callable, Collection, Mapping, Protocol
+from uuid import UUID
+
+import anyio
+import structlog
+
+from ._types import InputFileId
+
+if TYPE_CHECKING:
+    from ._observability import Observability
+
+_RECENT_JOB_LIMIT = 10_000
+
+
+@dataclass(frozen=True, slots=True)
+class SignedGatewayRequest:
+    timestamp: str | None
+    signature: str | None
+    method: str
+    target: str
+    body: bytes
+    job_id: str | None
+    traceparent: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class VerifiedGatewayRequest:
+    job_id: UUID | None
+    traceparent: str | None
+
+
+class GatewayRequestVerifier(Protocol):
+    def verify(self, request: SignedGatewayRequest) -> VerifiedGatewayRequest: ...
+
+
+class InputFileResolver(Protocol):
+    async def materialize(
+        self, job_id: UUID, input_file_ids: Collection[InputFileId], destination_dir: Path
+    ) -> Mapping[InputFileId, Path]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ValidatedProducedFile:
+    name: str
+    path: Path
+    media_type: str
+    download_name: str | None
+    size_bytes: int
+    sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class PublishedOutput:
+    name: str
+    storage_key: str
+    media_type: str
+    download_name: str | None
+    size_bytes: int
+    sha256: str
+
+
+class OutputPublisher(Protocol):
+    async def publish(
+        self, server_name: str, job_id: UUID, files: Collection[ValidatedProducedFile]
+    ) -> tuple[PublishedOutput, ...]: ...
+
+
+@dataclass(slots=True)
+class TaskServerRuntime:
+    gateway_requests: GatewayRequestVerifier
+    input_files: InputFileResolver
+    outputs: OutputPublisher
+    logger: structlog.stdlib.BoundLogger = field(default_factory=structlog.get_logger)
+    workdir_root: Path | None = None
+    max_concurrent_jobs: int = 1
+    request_body_max_bytes: int = 4 * 1024 * 1024
+    mcp_message_max_bytes: int = 1024 * 1024
+    docs_enabled: bool = False
+    limiter: anyio.CapacityLimiter = field(init=False)
+    active_jobs: set[UUID] = field(default_factory=set, init=False)
+    completed_jobs: OrderedDict[UUID, None] = field(default_factory=OrderedDict, init=False)
+    job_lock: anyio.Lock = field(default_factory=anyio.Lock, init=False)
+    start: Callable[[object, str], Awaitable[None]] | None = None
+    close: Callable[[], Awaitable[None]] | None = None
+    observability: Observability | None = field(default=None, init=False)
+    accepting_work: bool = field(default=False, init=False)
+
+    def __post_init__(self) -> None:
+        if (
+            min(self.max_concurrent_jobs, self.request_body_max_bytes, self.mcp_message_max_bytes)
+            < 1
+        ):
+            raise ValueError("Runtime budgets must be positive")
+        self.limiter = anyio.CapacityLimiter(self.max_concurrent_jobs)
+
+    async def claim_job(self, job_id: UUID) -> bool:
+        async with self.job_lock:
+            if (
+                not self.accepting_work
+                or job_id in self.active_jobs
+                or job_id in self.completed_jobs
+            ):
+                return False
+            self.active_jobs.add(job_id)
+            return True
+
+    async def complete_job(self, job_id: UUID) -> None:
+        async with self.job_lock:
+            self.active_jobs.discard(job_id)
+            self.completed_jobs[job_id] = None
+            self.completed_jobs.move_to_end(job_id)
+            while len(self.completed_jobs) > _RECENT_JOB_LIMIT:
+                self.completed_jobs.popitem(last=False)
+
+    async def wait_for_active_jobs(self) -> None:
+        """Wait for claimed work to leave the execution pipeline during shutdown."""
+        while True:
+            async with self.job_lock:
+                if not self.active_jobs:
+                    return
+            await anyio.sleep(0.01)
+
+
+from ._production import (  # noqa: E402
+    GatewayHMACVerifier,
+    GatewayInputFileResolver,
+    S3OutputPublisher,
+    build_runtime,
+)
+from ._settings import Environment, LogLevel, TaskServerSettings  # noqa: E402
+
+__all__ = [
+    "Environment",
+    "GatewayHMACVerifier",
+    "GatewayInputFileResolver",
+    "GatewayRequestVerifier",
+    "InputFileResolver",
+    "LogLevel",
+    "OutputPublisher",
+    "PublishedOutput",
+    "S3OutputPublisher",
+    "SignedGatewayRequest",
+    "TaskServerRuntime",
+    "TaskServerSettings",
+    "ValidatedProducedFile",
+    "VerifiedGatewayRequest",
+    "build_runtime",
+]

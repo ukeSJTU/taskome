@@ -1,7 +1,29 @@
-_REGISTRATION_NOT_IMPLEMENTED = "task-kit registration is not implemented yet"
+"""The stable, framework-independent public API for Task Server authors."""
 
+from ._app import build_task_server
+from ._types import (
+    ComputeAdapter,
+    ComputeContext,
+    ComputeError,
+    ComputeExecutionError,
+    ComputeInputError,
+    ComputeResult,
+    InputFileId,
+    ProducedFile,
+    TaskDefinition,
+)
+from .runtime import TaskServerRuntime
 
-def register_task(*args: object, **kwargs: object) -> None:
-    """Reserve task registration until the shared REST and MCP wiring is implemented."""
-    del args, kwargs
-    raise NotImplementedError(_REGISTRATION_NOT_IMPLEMENTED)
+__all__ = [
+    "ComputeAdapter",
+    "ComputeContext",
+    "ComputeError",
+    "ComputeExecutionError",
+    "ComputeInputError",
+    "ComputeResult",
+    "InputFileId",
+    "ProducedFile",
+    "TaskDefinition",
+    "TaskServerRuntime",
+    "build_task_server",
+]
