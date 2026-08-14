@@ -1,1 +1,3 @@
+@layer theme, base, scalar-theme, components, utilities;
 @import "@taskome/ui/globals.css";
+@import "@scalar/api-reference-react/style.css" layer(scalar-theme);

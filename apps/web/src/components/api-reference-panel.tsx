@@ -38,7 +38,7 @@ export function ApiReferencePanel() {
     <div className="flex min-w-0 flex-1 flex-col">
       <div className="border-b px-4 py-6 lg:px-8">
         <div className="max-w-3xl space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight">API reference</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">API Docs</h2>
           <p className="text-muted-foreground text-sm leading-6">
             The live REST contract for Direct API Clients. Authenticate requests with your Personal
             API Key in the <code className="text-foreground font-mono">X-API-Key</code> header.
@@ -48,7 +48,7 @@ export function ApiReferencePanel() {
 
       {state.status === "loading" && (
         <div className="space-y-5 p-4 lg:p-8" role="status" aria-live="polite">
-          <span className="sr-only">Loading API reference</span>
+          <span className="sr-only">Loading API Docs</span>
           <Skeleton className="h-10 w-full max-w-sm" />
           <Skeleton className="h-72 w-full" />
         </div>
@@ -59,7 +59,7 @@ export function ApiReferencePanel() {
           <div className="max-w-md space-y-4 text-center" role="alert">
             <AlertCircleIcon className="text-muted-foreground mx-auto size-8" aria-hidden="true" />
             <div className="space-y-1">
-              <h3 className="font-semibold">The API reference is temporarily unavailable</h3>
+              <h3 className="font-semibold">API Docs are temporarily unavailable</h3>
               <p className="text-muted-foreground text-sm leading-6">
                 We could not load the running Gateway contract. Try again in a moment.
               </p>
@@ -80,27 +80,19 @@ export function ApiReferencePanel() {
               content: state.projection,
               customCss: `
                 .taskome-api-reference .scalar-app {
-                  --scalar-font: inherit;
-                  --scalar-background-1: var(--background);
-                  --scalar-background-2: var(--muted);
-                  --scalar-background-3: var(--accent);
-                  --scalar-color-1: var(--foreground);
-                  --scalar-color-2: var(--muted-foreground);
-                  --scalar-color-3: var(--muted-foreground);
-                  --scalar-border-color: var(--border);
-                }
-                .taskome-api-reference .references-layout {
-                  min-height: 0;
+                  --scalar-font: var(--font-sans);
+                  --scalar-font-code: var(--font-mono);
                 }
               `,
               forceDarkModeState: resolvedTheme === "dark" ? "dark" : "light",
               hideClientButton: true,
               hideDarkModeToggle: true,
               hideTestRequestButton: true,
+              layout: "modern",
               modelsSectionLabel: "Schemas",
               showDeveloperTools: "never",
               telemetry: false,
-              theme: "none",
+              theme: "kepler",
               withDefaultFonts: false,
             }}
           />

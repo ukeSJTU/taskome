@@ -10,8 +10,8 @@ export function SiteHeader() {
   const title =
     pathname === "/account/api-keys"
       ? "API keys"
-      : pathname === "/api-reference"
-        ? "API reference"
+      : pathname === "/api-docs"
+        ? "API Docs"
         : "Documents";
 
   return (
