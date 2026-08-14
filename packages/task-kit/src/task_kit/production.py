@@ -1,5 +1,5 @@
 """Production Gateway HMAC, HTTP input resolution, and S3 output ports."""
-# ruff: noqa: ANN401, EM101, PGH003, PLR0913, TC001, TC003, TRY003
+# ruff: noqa: ANN401, EM101, PGH003, PLR0913, TC001, TC003, TRY003, TRY301
 
 from __future__ import annotations
 
@@ -26,6 +26,8 @@ from .runtime import (
 )
 from .settings import TaskServerSettings
 from .types import InputFileId
+
+MAX_INPUT_FILE_BYTES = 50 * 1024 * 1024
 
 
 def _signature(
@@ -129,20 +131,32 @@ class GatewayInputFileResolver:
         resolved: dict[InputFileId, Path] = {}
         for entry in entries:
             identifier = InputFileId(entry["id"])
+            if identifier not in input_file_ids or identifier in resolved:
+                raise RuntimeError("Gateway returned unexpected Input File metadata")
+            expected_size = entry["size_bytes"]
+            if not isinstance(expected_size, int) or not 0 < expected_size <= MAX_INPUT_FILE_BYTES:
+                raise RuntimeError("Gateway returned an invalid Input File size")
             path = destination_dir / str(identifier.root)
             partial = path.with_suffix(".part")
             written = 0
-            async with self._client.stream("GET", entry["url"]) as download:
-                download.raise_for_status()
-                with partial.open("wb") as handle:
-                    async for chunk in download.aiter_bytes():
-                        written += len(chunk)
-                        handle.write(chunk)
-            if written != entry["size_bytes"]:
+            try:
+                async with self._client.stream("GET", entry["url"]) as download:
+                    download.raise_for_status()
+                    with partial.open("wb") as handle:
+                        async for chunk in download.aiter_bytes():
+                            written += len(chunk)
+                            if written > expected_size:
+                                raise RuntimeError("Input File exceeded its declared size")
+                            handle.write(chunk)
+                if written != expected_size:
+                    raise RuntimeError("Gateway Input File size did not match downloaded bytes")
+                partial.replace(path)
+            except Exception:
                 partial.unlink(missing_ok=True)
-                raise RuntimeError("Gateway Input File size did not match downloaded bytes")
-            partial.replace(path)
+                raise
             resolved[identifier] = path
+        if set(resolved) != set(input_file_ids):
+            raise RuntimeError("Gateway omitted requested Input File metadata")
         return resolved
 
 
