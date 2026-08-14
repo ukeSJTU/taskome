@@ -5,7 +5,7 @@
 ## Invariants
 
 - Keep internal operational details, credentials, private endpoints, and team-specific workflows out of published content unless their publication is explicitly part of the task.
-- Use `@taskome/ui` for shared presentation primitives rather than duplicating the Web app's product UI or data-access code.
+- Share `@taskome/ui`'s theme tokens only (`@taskome/ui/theme.css`, layered under Fumadocs' own shadcn preset) — don't import `@taskome/ui` components. See ADR-0025.
 
 ## Completion
 
