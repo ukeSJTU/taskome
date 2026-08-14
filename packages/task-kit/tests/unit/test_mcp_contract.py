@@ -1,7 +1,5 @@
 # ruff: noqa: S101
 
-from typing import Any
-
 import httpx2
 import pytest
 from fastmcp import Client
@@ -41,9 +39,19 @@ async def test_mcp_lists_a_flat_alias_aware_tool_schema_with_a_real_client() -> 
         runtime=fake_runtime(),
     )
 
-    def client_factory(**kwargs: Any) -> httpx2.AsyncClient:  # noqa: ANN401
+    def client_factory(
+        headers: dict[str, str] | None = None,
+        timeout: httpx2.Timeout | None = None,
+        auth: httpx2.Auth | None = None,
+        follow_redirects: bool = True,  # noqa: FBT001, FBT002
+    ) -> httpx2.AsyncClient:
         return httpx2.AsyncClient(
-            transport=httpx2.ASGITransport(app=app), base_url="http://task-server", **kwargs
+            transport=httpx2.ASGITransport(app=app),
+            base_url="http://task-server",
+            headers=headers,
+            timeout=timeout,
+            auth=auth,
+            follow_redirects=follow_redirects,
         )
 
     transport = StreamableHttpTransport(
