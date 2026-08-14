@@ -33,9 +33,9 @@ class TaskServerSettings(BaseSettings):
     gateway_internal_url: AnyHttpUrl
     gateway_task_hmac_secret: SecretStr = Field(min_length=32)
     seaweedfs_internal_endpoint: AnyHttpUrl
-    seaweedfs_access_key: str
-    seaweedfs_secret_key: SecretStr
-    seaweedfs_bucket: str = "taskome"
+    seaweedfs_access_key: str = Field(min_length=1)
+    seaweedfs_secret_key: SecretStr = Field(min_length=1)
+    seaweedfs_bucket: str = Field(default="taskome", min_length=1)
     http_connect_timeout_seconds: float = Field(default=3, gt=0)
     http_io_timeout_seconds: float = Field(default=30, gt=0)
     seaweedfs_connect_timeout_seconds: float = Field(default=3, gt=0)

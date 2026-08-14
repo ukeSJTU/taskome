@@ -1,5 +1,5 @@
 """FastAPI assembly and the single synchronous Task execution pipeline."""
-# ruff: noqa: ANN202, ANN401, C901, EM101, EM102, PGH003, PLR0911, PLR0912, PLR0913, PLR0915, PLR0917, PLR2004, PTH101, TC003, TRY003, TRY300
+# ruff: noqa: ANN202, ANN401, C901, EM101, EM102, PLR0911, PLR0913, PLR0915, PLR0917, PLR2004, PTH101, TC003, TRY003
 
 from __future__ import annotations
 
@@ -8,26 +8,29 @@ import inspect
 import json
 import os
 import re
+import shutil
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Awaitable, Callable, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
+from functools import partial
 from pathlib import Path
-from typing import Any, Union, get_args, get_origin
+from typing import Any
 from uuid import UUID
 
 import anyio
+from anyio import to_thread
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_request
-from fastmcp.tools.base import ToolResult
-from pydantic import BaseModel, ValidationError
+from fastmcp.tools.base import Tool, ToolResult
+from pydantic import BaseModel, PrivateAttr, ValidationError
 from scalar_fastapi import get_scalar_api_reference
 
 from ._middleware import TaskServerBoundaryMiddleware
-from .runtime import SignedGatewayRequest, TaskServerRuntime, ValidatedProducedFile
-from .types import (
+from ._observability import DeferredTelemetryMiddleware
+from ._types import (
     ComputeContext,
     ComputeExecutionError,
     ComputeInputError,
@@ -36,6 +39,7 @@ from .types import (
     ProducedFile,
     TaskDefinition,
 )
+from .runtime import TaskServerRuntime, ValidatedProducedFile, VerifiedGatewayRequest
 
 _NAME = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
 
@@ -46,6 +50,28 @@ class _InputMaterializationError(Exception):
 
 class _OutputPublicationError(Exception):
     pass
+
+
+class _TaskTool(Tool):
+    _handler: Callable[[dict[str, Any]], Awaitable[ToolResult]] = PrivateAttr()
+
+    def __init__(
+        self,
+        *,
+        definition: TaskDefinition[Any, Any],
+        output_schema: dict[str, Any],
+        handler: Callable[[dict[str, Any]], Awaitable[ToolResult]],
+    ) -> None:
+        super().__init__(
+            name=definition.name,
+            description=definition.description,
+            parameters=_mcp_schema(definition.params_model),
+            output_schema=output_schema,
+        )
+        self._handler = handler
+
+    async def run(self, arguments: dict[str, Any]) -> ToolResult:
+        return await self._handler(arguments)
 
 
 def _assert_name(value: str, label: str) -> None:
@@ -70,46 +96,30 @@ def _schema(model: type[BaseModel]) -> dict[str, Any]:
     return schema
 
 
-def _reject_nested_extras(value: Any, annotation: Any) -> None:
-    """Reject unknown object keys before Pydantic can discard them in nested models."""
-    origin = get_origin(annotation)
-    if origin is Union:
-        for candidate in get_args(annotation):
-            try:
-                _reject_nested_extras(value, candidate)
-                return
-            except ValueError:
-                continue
-        return
-    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
-        if not isinstance(value, dict):
-            return
-        fields = annotation.model_fields
-        aliases = {
-            field.alias or field_name: (field_name, field) for field_name, field in fields.items()
-        }
-        unknown = set(value) - set(aliases)
-        if unknown:
-            raise ValueError("Params contain unknown nested fields")
-        for key, child in value.items():
-            _, field = aliases[key]
-            _reject_nested_extras(child, field.annotation)
-        return
-    if origin in (list, tuple, set, frozenset) and isinstance(value, list):
-        args = get_args(annotation)
-        if args:
-            for child in value:
-                _reject_nested_extras(child, args[0])
-    elif origin is dict and isinstance(value, dict):
-        args = get_args(annotation)
-        if len(args) == 2:
-            for child in value.values():
-                _reject_nested_extras(child, args[1])
+def _mcp_schema(model: type[BaseModel]) -> dict[str, Any]:
+    schema = _schema(model)
+
+    def remove_titles(node: Any) -> None:
+        if isinstance(node, dict):
+            node.pop("title", None)
+            for value in node.values():
+                remove_titles(value)
+        elif isinstance(node, list):
+            for value in node:
+                remove_titles(value)
+
+    remove_titles(schema)
+    return schema
 
 
-def _validate_params(model: type[BaseModel], payload: Any) -> BaseModel:
-    _reject_nested_extras(payload, model)
-    return model.model_validate(payload, strict=True, extra="forbid", by_alias=True, by_name=False)
+def _validate_params_json(model: type[BaseModel], body: bytes) -> BaseModel:
+    return model.model_validate_json(
+        body,
+        strict=True,
+        extra="forbid",
+        by_alias=True,
+        by_name=False,
+    )
 
 
 def _validate_definition(definition: TaskDefinition[Any, Any]) -> None:
@@ -153,25 +163,35 @@ def _mcp_error(code: str, message: str) -> ToolResult:
     )
 
 
-async def _bounded_body(request: Request, limit: int) -> bytes:
-    body = bytearray()
-    async for chunk in request.stream():
-        body.extend(chunk)
-        if len(body) > limit:
-            raise ValueError("request body exceeds configured limit")
-    return bytes(body)
-
-
-def _signed_request(request: Request, body: bytes) -> SignedGatewayRequest:
-    return SignedGatewayRequest(
-        timestamp=request.headers.get("X-Taskome-Timestamp"),
-        signature=request.headers.get("X-Taskome-Signature"),
-        method=request.method,
-        target=request.url.path + (f"?{request.url.query}" if request.url.query else ""),
-        body=body,
-        job_id=request.headers.get("X-Taskome-Job-Id"),
-        traceparent=request.headers.get("traceparent"),
+def _log_compute_failure(
+    runtime: TaskServerRuntime,
+    definition: TaskDefinition[Any, Any],
+    job_id: UUID,
+    error: ComputeExecutionError,
+) -> None:
+    runtime.logger.error(
+        "task_compute_failed",
+        failure_type=type(error).__name__,
+        task_name=definition.name,
+        job_id=str(job_id),
     )
+
+
+def _log_cleanup_failure(
+    runtime: TaskServerRuntime,
+    definition: TaskDefinition[Any, Any],
+    job_id: UUID,
+) -> None:
+    runtime.logger.error(
+        "task_workdir_cleanup_failed",
+        task_name=definition.name,
+        job_id=str(job_id),
+    )
+
+
+def _verified_gateway_request(request: Request) -> VerifiedGatewayRequest:
+    verified: VerifiedGatewayRequest = request.state.taskome_gateway_request
+    return verified
 
 
 def _discover_input_files(value: Any) -> tuple[InputFileId, ...]:
@@ -201,13 +221,16 @@ def _validated_outputs(
     names: set[str] = set()
     root = workdir.resolve()
     for file in files:
-        _assert_name(file.name, "Output name")
+        try:
+            _assert_name(file.name, "Output name")
+        except ValueError as error:
+            raise ComputeExecutionError("Adapter returned an invalid output name") from error
         if file.name in names:
             raise ComputeExecutionError("Adapter returned duplicate output names")
         names.add(file.name)
-        if file.path.is_absolute() or ".." in file.path.parts:
+        if file.relative_path.is_absolute() or ".." in file.relative_path.parts:
             raise ComputeExecutionError("Adapter returned an output path outside its workdir")
-        candidate = root / file.path
+        candidate = root / file.relative_path
         path = candidate.resolve()
         if candidate.is_symlink() or root not in path.parents or not path.is_file():
             raise ComputeExecutionError("Adapter returned an invalid output file")
@@ -238,11 +261,12 @@ async def _execute(
 ) -> dict[str, Any]:
     async with runtime.limiter:
         with anyio.CancelScope(shield=True):
-            with tempfile.TemporaryDirectory(
-                prefix=f"{server_name}-{job_id}-", dir=runtime.workdir_root
-            ) as directory:
+            directory = Path(
+                tempfile.mkdtemp(prefix=f"{server_name}-{job_id}-", dir=runtime.workdir_root)
+            )
+            try:
                 os.chmod(directory, 0o700)
-                root = Path(directory)
+                root = directory
                 inputs, work = root / "inputs", root / "work"
                 inputs.mkdir()
                 work.mkdir()
@@ -262,20 +286,23 @@ async def _execute(
                     ),
                     _input_paths=input_paths,
                 )
-                result = await anyio.to_thread.run_sync(  # type: ignore
-                    definition.adapter.run, params, context
-                )
+                result = await to_thread.run_sync(definition.adapter.run, params, context)
                 if not isinstance(result, ComputeResult):
                     raise ComputeExecutionError("Adapter must return ComputeResult")
+                if type(result.value) is not definition.result_model:
+                    raise ComputeExecutionError("Adapter returned the wrong result model class")
                 try:
-                    value = definition.result_model.model_validate(
-                        result.value.model_dump(mode="json"), strict=True
+                    value = definition.result_model.model_validate_json(
+                        result.value.model_dump_json(by_alias=True),
+                        strict=True,
+                        by_alias=True,
+                        by_name=False,
                     )
                 except (AttributeError, ValidationError) as error:
                     raise ComputeExecutionError(
                         "Adapter returned an invalid result value"
                     ) from error
-                files = _validated_outputs(result.files, work)
+                files = _validated_outputs(result.outputs, work)
                 try:
                     outputs = await runtime.outputs.publish(server_name, job_id, files)
                 except Exception as error:
@@ -284,6 +311,41 @@ async def _execute(
                     "value": value.model_dump(mode="json", by_alias=True),
                     "outputs": [asdict(output) for output in outputs],
                 }
+            finally:
+                try:
+                    await to_thread.run_sync(partial(shutil.rmtree, directory))
+                except OSError:
+                    _log_cleanup_failure(runtime, definition, job_id)
+
+
+def _published_output_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "required": [
+            "name",
+            "storage_key",
+            "media_type",
+            "download_name",
+            "size_bytes",
+            "sha256",
+        ],
+        "properties": {
+            "name": {"type": "string"},
+            "storage_key": {"type": "string"},
+            "media_type": {"type": "string"},
+            "download_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "size_bytes": {"type": "integer", "minimum": 0},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        },
+        "additionalProperties": False,
+    }
+
+
+def _verify_workdir_root(root: Path | None, server_name: str) -> None:
+    if root is not None and not root.is_dir():
+        raise RuntimeError("Configured workdir_root must be an existing directory")
+    with tempfile.TemporaryDirectory(prefix=f"{server_name}-startup-", dir=root):
+        pass
 
 
 def build_task_server(
@@ -317,9 +379,12 @@ def build_task_server(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         async with mcp_app.lifespan(app):
-            app.state.ready = True
-            runtime.accepting_work = True
             try:
+                await to_thread.run_sync(_verify_workdir_root, runtime.workdir_root, name)
+                if runtime.start is not None:
+                    await runtime.start(app, name)
+                app.state.ready = True
+                runtime.accepting_work = True
                 yield
             finally:
                 app.state.ready = False
@@ -334,8 +399,7 @@ def build_task_server(
         redoc_url=None,
         lifespan=lifespan,
     )
-    if runtime.instrument is not None:
-        runtime.instrument(app)
+    app.state.ready = False
 
     if runtime.docs_enabled:
 
@@ -358,11 +422,7 @@ def build_task_server(
         )
 
     @app.get("/internal/manifest")
-    async def get_manifest(request: Request) -> JSONResponse:
-        try:
-            runtime.gateway_requests.verify(_signed_request(request, b""))
-        except TypeError, ValueError:
-            return _problem(401, "unauthorized", "Invalid Gateway request.")
+    async def get_manifest() -> JSONResponse:
         return JSONResponse(manifest)
 
     @app.post("/internal/tasks/{local_task_name}")
@@ -370,21 +430,15 @@ def build_task_server(
         definition = registry.get(local_task_name)
         if definition is None:
             return _problem(404, "task_not_found", "Task not found.")
-        try:
-            body = await _bounded_body(request, runtime.request_body_max_bytes)
-        except ValueError:
-            return _problem(413, "body_too_large", "Request body is too large.")
-        signed = _signed_request(request, body)
-        try:
-            verified = runtime.gateway_requests.verify(signed)
-            job_id = verified.job_id or UUID(signed.job_id or "")
-        except ValueError, TypeError:
+        body = await request.body()
+        verified = _verified_gateway_request(request)
+        job_id = verified.job_id
+        if job_id is None:
             return _problem(401, "unauthorized", "Invalid Gateway request.")
         if not await runtime.claim_job(job_id):
             return _problem(409, "duplicate_job", "Job has already been processed.")
         try:
-            payload = json.loads(body)
-            params = _validate_params(definition.params_model, payload)
+            params = _validate_params_json(definition.params_model, body)
         except ValidationError, ValueError:
             await runtime.complete_job(job_id)
             return _problem(422, "invalid_input", "Params do not match this Task's contract.")
@@ -394,7 +448,8 @@ def build_task_server(
             )
         except ComputeInputError as error:
             return _problem(422, "invalid_input", str(error))
-        except ComputeExecutionError:
+        except ComputeExecutionError as error:
+            _log_compute_failure(runtime, definition, job_id, error)
             return _problem(500, "compute_failed", "Task execution failed.")
         except _InputMaterializationError:
             return _problem(502, "input_materialization_failed", "Input materialization failed.")
@@ -409,29 +464,19 @@ def build_task_server(
             await runtime.complete_job(job_id)
 
     def mcp_handler(task_definition: TaskDefinition[Any, Any]) -> Any:
-        async def call_task(**arguments: Any) -> ToolResult:
+        async def call_task(arguments: dict[str, Any]) -> ToolResult:
             request = get_http_request()
-            body = await request.body()
-            if len(body) > runtime.mcp_message_max_bytes:
-                return _mcp_error("invalid_input", "MCP message is too large.")
-            signed = SignedGatewayRequest(
-                timestamp=request.headers.get("X-Taskome-Timestamp"),
-                signature=request.headers.get("X-Taskome-Signature"),
-                method=request.method,
-                target=request.url.path + (f"?{request.url.query}" if request.url.query else ""),
-                body=body,
-                job_id=request.headers.get("X-Taskome-Job-Id"),
-                traceparent=request.headers.get("traceparent"),
-            )
-            try:
-                verified = runtime.gateway_requests.verify(signed)
-                job_id = verified.job_id or UUID(signed.job_id or "")
-            except TypeError, ValueError:
+            verified = _verified_gateway_request(request)
+            job_id = verified.job_id
+            if job_id is None:
                 return _mcp_error("unauthorized", "Invalid Gateway request.")
             if not await runtime.claim_job(job_id):
                 return _mcp_error("duplicate_job", "Job has already been processed.")
             try:
-                params = _validate_params(task_definition.params_model, arguments)
+                params = _validate_params_json(
+                    task_definition.params_model,
+                    json.dumps(arguments, separators=(",", ":")).encode(),
+                )
                 envelope = await _execute(
                     task_definition, runtime, name, job_id, params, verified.traceparent
                 )
@@ -439,9 +484,12 @@ def build_task_server(
                     content=json.dumps(envelope, separators=(",", ":")),
                     structured_content=envelope,
                 )
-            except ValidationError, ValueError, ComputeInputError:
-                return _mcp_error("invalid_input", "Params do not match this Task's contract.")
-            except ComputeExecutionError:
+            except ComputeInputError as error:
+                return _mcp_error("invalid_input", str(error))
+            except ValidationError:
+                raise
+            except ComputeExecutionError as error:
+                _log_compute_failure(runtime, task_definition, job_id, error)
                 return _mcp_error("compute_failed", "Task execution failed.")
             except _InputMaterializationError:
                 return _mcp_error("input_materialization_failed", "Input materialization failed.")
@@ -456,38 +504,25 @@ def build_task_server(
         return call_task
 
     for definition in definitions:
-        call_task = mcp_handler(definition)
-        fields = []
-        for field_name, field_info in definition.params_model.model_fields.items():
-            default = inspect.Parameter.empty if field_info.is_required() else field_info.default
-            fields.append(
-                inspect.Parameter(
-                    field_info.alias or field_name,
-                    inspect.Parameter.KEYWORD_ONLY,
-                    default=default,
-                    annotation=field_info.annotation,
-                )
-            )
-        call_task.__annotations__ = {
-            field_info.alias or field_name: field_info.annotation
-            for field_name, field_info in definition.params_model.model_fields.items()
-        }
-        call_task.__signature__ = inspect.Signature(fields)  # type: ignore[attr-defined]
-        mcp.tool(
-            name=definition.name,
-            description=definition.description,
-            output_schema={
-                "type": "object",
-                "required": ["value", "outputs"],
-                "properties": {
-                    "value": _schema(definition.result_model),
-                    "outputs": {"type": "array"},
+        mcp.add_tool(
+            _TaskTool(
+                definition=definition,
+                handler=mcp_handler(definition),
+                output_schema={
+                    "type": "object",
+                    "required": ["value", "outputs"],
+                    "properties": {
+                        "value": _schema(definition.result_model),
+                        "outputs": {"type": "array", "items": _published_output_schema()},
+                    },
+                    "additionalProperties": False,
                 },
-                "additionalProperties": False,
-            },
-        )(call_task)
+            )
+        )
     mcp_app = mcp.http_app(path="/")
     app.mount("/mcp", mcp_app)
     app.add_middleware(TaskServerBoundaryMiddleware, runtime=runtime)
+    if runtime.start is not None:
+        app.add_middleware(DeferredTelemetryMiddleware, runtime=runtime)
 
     return app

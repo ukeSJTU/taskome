@@ -37,7 +37,7 @@ class ComputeExecutionError(ComputeError):
 @dataclass(frozen=True, slots=True)
 class ProducedFile:
     name: str
-    path: Path
+    relative_path: Path
     media_type: str
     download_name: str | None = None
 
@@ -45,7 +45,7 @@ class ProducedFile:
 @dataclass(frozen=True, slots=True)
 class ComputeResult(Generic[ResultT]):
     value: ResultT
-    files: tuple[ProducedFile, ...] = ()
+    outputs: tuple[ProducedFile, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

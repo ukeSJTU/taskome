@@ -1,8 +1,7 @@
 """The stable, framework-independent public API for Task Server authors."""
 
-from .app import build_task_server
-from .runtime import TaskServerRuntime
-from .types import (
+from ._app import build_task_server
+from ._types import (
     ComputeAdapter,
     ComputeContext,
     ComputeError,
@@ -13,6 +12,7 @@ from .types import (
     ProducedFile,
     TaskDefinition,
 )
+from .runtime import TaskServerRuntime
 
 __all__ = [
     "ComputeAdapter",

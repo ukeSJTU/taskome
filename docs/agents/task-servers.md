@@ -2,8 +2,6 @@
 
 Use this checklist when adding `apps/task-<name>`. A Task Server is one independently deployed, flat uv project that may expose multiple Tasks sharing the same compute environment. There is no generator or cookiecutter; the small explicit assembly is the template.
 
-> ADR-0026 is the accepted target contract. Until issue #22 replaces task-kit's scaffold, new Task Servers cannot use the full API described here.
-
 ## 1. Choose the server boundary
 
 Group Tasks only when they genuinely share the same compute dependencies, image, credentials, capacity, and deployment lifecycle. Give the server a lowercase single-underscore name of at most 63 characters. Give each local Task a unique name under the same rule.
@@ -61,6 +59,24 @@ For each local Task:
 6. Classify safe semantic rejection as `ComputeInputError` and internal tool failure as `ComputeExecutionError`.
 7. Never add `extra_args`, a platform batch envelope, Task version, execution mode, timeout placeholder, storage key, or callback.
 
+The frozen Produced File data shape is:
+
+```python
+return ComputeResult(
+    value=Result(...),
+    outputs=(
+        ProducedFile(
+            name="predicted_structure",
+            relative_path=Path("prediction.pdb"),
+            media_type="chemical/x-pdb",
+            download_name="prediction.pdb",
+        ),
+    ),
+)
+```
+
+Do not use the superseded `files` or `path` field names. The only supported imports are the package-root author API, `task_kit.runtime`, and `task_kit.testing`.
+
 Subprocess adapters pass an argument vector without `shell=True`, use controlled cwd/environment, and close/terminate children they create when their own operation fails. task-kit cannot safely kill an arbitrary worker thread and does not promise a total execution timeout.
 
 ## 4. Assemble the app
@@ -102,6 +118,8 @@ Copy `.env.example` to the service-local ignored `.env`. Supply:
 - Optional workdir root and operational I/O budgets.
 - Standard application environment/log level/docs and OTLP variables.
 
+If `WORKDIR_ROOT` is configured, create it before first start and make it writable by the Task Server user. Startup validates it before readiness.
+
 Never give the Task Server access to Gateway's `uploads/` prefix. It retrieves only Job-attached Input Files through Gateway's signed internal resolver and a fresh presigned GET.
 
 Gateway static config must map the exact server name to one internal URL. Gateway startup fetches the signed manifest and refuses readiness if it is unavailable, mismatched, or creates a qualified-name collision.
@@ -139,6 +157,8 @@ uv run fastapi run --host 0.0.0.0 --port 8000 --workers 1 src/fpocket_server/app
 For synchronous v1, configure exactly one process and one replica. Use stop-then-start deployment; do not put multiple replicas behind a load balancer. Health endpoints are `/health/live` and `/health/ready`; internal Task endpoints are never routed at the public edge.
 
 Forced shutdown can interrupt a Job and leave an ambiguous state or orphan output. There is no automatic retry. A caller retry creates a new Job. Clearly retain the `TODO`/documentation marker that this process-local execution, capacity, duplicate guard, and deployment constraint must be replaced—not extended—when Taskiq/Ray is designed.
+
+REST failures use RFC 9457 Problem Details. MCP execution failures carry a stable `_meta.taskome.error_code`. Inspect structured logs and traces by Job id, but never log Params, sequences, presigned URLs, credentials, signatures, raw tool stderr, or `ComputeExecutionError` text.
 
 ## 9. Final checklist
 

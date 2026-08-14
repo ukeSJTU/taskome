@@ -12,6 +12,7 @@ from uuid import UUID
 
 import structlog
 
+from ._types import ComputeContext, InputFileId
 from .runtime import (
     PublishedOutput,
     SignedGatewayRequest,
@@ -19,9 +20,8 @@ from .runtime import (
     ValidatedProducedFile,
     VerifiedGatewayRequest,
 )
-from .types import ComputeContext, InputFileId
 
-TEST_GATEWAY_HMAC_SECRET = "task-kit-test-secret-0123456789"
+TEST_GATEWAY_HMAC_SECRET = "task-kit-test-secret-01234567890"
 
 
 def signed_request_headers(

@@ -29,7 +29,12 @@ class TaskServerBoundaryMiddleware:
         )
         body = await self._read_body(receive, limit)
         if body is None:
-            await self._response(send, 413, b'{"detail":"Request body is too large."}')
+            await self._response(
+                send,
+                413,
+                "body_too_large",
+                "Request body is too large.",
+            )
             return
         headers = {key.decode().lower(): value.decode() for key, value in scope["headers"]}
         target = path + (f"?{scope['query_string'].decode()}" if scope["query_string"] else "")
@@ -46,10 +51,11 @@ class TaskServerBoundaryMiddleware:
             try:
                 verified = self.runtime.gateway_requests.verify(request)
                 if path != "/internal/manifest" and verified.job_id is None:
-                    await self._response(send, 401, b'{"detail":"Invalid Gateway request."}')
+                    await self._response(send, 401, "unauthorized", "Invalid Gateway request.")
                     return
+                scope.setdefault("state", {})["taskome_gateway_request"] = verified
             except TypeError, ValueError:
-                await self._response(send, 401, b'{"detail":"Invalid Gateway request."}')
+                await self._response(send, 401, "unauthorized", "Invalid Gateway request.")
                 return
         delivered = False
 
@@ -87,7 +93,16 @@ class TaskServerBoundaryMiddleware:
             return False
 
     @staticmethod
-    async def _response(send: Send, status: int, body: bytes) -> None:
+    async def _response(send: Send, status: int, code: str, detail: str) -> None:
+        body = json.dumps(
+            {
+                "type": f"urn:taskome:error:{code}",
+                "title": code.replace("_", " "),
+                "status": status,
+                "detail": detail,
+            },
+            separators=(",", ":"),
+        ).encode()
         await send(
             {
                 "type": "http.response.start",

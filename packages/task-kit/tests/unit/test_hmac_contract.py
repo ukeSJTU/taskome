@@ -3,8 +3,7 @@
 from uuid import UUID
 
 import pytest
-from task_kit.production import GatewayHMACVerifier
-from task_kit.runtime import SignedGatewayRequest
+from task_kit.runtime import GatewayHMACVerifier, SignedGatewayRequest
 
 
 def test_gateway_hmac_matches_the_fixed_protocol_example() -> None:

@@ -6,13 +6,16 @@ from __future__ import annotations
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Awaitable, Callable, Collection, Mapping, Protocol
+from typing import TYPE_CHECKING, Awaitable, Callable, Collection, Mapping, Protocol
 from uuid import UUID
 
 import anyio
 import structlog
 
-from .types import InputFileId
+from ._types import InputFileId
+
+if TYPE_CHECKING:
+    from ._observability import Observability
 
 _RECENT_JOB_LIMIT = 10_000
 
@@ -85,8 +88,9 @@ class TaskServerRuntime:
     active_jobs: set[UUID] = field(default_factory=set, init=False)
     completed_jobs: OrderedDict[UUID, None] = field(default_factory=OrderedDict, init=False)
     job_lock: anyio.Lock = field(default_factory=anyio.Lock, init=False)
+    start: Callable[[object, str], Awaitable[None]] | None = None
     close: Callable[[], Awaitable[None]] | None = None
-    instrument: Callable[[object], None] | None = None
+    observability: Observability | None = field(default=None, init=False)
     accepting_work: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
@@ -123,3 +127,30 @@ class TaskServerRuntime:
                 if not self.active_jobs:
                     return
             await anyio.sleep(0.01)
+
+
+from ._production import (  # noqa: E402
+    GatewayHMACVerifier,
+    GatewayInputFileResolver,
+    S3OutputPublisher,
+    build_runtime,
+)
+from ._settings import Environment, LogLevel, TaskServerSettings  # noqa: E402
+
+__all__ = [
+    "Environment",
+    "GatewayHMACVerifier",
+    "GatewayInputFileResolver",
+    "GatewayRequestVerifier",
+    "InputFileResolver",
+    "LogLevel",
+    "OutputPublisher",
+    "PublishedOutput",
+    "S3OutputPublisher",
+    "SignedGatewayRequest",
+    "TaskServerRuntime",
+    "TaskServerSettings",
+    "ValidatedProducedFile",
+    "VerifiedGatewayRequest",
+    "build_runtime",
+]

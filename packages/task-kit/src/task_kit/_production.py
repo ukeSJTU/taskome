@@ -11,7 +11,7 @@ from collections.abc import Collection, Mapping
 from functools import partial
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import boto3
@@ -19,10 +19,14 @@ import httpx
 import structlog
 from anyio import to_thread
 from botocore.client import Config
+from botocore.exceptions import ClientError
 from opentelemetry import propagate
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
+from ._logging import configure_logging
+from ._observability import create_observability
+from ._settings import Environment, TaskServerSettings
+from ._types import InputFileId
 from .runtime import (
     PublishedOutput,
     SignedGatewayRequest,
@@ -30,11 +34,10 @@ from .runtime import (
     ValidatedProducedFile,
     VerifiedGatewayRequest,
 )
-from .settings import Environment, TaskServerSettings
-from .types import InputFileId
 
 if TYPE_CHECKING:
-    from fastapi import FastAPI
+    from opentelemetry.sdk._logs.export import LogRecordExporter
+    from opentelemetry.sdk.trace.export import SpanExporter
 
 MAX_INPUT_FILE_BYTES = 50 * 1024 * 1024
 
@@ -210,6 +213,17 @@ class S3OutputPublisher:
         return tuple(outputs)
 
     def _put_file(self, key: str, file: ValidatedProducedFile) -> None:
+        # SeaweedFS 3.93 does not enforce S3 conditional PUT. The v1 deployment
+        # contract permits only one process/replica and stop-then-start rollout,
+        # while claim_job serializes duplicate job ids inside that process, so a
+        # preflight existence check is the compatible non-overwrite boundary.
+        try:
+            self._client.head_object(Bucket=self._bucket, Key=key)
+        except ClientError as error:
+            if error.response.get("Error", {}).get("Code") not in {"404", "NoSuchKey"}:
+                raise
+        else:
+            raise FileExistsError(key)
         with file.path.open("rb") as body:
             self._client.put_object(
                 Bucket=self._bucket,
@@ -220,7 +234,12 @@ class S3OutputPublisher:
             )
 
 
-def build_runtime(settings: TaskServerSettings) -> TaskServerRuntime:
+def build_runtime(
+    settings: TaskServerSettings,
+    *,
+    span_exporter: SpanExporter | None = None,
+    log_exporter: LogRecordExporter | None = None,
+) -> TaskServerRuntime:
     """Construct the reusable production ports from validated settings."""
     timeout = httpx.Timeout(
         connect=settings.http_connect_timeout_seconds,
@@ -240,20 +259,34 @@ def build_runtime(settings: TaskServerSettings) -> TaskServerRuntime:
             signature_version="s3v4",
             connect_timeout=settings.seaweedfs_connect_timeout_seconds,
             read_timeout=settings.seaweedfs_io_timeout_seconds,
-            retries={"mode": "standard", "total_max_attempts": 2},
+            retries={"mode": "standard", "total_max_attempts": 1},
             s3={"addressing_style": "path"},
         ),
     )
 
+    async def start(app: object, server_name: str) -> None:
+        del app
+        runtime.observability = create_observability(
+            settings,
+            server_name,
+            span_exporter=span_exporter,
+            log_exporter=log_exporter,
+        )
+        configure_logging(settings, runtime.observability.logger_provider)
+        HTTPXClientInstrumentor.instrument_client(
+            client,
+            tracer_provider=runtime.observability.tracer_provider,
+            request_hook=_redact_httpx_query,
+        )
+
     async def close() -> None:
+        HTTPXClientInstrumentor.uninstrument_client(client)
         await client.aclose()
-        s3.close()
+        await to_thread.run_sync(s3.close)
+        if runtime.observability is not None:
+            await runtime.observability.shutdown()
 
-    def instrument(app: object) -> None:
-        FastAPIInstrumentor.instrument_app(cast("FastAPI", app))
-        HTTPXClientInstrumentor.instrument_client(client)
-
-    return TaskServerRuntime(
+    runtime = TaskServerRuntime(
         gateway_requests=GatewayHMACVerifier(
             settings.gateway_task_hmac_secret.get_secret_value(),
             settings.gateway_signature_max_age_seconds,
@@ -274,6 +307,15 @@ def build_runtime(settings: TaskServerSettings) -> TaskServerRuntime:
             if settings.docs_enabled is None
             else settings.docs_enabled
         ),
+        start=start,
         close=close,
-        instrument=instrument,
     )
+    return runtime
+
+
+async def _redact_httpx_query(span: Any, request: Any) -> None:
+    if not span.is_recording():
+        return
+    safe_url = str(request.url.copy_with(query=None))
+    span.set_attribute("url.full", safe_url)
+    span.set_attribute("http.url", safe_url)

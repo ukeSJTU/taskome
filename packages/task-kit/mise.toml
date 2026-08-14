@@ -13,7 +13,17 @@ description = "Read-only check: lint, format, types"
 hide = true
 run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check src"]
 
-[tasks.test]
-description = "Run task-kit contract tests"
+[tasks."test:unit"]
+description = "Run task-kit unit contract tests"
 hide = true
-run = "uv run pytest tests"
+run = "uv run pytest tests/unit"
+
+[tasks."test:integration"]
+description = "Run task-kit production boundary integration tests"
+hide = true
+run = "uv run pytest tests/integration"
+
+[tasks.test]
+description = "Run all task-kit contract tests"
+hide = true
+run = ["uv run pytest tests/unit", "uv run pytest tests/integration"]
