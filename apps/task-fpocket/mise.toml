@@ -23,6 +23,27 @@ run = "uv run ruff format"
 description = "Read-only check: lint, format, types"
 run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check src"]
 
+[tasks."compute:build"]
+description = "Build the native fpocket binary for local/CI tests (not the Docker image)"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "$(uname -s)-$(uname -m)" in
+  Linux-x86_64) arch=LINUXAMD64 ;;
+  Darwin-arm64) arch=MACOSXARM64 ;;
+  Darwin-x86_64) arch=MACOSXX86_64 ;;
+  *)
+    echo "Unsupported platform for a native fpocket build: $(uname -s)-$(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
+mkdir -p compute/bin compute/obj
+make -C compute ARCH="$arch" fpocket
+'''
+
 [tasks.test]
-description = "Smoke-test the fpocket Task Server entry point until API tests exist"
-run = "uv run fpocket-server"
+description = "Run the fpocket Task Server test suite"
+depends = ["compute:build"]
+run = "uv run pytest"

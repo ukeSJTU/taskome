@@ -16,7 +16,7 @@ run = "uv run ruff format"
 
 [tasks.check]
 description = "Read-only check: lint, format, types"
-run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check"]
+run = ["uv run ruff check", "uv run ruff format --check", "uv run ty check src"]
 
 [tasks."test:unit"]
 description = "Run gateway unit tests (fast, no external services)"

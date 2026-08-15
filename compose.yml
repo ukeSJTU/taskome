@@ -26,5 +26,51 @@ services:
       - no-new-privileges:true
     restart: unless-stopped
 
+  task-fpocket:
+    # The vendored fpocket build links a pre-built LINUXAMD64 molfile plugin
+    # archive (see compute/plugins/LINUXAMD64) -- it only builds for amd64,
+    # matching `mise run //apps/task-fpocket:build`'s explicit --platform.
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: apps/task-fpocket/Dockerfile
+    env_file:
+      - path: apps/task-fpocket/.env
+        required: false
+    environment:
+      # Nothing dispatches to this Task Server yet (ADR-0004's Gateway queue
+      # isn't built) -- these are placeholders so the required setting is
+      # present, not a real address anything calls out to.
+      GATEWAY_INTERNAL_URL: http://gateway.internal.invalid:8000
+      GATEWAY_TASK_HMAC_SECRET: ${GATEWAY_TASK_HMAC_SECRET:-taskome-local-fpocket-gateway-hmac-secret}
+      SEAWEEDFS_INTERNAL_ENDPOINT: http://seaweedfs:8333
+      SEAWEEDFS_ACCESS_KEY: taskome-dev
+      SEAWEEDFS_SECRET_KEY: ${SEAWEEDFS_SECRET_KEY:-taskome-dev-secret-change-me}
+    ports:
+      - "127.0.0.1:18000:8000" # dev-only: manual signed-request verification (see scripts/sign-internal-request.py)
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
 volumes:
   taskome_postgres_data:

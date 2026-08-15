@@ -26,6 +26,12 @@
 **/.coverage
 **/*.egg-info
 
+# Native build artifacts (e.g. from `mise run //apps/task-fpocket:compute:build`
+# for local tests) must never leak into a Docker build context: they're built
+# for the host platform and can break a Linux image's own compile/link step.
+**/*.o
+**/*.obj
+
 **/coverage
 **/tests
 **/README.md

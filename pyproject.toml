@@ -31,6 +31,7 @@ ignore = ["D", "COM812", "ISC001", "CPY001"]
 "apps/gateway/gunicorn.conf.py" = ["INP001"]
 "apps/gateway/alembic/**" = ["INP001"]
 "apps/gateway/tests/**" = ["S101", "PLR2004", "ANN001", "ANN201", "INP001"]
+"apps/task-fpocket/tests/**" = ["S101", "PLR2004", "ANN001", "ANN201", "INP001"]
 
 [tool.ty.src]
 exclude = ["references", ".agents", "apps/task-*/compute"]
