@@ -19,6 +19,7 @@ python.uv_venv_auto = "source"
 
 [env]
 UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
+_.path = ["apps/cli/bin"]
 
 [tasks.setup]
 description = "Install locked project dependencies, initialize local env files, and install Git hooks"
@@ -58,8 +59,15 @@ depends = ["cli:build", "web:build", "docs:build"]
 output = "prefix"
 
 [tasks."cli:build"]
-description = "Compile the Taskome CLI"
+description = "Build the Taskome CLI binary"
 run = "mise run //apps/cli:build"
+
+[tasks."cli:run"]
+description = "Run the Taskome CLI from source"
+usage = '''
+arg "[args]..." help="Arguments passed to taskome"
+'''
+run = "go -C apps/cli run ./cmd/taskome $usage_args"
 
 [tasks."web:build"]
 description = "Build Web"

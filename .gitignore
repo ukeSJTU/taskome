@@ -12,7 +12,7 @@ build
 *.tsbuildinfo
 
 # Go CLI local build and test artifacts
-apps/cli/taskome
+apps/cli/bin/
 apps/cli/*.test
 apps/cli/coverage.out
 apps/cli/coverage.html

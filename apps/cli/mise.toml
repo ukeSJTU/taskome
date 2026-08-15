@@ -1,7 +1,15 @@
 [tasks.build]
-description = "Compile the Taskome CLI"
+description = "Build the Taskome CLI binary"
 hide = true
-run = "go build ./..."
+run = ["mkdir -p bin", "go build -o bin/taskome ./cmd/taskome"]
+
+[tasks.run]
+description = "Run the Taskome CLI from source"
+hide = true
+usage = '''
+arg "[args]..." help="Arguments passed to taskome"
+'''
+run = "go run ./cmd/taskome $usage_args"
 
 [tasks.check]
 description = "Run read-only Taskome CLI checks"
