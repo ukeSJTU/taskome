@@ -17,7 +17,7 @@ web
 
 Two independent surfaces sharing one app:
 
-1. **Tool platform** — a GPU-backed compute platform that puts XDenovo's internal protein-design tools (initially PepMimic, BindCraft, GraphPep, extended opportunistically) behind a single reachable interface, exposed identically over a Web UI, MCP, and REST. Success is a researcher or agent running a real job with the tool's actual config surface, without needing direct server/CLI access.
+1. **Tool platform** — a GPU-backed compute platform that puts XDenovo's internal protein-design tools behind a single reachable interface, exposed identically over a Web UI, MCP, and REST. No fixed tool list — the current and planned roster is tracked in `docs/product/roadmap.md`, not restated here, so this document doesn't go stale every time a tool ships. Success is a researcher or agent running a real job with the tool's actual config surface, without needing direct server access.
 2. **Public website** — communicates XDenovo's AI4Bio positioning outward. Success is a visitor understanding what XDenovo does and why it's differentiated.
 
 ## Positioning
@@ -27,19 +27,20 @@ Two independent surfaces sharing one app:
 
 ## Operating Context
 
-- **Access Channels** (ADR-0023): Web App uses REST through `apps/web`'s own BFF API routes; MCP Agents use MCP directly against `apps/gateway`; Direct API Clients use REST directly against `apps/gateway`. Browser code never bypasses the BFF.
+- **Access Channels** (ADR-0002): Web App uses REST through `apps/web`'s own BFF API routes; MCP Agents use MCP directly against `apps/gateway`; Direct API Clients use REST directly against `apps/gateway`. Browser code never bypasses the BFF. A CLI is a planned fourth channel (not yet built) that reuses the Direct API Client's REST + Personal API Key path — see `docs/product/roadmap.md` milestone 3.
 - **Domain terms** (root `CONTEXT.md`): Task, Job, Task Server, Gateway, Principal, Personal API Key, Input File. "taskome" = Task + -ome.
-- **Data ownership**: `apps/web` owns the auth Postgres schema; `apps/gateway` owns jobs and input files. Cross-service access goes through gateway's REST API, never direct SQL.
+- **Data ownership** (ADR-0001): `apps/web` owns the auth Postgres schema; `apps/gateway` owns jobs and input files. Cross-service access goes through gateway's REST API, never direct SQL.
+- **Task Servers**: each tool ships as its own `apps/task-<name>` uv project built on `packages/task-kit` (ADR-0003), which generates matching REST + MCP wiring from one `ComputeAdapter` per Task. `apps/task-fpocket` (binding pocket detection, wrapping `fpocket`) is the first Task Server — currently a skeleton, not yet calling `build_task_server()` (see `docs/product/roadmap.md`).
 - **Auth**: better-auth (`packages/auth`), consumed via `apps/web/src/lib/auth-client.ts`. Plugins: personal API keys (named, revocable), JWT (short-lived session tokens for BFF→Gateway calls), two-factor auth (issuer "taskome"). Also handles OAuth consent and an OAuth authorization server `.well-known` endpoint for MCP Agent auth.
 - **Routes**: `(public)` public site; `(auth)` login/signup; `(app)` authenticated dashboard, account/API keys, API reference; `oauth/consent`, `security/two-factor`, `two-factor` auth flows.
 
 ## Capabilities and Constraints
 
-- Each Task's MCP and REST parameters are a curated subset of the underlying tool's real config, designed per tool (not a full passthrough), including vendored-code changes where needed. No CLI is offered.
+- Each Task's MCP and REST parameters are a curated subset of the underlying tool's real config, designed per tool (not a full passthrough), including vendored-code changes where needed. No CLI yet — see Access Channels above.
 - Both MCP and REST are required for every Task — neither ships alone as "done."
 - Job chaining (piping one Job's output into the next Job's input) is explicitly out of scope for now; it's on the roadmap and not designed around yet.
-- No fixed tool catalog boundary — PepMimic, BindCraft, GraphPep are the initial set, extended opportunistically.
-- No team-scoped sharing/visibility yet (flat individual accounts); storage layer is ownership-agnostic so this can land later without a storage migration (ADR-0011).
+- No fixed tool catalog boundary — current and planned tools, with status, are tracked in `docs/product/roadmap.md`, extended opportunistically.
+- No team-scoped sharing/visibility yet (flat individual accounts); storage layer is ownership-agnostic so this can land later without a storage migration (ADR-0001).
 - `apps/docs` is a separate static public content site with no Gateway access — out of scope for `apps/web`.
 
 ## Brand Commitments
@@ -53,7 +54,7 @@ Two independent surfaces sharing one app:
     - **Company**: XDeNovo / 纽肽生物 (Shanghai XDeNovo Biotechnology Co., Ltd.), founded 2025.
     - **Mission**: accelerate drug development through AI-designed novel peptides, addressing difficult-to-drug targets and unmet clinical needs.
     - **Team**: core members from David Baker Laboratory and Shanghai Jiao Tong University; combines peptide engineering expertise with AI.
-    - **Products** (previous framing, predates this repo's PepMimic/BindCraft/GraphPep tool set): de novo peptide/antibody design, PDC/PRC drug targeting heads, antimicrobial peptides, cosmetic peptides, industrial enzymes, custom protein design.
+    - **Products** (previous framing, predates this repo's actual tool roster — see `docs/product/roadmap.md`): de novo peptide/antibody design, PDC/PRC drug targeting heads, antimicrobial peptides, cosmetic peptides, industrial enzymes, custom protein design.
     - **Platform validation cases**: metabolic diseases, tumor immunity, neurodegenerative diseases, autoimmune diseases, cardiovascular diseases — each with a stated affinity/specificity claim from internal experimental data.
     - **Locations**: HQ Shanghai (Minhang District); R&D presence in Shanghai, Beijing, Hong Kong, Seattle.
     - **Industry timeline** (2018 AlphaFold → 2021 AlphaFold2 → 2022 first AI-antibody in clinical trials → 2023 RFdiffusion → 2024 Nobel Prize in Chemistry for computational protein design → 2025 company founded).
