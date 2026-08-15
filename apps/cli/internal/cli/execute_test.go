@@ -63,3 +63,28 @@ func TestExecuteVersion(t *testing.T) {
 		t.Fatalf("version output = %q, want devel", stdout.String())
 	}
 }
+
+func TestExecuteGeneratesBashCompletion(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	exitCode := Execute(
+		context.Background(),
+		[]string{"completion", "bash"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("Execute(completion bash) exit code = %d, want 0", exitCode)
+	}
+	if !strings.Contains(stdout.String(), "# bash completion V2 for taskome") {
+		t.Fatalf("completion output = %q, want bash completion script", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("completion stderr = %q, want empty", stderr.String())
+	}
+}

@@ -6,7 +6,7 @@ import "github.com/spf13/cobra"
 var Version = "devel"
 
 func newRootCommand() *cobra.Command {
-	return &cobra.Command{
+	command := &cobra.Command{
 		Use:           "taskome",
 		Short:         "Taskome command-line interface",
 		SilenceErrors: true,
@@ -17,4 +17,7 @@ func newRootCommand() *cobra.Command {
 		},
 		Version: Version,
 	}
+	command.AddCommand(newCompletionCommand())
+
+	return command
 }
