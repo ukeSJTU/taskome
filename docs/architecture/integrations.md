@@ -22,9 +22,20 @@ Publishing a Task's output to SeaweedFS is a deliberately non-retrying operation
 | SeaweedFS | Input Files and Job outputs, via presigned URLs and direct S3-protocol calls | No retry on ambiguous writes (above). See [`data.md`](./data.md).                                                                                 |
 | Ray       | GPU/CPU resource requests for Job execution                                  | Undesigned — no code calls Ray yet. See `containers.md`.                                                                                          |
 
+## Outbound email (planned)
+
+Taskome will add transactional email in a later implementation phase. The intended environment split is:
+
+| Environment       | Service                                 | Role                                                                                                       |
+| ----------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Local development | [Mailpit](https://mailpit.axllent.org/) | A local SMTP capture inbox for manually inspecting messages. It must not deliver email to real recipients. |
+| Production        | [Resend](https://resend.com/)           | The transactional email provider for real delivery.                                                        |
+
+This is a recorded direction, not an implemented integration: there is no Mailpit Compose service, SMTP or Resend configuration, environment variables, email-sending module, or authentication-email callback yet. When the work is taken on, keep provider-specific code behind an application-owned sending boundary so Better Auth's verification and password-reset flows do not depend directly on either Mailpit or Resend. Define the authentication flows, templates, localization, rate limits, delivery-failure handling, and test seams as part of that implementation rather than treating the local inbox as the feature itself.
+
 ## What's not integrated
 
-No outbound email (no SMTP/email-provider configuration anywhere in the codebase). No inbound webhooks from third parties. No other outbound API integrations exist today beyond the three systems above.
+No outbound email is implemented yet (no SMTP/email-provider configuration anywhere in the codebase). No inbound webhooks from third parties. No other outbound API integrations exist today beyond the three systems above.
 
 ## Related docs
 
