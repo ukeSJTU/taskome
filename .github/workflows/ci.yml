@@ -68,6 +68,7 @@ jobs:
           uv sync --locked
       - name: Run unit tests
         run: |
+          mise run cli:test
           mise run ts:test
           mise run gateway:test:unit
           mise run //packages/task-kit:test:unit

@@ -2,9 +2,10 @@
 monorepo_root = true
 
 [monorepo]
-config_roots = ["apps/gateway", "apps/docs", "apps/task-fpocket", "packages/task-kit"]
+config_roots = ["apps/cli", "apps/gateway", "apps/docs", "apps/task-fpocket", "packages/task-kit"]
 
 [tools]
+go = "1.26.6"
 node = "24"
 python = "3.14"
 pnpm = "11"
@@ -25,6 +26,7 @@ depends = ["//apps/task-fpocket:sync"]
 run = [
   "pnpm install --frozen-lockfile",
   "uv sync --locked",
+  "go -C apps/cli mod download",
   "mise run env:init",
   "lefthook install",
 ]
@@ -51,9 +53,13 @@ description = "Run Docs in development mode on port 3001"
 run = "pnpm --dir apps/docs run dev"
 
 [tasks.build]
-description = "Build the Web and Docs applications"
-depends = ["web:build", "docs:build"]
+description = "Build applications across the repository"
+depends = ["cli:build", "web:build", "docs:build"]
 output = "prefix"
+
+[tasks."cli:build"]
+description = "Compile the Taskome CLI"
+run = "mise run //apps/cli:build"
 
 [tasks."web:build"]
 description = "Build Web"
@@ -180,14 +186,18 @@ description = "Report available dependency and tool updates without changing loc
 run = "bash scripts/deps-outdated.sh"
 
 [tasks."api-client:generate"]
-description = "Refresh the generated authenticated gateway client"
-run = ["mise run gateway:openapi:export", "pnpm --filter @taskome/api-client generate"]
+description = "Refresh generated Gateway clients"
+run = [
+  "mise run gateway:openapi:export",
+  "pnpm --filter @taskome/api-client generate",
+  "mise run //apps/cli:api-client:generate",
+]
 
 [tasks."api-client:verify"]
 description = "Regenerate the API client and require no uncommitted generated changes"
 run = [
   "mise run //:api-client:generate",
-  "git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/generated",
+  "git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/generated apps/cli/internal/gateway/generated",
 ]
 
 [tasks.lint]
@@ -207,13 +217,33 @@ output = "prefix"
 
 [tasks.check]
 description = "Read-only check across the whole repo (lint + format + types)"
-depends = ["ts:check", "gateway:check", "//apps/task-fpocket:check", "//packages/task-kit:check"]
+depends = [
+  "cli:check",
+  "ts:check",
+  "gateway:check",
+  "//apps/task-fpocket:check",
+  "//packages/task-kit:check",
+]
 output = "prefix"
+
+[tasks."cli:check"]
+description = "Run read-only Taskome CLI checks"
+run = "mise run //apps/cli:check"
 
 [tasks.test]
 description = "Run tests across the repo"
-depends = ["ts:test", "gateway:test", "//apps/task-fpocket:test", "//packages/task-kit:test"]
+depends = [
+  "cli:test",
+  "ts:test",
+  "gateway:test",
+  "//apps/task-fpocket:test",
+  "//packages/task-kit:test",
+]
 output = "prefix"
+
+[tasks."cli:test"]
+description = "Run Taskome CLI tests"
+run = "mise run //apps/cli:test"
 
 [tasks."dev:up"]
 description = "Start and wait for dev-support services (PostgreSQL, Redis, SeaweedFS, otel-gui)"

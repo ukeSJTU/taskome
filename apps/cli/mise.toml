@@ -1,0 +1,19 @@
+[tasks.build]
+description = "Compile the Taskome CLI"
+hide = true
+run = "go build ./..."
+
+[tasks.check]
+description = "Run read-only Taskome CLI checks"
+hide = true
+run = ["test -z \"$(gofmt -l .)\"", "go vet ./..."]
+
+[tasks.test]
+description = "Run Taskome CLI tests"
+hide = true
+run = "go test ./..."
+
+[tasks."api-client:generate"]
+description = "Generate the Taskome CLI Gateway client from OpenAPI"
+hide = true
+run = "go tool oapi-codegen --config oapi-codegen.yaml ../../packages/api-client/openapi.json"

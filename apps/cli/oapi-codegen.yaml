@@ -1,0 +1,5 @@
+package: gateway
+generate:
+  models: true
+  client: true
+output: internal/gateway/generated/client.go

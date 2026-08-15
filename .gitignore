@@ -11,6 +11,12 @@ dist
 build
 *.tsbuildinfo
 
+# Go CLI local build and test artifacts
+apps/cli/taskome
+apps/cli/*.test
+apps/cli/coverage.out
+apps/cli/coverage.html
+
 # Python bytecode
 __pycache__/
 *.py[cod]
