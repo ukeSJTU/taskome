@@ -51,6 +51,7 @@ Four ways to reach a Task, all built for v1:
 ### Execution
 
 - GPU/CPU scheduling runs on Ray, wired in and working at a basic, usable level — not infrastructure that exists on paper but has no real consumer.
+- Job submissions go through a durable queue (taskiq, backed by Redis) before reaching Ray. The queue handles intake, retrying a failed submission, deduplication, and fairness across submitters; Ray takes over from there for resource-aware execution and execution-level retries. These are different problems — a queue makes sure a Job isn't lost or run twice, Ray decides which GPU it runs on.
 - The design goal is that every Job's output is traceable back to the exact tool version and parameters that produced it. Today's implementation doesn't fully cover tool-version tracking yet, but v1 is built toward closing that gap, not around leaving it open indefinitely.
 
 ### Accounts and cost

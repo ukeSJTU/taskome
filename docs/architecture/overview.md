@@ -31,7 +31,9 @@ The big technical bets, grouped by concern. Each group links to the page that go
 
 ### Task Server framework
 
-Every compute tool (PepMimic-style binder design, pocket detection, whatever comes next) is wrapped the same way: a flat `apps/task-<name>` project, built on the shared `packages/task-kit` library via `build_task_server`. Task authors implement one `ComputeAdapter` per Task; `task-kit` generates the matching REST route and MCP tool from it, and handles execution (currently synchronous, one worker per Task Server) behind a separate `TaskServerRuntime` port for infrastructure concerns. This is what makes "every Task speaks REST and MCP equally" (above) actually hold — the wiring is generated once, in one library, not reimplemented per tool.
+Every compute tool (PepMimic-style binder design, pocket detection, whatever comes next) is wrapped the same way: a flat `apps/task-<name>` project, built on the shared `packages/task-kit` library via `build_task_server`. Task authors implement one `ComputeAdapter` per Task; `task-kit` generates the matching REST route and MCP tool from it, and handles execution — both synchronous and asynchronous, so a Task author never has to pick one execution model up front — behind a separate `TaskServerRuntime` port for infrastructure concerns. This is what makes "every Task speaks REST and MCP equally" (above) actually hold — the wiring is generated once, in one library, not reimplemented per tool.
+
+> **Status note (delete once built):** `task-kit` currently only implements synchronous execution, one worker per Task Server. Async support doesn't exist in code yet.
 
 See [`docs/architecture/containers.md`](./containers.md) for where each Task Server sits, and [`docs/engineering/testing.md`](../engineering/testing.md) for how this shape gets tested.
 
