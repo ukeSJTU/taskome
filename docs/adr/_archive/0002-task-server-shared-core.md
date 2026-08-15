@@ -1,3 +1,0 @@
-# Task Server: REST and MCP share one in-process core, never call each other
-
-Within a Task Server, REST and MCP are both thin adapters over the same in-process functions — neither is implemented as an HTTP/MCP client of the other. We considered galaxy-mcp's pattern (its MCP tool handlers call Galaxy's existing REST API over the network via the `bioblend` client library) but rejected it for our case: that shape exists because galaxy-mcp is a separate project bolted onto a pre-existing, possibly remote Galaxy server, not a constraint that applies to a Task Server we write from scratch in one repo. Going through a self-network-call in either direction would add latency and a redundant interface for no benefit here.

@@ -37,4 +37,3 @@ This is a deliberate, temporary shape: it's meant to be replaced, not extended, 
 - [`security.md`](./security.md) — the secrets this page's config differences reference.
 - [`docs/engineering/local-development.md`](../engineering/local-development.md) — the day-to-day commands for running this locally.
 - [`docs/engineering/ci-cd.md`](../engineering/ci-cd.md) — what CI does and doesn't do around deployment.
-- `docs/adr/` — the compose-split decision behind this, once renumbered.

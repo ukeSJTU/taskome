@@ -8,7 +8,7 @@ Every service in this platform must emit traces and structured logs over OpenTel
 - **Structured logs**: `pino` for TypeScript services, `structlog` for Python services — not ad hoc `console.log`/`print`. A log line without structured fields (request ID, user/principal where applicable) isn't useful for debugging a shared platform.
 - **Local parity**: you should be able to see the same shape of trace/log data locally that you'd see in production, without needing production credentials. That's what `otel-gui` is for.
 
-The specific technology choices behind these requirements — why OpenTelemetry, why Axiom for production, why a self-hosted viewer for local dev instead of a hosted one — are architectural decisions, not requirements; see the observability ADRs (`docs/adr/`) for that reasoning. This page assumes those choices and tells you how to work with them.
+Axiom was chosen for production specifically to avoid self-hosting and operating a collector/ingestion stack — a hosted SaaS trades a recurring bill for not owning that infrastructure. Local development inverts that trade-off deliberately: a self-hosted, disposable viewer costs nothing to run for a single developer and avoids routing local traffic through a production-shared account.
 
 ## Local development: otel-gui
 
@@ -23,4 +23,3 @@ Production traces and logs export to Axiom rather than the local viewer. You nee
 ## Related docs
 
 - [`docs/engineering/local-development.md`](./local-development.md) — starting the dev-support stack that includes `otel-gui`.
-- `docs/adr/` — why OTel, why Axiom, why a local viewer (once those ADRs are written).
