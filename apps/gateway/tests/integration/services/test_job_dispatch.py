@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import urllib.request
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import httpx
 import pytest
@@ -44,6 +44,7 @@ if TYPE_CHECKING:
 
     from fastapi import FastAPI
     from gateway.services.storage import SeaweedFSStorage
+    from redis.asyncio import Redis
     from starlette.types import ASGIApp, Receive, Scope, Send
     from task_kit.runtime import PublishedOutput, ValidatedProducedFile
 
@@ -62,6 +63,18 @@ class _LifespanStateApp:
         if scope["type"] == "lifespan":
             scope["state"] = {}
         await self.app(scope, receive, send)
+
+
+class _FakeRedis:
+    """Stands in for the Redis client `lifespan` pings on every startup, in every
+    environment -- Gateway's queue intake isn't built yet (ADR-0004), so this test
+    has no real broker to point at and doesn't need one."""
+
+    async def ping(self) -> bool:
+        return True
+
+    async def aclose(self) -> None:
+        pass
 
 
 class _UnclosableStorage:
@@ -176,7 +189,12 @@ def _gateway_app(*, postgres_url: str, storage: SeaweedFSStorage) -> FastAPI:
         app_environment=Environment.TEST,
         fpocket_task_hmac_secret=_SECRET,
     )
-    app = create_app(settings, database=Database(postgres_url), storage=_UnclosableStorage(storage))
+    app = create_app(
+        settings,
+        database=Database(postgres_url),
+        storage=_UnclosableStorage(storage),
+        redis=cast("Redis", _FakeRedis()),
+    )
     app.state.job_service.attach_manifests({"fpocket": {"detect_pockets": _manifest()}})
     return app
 
