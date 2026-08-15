@@ -105,7 +105,9 @@ Each run starts a uniquely named, disposable Docker Compose project (its own Pos
 
 ## What CI runs
 
-`check`, `test-unit`, and `test-integration` run as separate parallel CI jobs so unit failures report back without waiting on container startup. `browser-e2e` is its own job, running the production-shaped variant (`E2E_PRODUCTION=1`) and uploading `playwright-report`/`test-results` as artifacts with **14-day retention**. See [`docs/engineering/ci-cd.md`](./ci-cd.md) for the full job list and what each one covers.
+CI classifies changed paths and calls language- or contract-specific reusable workflows. Within the selected Python lane, unit and integration jobs remain separate so fast failures report without waiting on testcontainers. CLI tests and the race detector run together in their own job; Web tests run in the TypeScript lane.
+
+Browser E2E runs only for affected Web, Gateway, shared Web-package, or global-tooling changes. It uses the production-shaped variant (`E2E_PRODUCTION=1`) and uploads `playwright-report`/`test-results` with **14-day retention**. Browser E2E is visible but is not part of the `CI required` merge gate. See [`docs/engineering/ci-cd.md`](./ci-cd.md) for routing, required-check policy, and the complete lane list.
 
 ## Related docs
 

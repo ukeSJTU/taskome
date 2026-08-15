@@ -1,0 +1,96 @@
+name: CI / CLI
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check and security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+      - name: Resolve Go cache paths
+        id: go-cache-paths
+        run: |
+          set -Eeuo pipefail
+          printf 'build=%s\n' "$(go env GOCACHE)" >>"$GITHUB_OUTPUT"
+          printf 'modules=%s\n' "$(go env GOMODCACHE)" >>"$GITHUB_OUTPUT"
+      - name: Restore Go caches
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ steps.go-cache-paths.outputs.build }}
+            ${{ steps.go-cache-paths.outputs.modules }}
+          key: go-${{ runner.os }}-${{ hashFiles('apps/cli/go.sum', 'mise.lock') }}
+      - name: Download CLI dependencies
+        run: go -C apps/cli mod download
+      - name: Run CLI checks
+        run: |
+          mise run //apps/cli:check
+          mise run //apps/cli:security
+
+  test:
+    name: Test and race detector
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+      - name: Resolve Go cache paths
+        id: go-cache-paths
+        run: |
+          set -Eeuo pipefail
+          printf 'build=%s\n' "$(go env GOCACHE)" >>"$GITHUB_OUTPUT"
+          printf 'modules=%s\n' "$(go env GOMODCACHE)" >>"$GITHUB_OUTPUT"
+      - name: Restore Go caches
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ steps.go-cache-paths.outputs.build }}
+            ${{ steps.go-cache-paths.outputs.modules }}
+          key: go-${{ runner.os }}-${{ hashFiles('apps/cli/go.sum', 'mise.lock') }}
+      - name: Download CLI dependencies
+        run: go -C apps/cli mod download
+      - name: Run CLI tests
+        run: |
+          mise run //apps/cli:test
+          mise run //apps/cli:test:race
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+      - name: Resolve Go cache paths
+        id: go-cache-paths
+        run: |
+          set -Eeuo pipefail
+          printf 'build=%s\n' "$(go env GOCACHE)" >>"$GITHUB_OUTPUT"
+          printf 'modules=%s\n' "$(go env GOMODCACHE)" >>"$GITHUB_OUTPUT"
+      - name: Restore Go caches
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ steps.go-cache-paths.outputs.build }}
+            ${{ steps.go-cache-paths.outputs.modules }}
+          key: go-${{ runner.os }}-${{ hashFiles('apps/cli/go.sum', 'mise.lock') }}
+      - name: Download CLI dependencies
+        run: go -C apps/cli mod download
+      - name: Build CLI
+        run: mise run //apps/cli:build
