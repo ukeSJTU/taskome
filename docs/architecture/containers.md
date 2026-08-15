@@ -101,4 +101,4 @@ The containers above are built from shared packages, which aren't separately dep
 - [`integrations.md`](./integrations.md) — SeaweedFS and Ray in more detail.
 - [`security.md`](./security.md) — how identity flows through Web, Gateway, and the Task Servers.
 - [`deployment.md`](./deployment.md) — how these containers actually run in production.
-- `docs/adr/` — the decisions behind this shape, once written.
+- [`docs/adr/`](../adr/) — the decisions behind this shape.

@@ -31,4 +31,4 @@ No outbound email (no SMTP/email-provider configuration anywhere in the codebase
 - [`containers.md`](./containers.md) — where dispatch and the Job queue sit.
 - [`data.md`](./data.md) — Input File storage and retention.
 - [`docs/engineering/observability.md`](../engineering/observability.md) — what gets sent to Axiom.
-- `docs/adr/` — the job-dispatch decision behind this, once renumbered.
+- [`docs/adr/0004-gateway-owned-job-dispatch.md`](../adr/0004-gateway-owned-job-dispatch.md) — the job-dispatch decision behind this.

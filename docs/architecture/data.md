@@ -38,4 +38,4 @@ Presigned upload and download URLs both expire after 15 minutes. Upload URLs are
 - [`containers.md`](./containers.md) — the schema-per-owner split this page details.
 - [`security.md`](./security.md) — how `owner_user_id` gets resolved from a request.
 - [`integrations.md`](./integrations.md) — how Input Files move through SeaweedFS.
-- `docs/adr/` — the storage and presigned-URL decisions behind this, once renumbered.
+- [`docs/adr/0005-seaweedfs-storage-and-presigned-urls.md`](../adr/0005-seaweedfs-storage-and-presigned-urls.md) — the storage and presigned-URL decisions behind this.

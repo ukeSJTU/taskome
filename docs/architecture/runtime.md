@@ -74,4 +74,5 @@ Gateway never sees the file's bytes in either direction — it only ever mints a
 - [`data.md`](./data.md) — Input File retention and the presigned URL TTL.
 - [`integrations.md`](./integrations.md) — why Job dispatch has no completion webhook.
 - [`security.md`](./security.md) — what "resolve caller to Principal" actually checks.
-- `docs/adr/` — the job-dispatch and presigned-URL decisions behind these flows, once renumbered.
+- [`docs/adr/0004-gateway-owned-job-dispatch.md`](../adr/0004-gateway-owned-job-dispatch.md) — the job-dispatch decision behind these flows.
+- [`docs/adr/0005-seaweedfs-storage-and-presigned-urls.md`](../adr/0005-seaweedfs-storage-and-presigned-urls.md) — the presigned-URL decision behind these flows.

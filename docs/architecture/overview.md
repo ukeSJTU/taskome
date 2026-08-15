@@ -75,4 +75,4 @@ Every service emits traces and structured logs over OpenTelemetry; production da
 - [`docs/architecture/containers.md`](./containers.md) — how the pieces above relate, as a diagram.
 - [`docs/architecture/constraints.md`](./constraints.md) — the limits this architecture is deliberately operating inside of.
 - [`docs/architecture/risks.md`](./risks.md) — where this architecture is known to be thin.
-- `docs/adr/` — the specific decisions behind each strategy above, once written.
+- [`docs/adr/`](../adr/) — the specific decisions behind each strategy above.
