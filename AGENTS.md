@@ -10,8 +10,8 @@ Internal platform for XDenovo's own binder/de novo protein design work — not a
 Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as useful tools appear, no fixed catalog boundary.
 
 - **Users**: multiple internal teams share one instance. Accounts are flat and individual for now — no team-scoped sharing/visibility yet; that's a later feature, not a storage-layer concern (ADR-0011's ownership-agnostic storage keys already support it whenever it lands).
-- **Interfaces**: MCP and REST are both required for every Task — neither ships alone as "done." Users reach them through three Access Channels: the Web App uses REST through its BFF, MCP Agents use MCP directly, and Direct API Clients use REST directly. See ADR-0023.
-- **Parameters**: each Task's MCP/REST parameters are a curated subset of the underlying tool's real config, not a full passthrough — designed per tool, including vendored-code changes where needed to expose what's worth exposing. No CLI is offered.
+- **Interfaces**: MCP and REST are both required for every Task — neither ships alone as "done." Users reach them through four Access Channels: the Web App uses REST through its BFF, MCP Agents use MCP directly, Direct API Clients use REST directly, and the CLI also uses REST directly. See ADR-0023 for the three channels that predate the CLI addition.
+- **Parameters**: each Task's MCP/REST parameters are a curated subset of the underlying tool's real config, not a full passthrough — designed per tool, including vendored-code changes where needed to expose what's worth exposing.
 - **Job chaining** (piping one Job's output into the next Job's input): out of scope for now, on the roadmap — design it when it's picked up, don't build around its absence.
 
 ### Public website
