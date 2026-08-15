@@ -5,7 +5,7 @@ description = "Taskome computing platform REST and MCP gateway"
 authors = [{ name = "ukeSJTU", email = "uke_sjtu@sjtu.edu.cn" }]
 requires-python = ">=3.14"
 dependencies = [
-  "alembic>=1.17,<1.18",
+  "alembic>=1.19.1,<1.20",
   "boto3>=1.42,<2",
   "fastapi[standard]>=0.141.1",
   "fastmcp==4.0.0b2",
