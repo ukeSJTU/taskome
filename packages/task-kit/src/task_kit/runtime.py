@@ -134,6 +134,7 @@ from ._production import (  # noqa: E402
     GatewayInputFileResolver,
     S3OutputPublisher,
     build_runtime,
+    sign_gateway_request,
 )
 from ._settings import Environment, LogLevel, TaskServerSettings  # noqa: E402
 
@@ -153,4 +154,5 @@ __all__ = [
     "ValidatedProducedFile",
     "VerifiedGatewayRequest",
     "build_runtime",
+    "sign_gateway_request",
 ]

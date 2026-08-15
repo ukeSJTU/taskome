@@ -66,6 +66,39 @@ def _signature(
     return hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).hexdigest()
 
 
+def sign_gateway_request(
+    secret: str,
+    *,
+    method: str,
+    target: str,
+    body: bytes,
+    job_id: UUID | None = None,
+) -> dict[str, str]:
+    """Build `taskome-v1` HMAC headers for a Gateway-originated internal request.
+
+    The counterpart to `GatewayHMACVerifier.verify`: Gateway uses this to call a
+    Task Server (dispatch, manifest fetch), and a Task Server uses it to call
+    back into Gateway (Input File resolution) -- both directions share one
+    canonical signing scheme (ADR-0007) defined in exactly this one place.
+    """
+    timestamp = str(int(time.time()))
+    headers: dict[str, str] = {"X-Taskome-Timestamp": timestamp}
+    if job_id is not None:
+        headers["X-Taskome-Job-Id"] = str(job_id)
+    propagate.inject(headers)
+    traceparent = headers.get("traceparent", "")
+    headers["X-Taskome-Signature"] = _signature(
+        secret,
+        timestamp=timestamp,
+        method=method,
+        target=target,
+        job_id=str(job_id) if job_id is not None else "",
+        traceparent=traceparent,
+        body=body,
+    )
+    return headers
+
+
 class GatewayHMACVerifier:
     def __init__(self, secret: str, max_age_seconds: int) -> None:
         self._secret = secret.encode()
@@ -119,23 +152,14 @@ class GatewayInputFileResolver:
             {"input_file_ids": [str(identifier.root) for identifier in input_file_ids]},
             separators=(",", ":"),
         ).encode()
-        timestamp = str(int(time.time()))
-        headers: dict[str, str] = {
-            "content-type": "application/json",
-            "X-Taskome-Timestamp": timestamp,
-            "X-Taskome-Job-Id": str(job_id),
-        }
-        propagate.inject(headers)
-        traceparent = headers.get("traceparent", "")
-        headers["X-Taskome-Signature"] = _signature(
+        headers = sign_gateway_request(
             self._secret,
-            timestamp=timestamp,
             method="POST",
             target=target,
-            job_id=str(job_id),
-            traceparent=traceparent,
             body=body,
+            job_id=job_id,
         )
+        headers["content-type"] = "application/json"
         response = await self._client.post(
             f"{self._gateway_url}{target}",
             content=body,

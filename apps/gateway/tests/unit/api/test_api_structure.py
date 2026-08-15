@@ -30,6 +30,9 @@ def test_rest_openapi_declares_stable_operations_and_problem_responses(
             "getInputFileDownloadUrl",
         ),
         ("/v1/input-files/{input_file_id}", "delete"): ("input-files", "deleteInputFile"),
+        ("/v1/jobs", "post"): ("jobs", "createJob"),
+        ("/v1/jobs/{job_id}", "get"): ("jobs", "getJob"),
+        ("/v1/jobs", "get"): ("jobs", "listJobs"),
     }
 
     for (path, method), (tag, operation_id) in expected_operations.items():
@@ -42,11 +45,15 @@ def test_rest_openapi_declares_stable_operations_and_problem_responses(
     download_responses = openapi["paths"]["/v1/input-files/{input_file_id}/download-url"]["get"][
         "responses"
     ]
+    create_job_responses = openapi["paths"]["/v1/jobs"]["post"]["responses"]
+    get_job_responses = openapi["paths"]["/v1/jobs/{job_id}"]["get"]["responses"]
 
     for responses, statuses in (
         (auth_responses, ("400", "401", "503", "default")),
         (create_responses, ("400", "401", "422", "503", "default")),
         (download_responses, ("400", "401", "404", "422", "503", "default")),
+        (create_job_responses, ("400", "401", "404", "422", "503", "default")),
+        (get_job_responses, ("400", "401", "404", "422", "503", "default")),
     ):
         for status_code in statuses:
             content = responses[status_code]["content"]

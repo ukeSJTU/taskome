@@ -11,11 +11,16 @@ from uuid import UUID
 import structlog
 from pydantic import BaseModel, ConfigDict, RootModel
 
+INPUT_FILE_ID_JSON_SCHEMA_MARKER = "x-taskome-input-file-id"
+
 
 class InputFileId(RootModel[UUID]):
     """Opaque Gateway-owned Input File identifier, represented as a UUID in JSON."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={INPUT_FILE_ID_JSON_SCHEMA_MARKER: True},
+    )
 
 
 ParamsT = TypeVar("ParamsT", bound=BaseModel)

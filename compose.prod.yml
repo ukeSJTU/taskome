@@ -131,10 +131,14 @@ services:
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
       REDIS_URL: redis://redis-taskiq:6379/0
       FORWARDED_ALLOW_IPS: 172.30.0.2
+      FPOCKET_INTERNAL_URL: http://task-fpocket:8000
+      FPOCKET_TASK_HMAC_SECRET: ${GATEWAY_TASK_HMAC_SECRET:-taskome-local-fpocket-gateway-hmac-secret}
     depends_on:
       gateway-migrate:
         condition: service_completed_successfully
       redis-taskiq:
+        condition: service_healthy
+      task-fpocket:
         condition: service_healthy
     healthcheck:
       test:
@@ -179,6 +183,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+
+  # Overrides compose.yml's dev-shaped default (Gateway runs natively in dev, so
+  # task-fpocket reaches it via host.docker.internal) -- in this production shape
+  # Gateway is itself a Compose service, reachable by name.
+  task-fpocket:
+    environment:
+      GATEWAY_INTERNAL_URL: http://gateway:8000
 
 networks:
   edge:

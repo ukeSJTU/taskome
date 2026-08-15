@@ -20,6 +20,7 @@ class InputFileRecord:
     """Minimal committed Input File record returned to the service layer."""
 
     id: UUID
+    size_bytes: int
 
 
 class InputFileRepository:
@@ -33,6 +34,7 @@ class InputFileRepository:
         input_file_id: UUID,
         owner_user_id: str,
         original_filename: str,
+        size_bytes: int,
     ) -> InputFileRecord:
         """Commit a new Input File metadata record."""
 
@@ -41,10 +43,11 @@ class InputFileRepository:
                 id=input_file_id,
                 owner_user_id=owner_user_id,
                 original_filename=original_filename,
+                size_bytes=size_bytes,
             )
             session.add(input_file)
             await session.flush()
-        return InputFileRecord(id=input_file.id)
+        return InputFileRecord(id=input_file.id, size_bytes=input_file.size_bytes)
 
     async def find_active_owned(
         self,
@@ -63,7 +66,11 @@ class InputFileRepository:
                     )
                 )
             ).scalar_one_or_none()
-        return None if input_file is None else InputFileRecord(id=input_file.id)
+        return (
+            None
+            if input_file is None
+            else InputFileRecord(id=input_file.id, size_bytes=input_file.size_bytes)
+        )
 
     async def mark_deleted(
         self,
@@ -88,4 +95,4 @@ class InputFileRepository:
                 return None
             input_file.deleted_at = datetime.now(UTC)
             await session.flush()
-        return InputFileRecord(id=input_file.id)
+        return InputFileRecord(id=input_file.id, size_bytes=input_file.size_bytes)
