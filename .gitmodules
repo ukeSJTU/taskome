@@ -43,3 +43,23 @@
 	url = https://github.com/XDenovo/old-website.git
 	branch = main
 	shallow = true
+[submodule "references/restctl-template"]
+	path = references/restctl-template
+	url = https://github.com/jwmoss/restctl-template.git
+	branch = main
+	shallow = true
+[submodule "references/oras"]
+	path = references/oras
+	url = https://github.com/oras-project/oras.git
+	branch = main
+	shallow = true
+[submodule "references/github-cli"]
+	path = references/github-cli
+	url = https://github.com/cli/cli.git
+	branch = trunk
+	shallow = true
+[submodule "references/perses"]
+	path = references/perses
+	url = https://github.com/perses/perses.git
+	branch = main
+	shallow = true
