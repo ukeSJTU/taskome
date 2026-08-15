@@ -2,27 +2,11 @@
 
 ## Project direction
 
-Internal platform for XDenovo's own binder/de novo protein design work — not an external product, no billing. Modeled after two references, each contributing a different piece:
-
-- [tamarind.bio](https://app.tamarind.bio/app) — GPU-backed compute tools behind one platform, reachable from a web UI.
-- [subseq.bio](https://subseq.bio/) — power-user posture: expose a tool's real configuration surface rather than tamarind's no-code abstraction.
-
-Initial tool set: PepMimic, BindCraft, GraphPep — extend opportunistically as useful tools appear, no fixed catalog boundary.
-
-- **Users**: multiple internal teams share one instance. Accounts are flat and individual for now — no team-scoped sharing/visibility yet; that's a later feature, not a storage-layer concern (ADR-0011's ownership-agnostic storage keys already support it whenever it lands).
-- **Interfaces**: MCP and REST are both required for every Task — neither ships alone as "done." Users reach them through four Access Channels: the Web App uses REST through its BFF, MCP Agents use MCP directly, Direct API Clients use REST directly, and the CLI also uses REST directly. See ADR-0023 for the three channels that predate the CLI addition.
-- **Parameters**: each Task's MCP/REST parameters are a curated subset of the underlying tool's real config, not a full passthrough — designed per tool, including vendored-code changes where needed to expose what's worth exposing.
-- **Job chaining** (piping one Job's output into the next Job's input): out of scope for now, on the roadmap — design it when it's picked up, don't build around its absence.
-
-### Public website
-
-`apps/web` also serves as XDenovo's public corporate website (the `(public)` route group), independent of the authenticated tool platform above. XDenovo operates in the AI4Bio field (AI-native biotech / de novo protein design); the website communicates that positioning outward and is not part of the internal tool platform's product surface. `references/old-website` (the previous site) is kept as content/structure reference only, never reused as code. See ADR-0018 for the rebuild approach.
+Taskome is XDenovo's product for running binder and de novo protein design compute — see [`docs/product/vision.md`](docs/product/vision.md) for what it is, who it's for, and the Now/Future scope boundary.
 
 ## Architecture
 
-- **Components**: `apps/web` (Next.js) is the only browser application for the authenticated product — there is no separate frontend/backend split. Its own API routes are the BFF: they aggregate calls to `apps/gateway` (FastAPI + MCP) into responses shaped for the frontend. Browser code never bypasses that BFF; the separately deployed Gateway exposes MCP to Agents and the curated `/v1` REST contract to non-browser Direct API Clients. `apps/docs` is static public content with no Gateway access. See ADR-0020 and ADR-0023.
-- **Data ownership**: each service reads and writes only the Postgres data it owns — `apps/web` owns auth, `apps/gateway` owns everything else (jobs, input files, …). Cross-service access always goes through gateway's REST API, never direct SQL against the other's tables. One shared Postgres instance, split by schema per owner; migrations stay per-owner too (`packages/db`/Drizzle for web, SQLAlchemy/Alembic for gateway).
-- **Web → gateway calls**: server-side only (never the browser), authenticated with a better-auth-minted JWT, through the generated client in `packages/api-client` (orval, from gateway's checked-in OpenAPI spec). See ADR-0012 for the full reasoning.
+See [`docs/architecture/overview.md`](docs/architecture/overview.md) for how Taskome is built, [`docs/architecture/context.md`](docs/architecture/context.md) and [`docs/architecture/containers.md`](docs/architecture/containers.md) for the system diagrams, and [`docs/adr/`](docs/adr/) for the specific decisions behind each.
 
 ## AI development
 

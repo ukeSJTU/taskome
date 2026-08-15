@@ -1,6 +1,14 @@
 # taskome
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, Self, and more.
+Taskome is XDenovo's product for running binder and de novo protein design compute — one platform, reachable from a browser, an AI agent, or a script, instead of a pile of one-off tool installs. See [`docs/product/vision.md`](docs/product/vision.md) for what it is and who it's for.
+
+This repository is a pnpm/uv monorepo, scaffolded with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (Next.js, Drizzle, Better-Auth) on the frontend and FastAPI/FastMCP on the backend.
+
+## Documentation
+
+- [`docs/README.md`](docs/README.md) — full documentation index: product direction, architecture, decision records, and engineering guides.
+- [`docs/product/vision.md`](docs/product/vision.md) — what Taskome is and who it's for.
+- [`docs/architecture/overview.md`](docs/architecture/overview.md) — how it's built.
 
 ## Features
 
@@ -70,7 +78,7 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 
 ### Docker Compose
 
-Two files, not one — see [ADR-0013](docs/adr/0013-dev-support-base-and-prod-overlay-compose.md):
+Two files, not one — see [`docs/architecture/deployment.md`](docs/architecture/deployment.md):
 
 - `compose.yml` — dev-support services only (PostgreSQL, Redis, SeaweedFS, and a local otel-gui trace/log viewer). Web, Gateway, and Docs run natively in development (`mise run dev`), not in containers.
 - `compose.prod.yml` — overlay adding the three deployables (`web`, `docs`, and one `gateway`) plus Caddy on top of `compose.yml`. App Dockerfiles live in `apps/*/Dockerfile`.

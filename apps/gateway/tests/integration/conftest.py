@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 @pytest.fixture(scope="session")
 def postgres_url() -> Iterator[str]:
     """One Postgres container for the whole integration run, schema built by running
-    real `alembic upgrade head` — see ADR-0024 for why tests use the migration chain
-    instead of building the schema ad hoc."""
+    real `alembic upgrade head` instead of building the schema ad hoc — see
+    docs/engineering/testing.md for why."""
     with PostgresContainer("postgres:18") as postgres:
         database_url = postgres.get_connection_url().replace(
             "postgresql+psycopg2", "postgresql+psycopg"

@@ -37,7 +37,10 @@ class DownloadUrl:
 
 
 class InputFileRepositoryPort(Protocol):
-    """What `InputFileService` needs from a repository — see ADR-0017 for why this is a port."""
+    """What `InputFileService` needs from a repository.
+
+    A port so the service can be tested against a fake instead of a real database.
+    """
 
     async def create(
         self,
@@ -56,7 +59,10 @@ class InputFileRepositoryPort(Protocol):
 
 
 class StoragePort(Protocol):
-    """What `InputFileService` needs from object storage — see ADR-0017 for why this is a port."""
+    """What `InputFileService` needs from object storage.
+
+    A port so the service can be tested against a fake instead of a real bucket.
+    """
 
     def ensure_bucket(self) -> None: ...
     def mint_upload_url(

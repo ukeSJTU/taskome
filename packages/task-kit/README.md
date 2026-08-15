@@ -167,7 +167,7 @@ REST uses RFC 9457 Problem Details. MCP uses JSON-RPC `InvalidParams` for model 
 
 Successful REST and MCP calls return `value` plus `outputs`. Every output has `name`, `storage_key`, `media_type`, nullable `download_name`, `size_bytes`, and `sha256`. REST failures use RFC 9457 Problem Details: invalid input 422, compute failure 500, Input File/output infrastructure failure 502, duplicate Job 409, oversized body 413, and invalid authentication 401. MCP model errors are JSON-RPC `InvalidParams`; execution errors use `isError=true` and `_meta.taskome.error_code`.
 
-Execution, manifest, and Gateway-to-Task-Server MCP calls use ADR-0027's signed HTTP protocol. Health endpoints are unsigned. Task Server interfaces are internal; callers use Gateway's public `/v1` REST or `/mcp` interface.
+Execution, manifest, and Gateway-to-Task-Server MCP calls use the HMAC-signed internal request protocol described in [ADR-0007](../../docs/adr/0007-internal-service-hmac-signing.md). Health endpoints are unsigned. Task Server interfaces are internal; callers use Gateway's public `/v1` REST or `/mcp` interface.
 
 The manifest reports `schema_version`, `server_name`, and each Task's local name, description, Params schema, and Result schema. It contains no Task version or build revision.
 
@@ -231,4 +231,4 @@ The synchronous version requires exactly one worker and one replica. It has no d
 
 Gateway owns Job identity and state; Task Servers never expose caller-facing URLs, authentication, or CORS. Output PUTs request the S3 `If-None-Match: *` condition. Because the pinned SeaweedFS 3.93 does not enforce that condition, publication also checks object existence immediately before writing; the one-process, one-replica, stop-then-start contract is what makes this compatible non-overwriting boundary safe in synchronous v1.
 
-See [ADR-0026](../../docs/adr/0026-task-kit-public-api-and-sync-execution.md), [ADR-0027](../../docs/adr/0027-gateway-owned-job-dispatch-and-task-manifests.md), and the [Task Server runbook](../../docs/agents/task-servers.md).
+See [ADR-0003](../../docs/adr/0003-task-kit-task-server-framework.md), [ADR-0004](../../docs/adr/0004-gateway-owned-job-dispatch.md), [ADR-0007](../../docs/adr/0007-internal-service-hmac-signing.md), and [`AGENTS.md`](./AGENTS.md) for this package's contract.

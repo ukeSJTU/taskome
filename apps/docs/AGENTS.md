@@ -5,7 +5,7 @@
 ## Invariants
 
 - Keep internal operational details, credentials, private endpoints, and team-specific workflows out of published content unless their publication is explicitly part of the task.
-- Share `@taskome/ui`'s theme tokens only (`@taskome/ui/theme.css`, layered under Fumadocs' own shadcn preset) — don't import `@taskome/ui` components. See ADR-0025.
+- Share `@taskome/ui`'s theme tokens only (`@taskome/ui/theme.css`, layered under Fumadocs' own shadcn preset) — don't import `@taskome/ui` components. See [ADR-0006](../../docs/adr/0006-frontend-deployable-and-package-boundaries.md).
 - No feature/domain component folders. Route-private components go in Next.js `_components/` at the nearest common ancestor route of everything that imports them; cross-route shared components go flat in top-level `src/components/`. Same rule as `apps/web`.
 
 ## Completion

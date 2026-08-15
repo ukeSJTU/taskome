@@ -103,7 +103,7 @@ generate a reviewed revision with `mise run gateway:db:revision`; it uses a
 disposable PostgreSQL 18 container and creates no revision when metadata matches the
 existing head. Apply revisions with `mise run gateway:db:migrate` — this is
 the only path that builds the schema, in development, tests, and production alike
-(see ADR-0024); the production Compose stack runs `db:migrate` once before Gateway
+(see `docs/engineering/testing.md` for why tests run this same path instead of `metadata.create_all`); the production Compose stack runs `db:migrate` once before Gateway
 starts. Native development uses `localhost` in the URL; containers use the `postgres`
 host. Liveness is process-only; readiness checks Postgres and Redis concurrently
 and returns a separate `ok` or `error` result for each. SeaweedFS and JWKS are
