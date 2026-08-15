@@ -47,6 +47,10 @@ ENV PATH="/app/.venv/bin:$PATH" \
 COPY --from=fpocket-build --chown=fpocket:fpocket /build/bin/fpocket /usr/local/bin/fpocket
 COPY --from=python-build --chown=fpocket:fpocket /app/apps/task-fpocket/.venv /app/.venv
 COPY --from=python-build --chown=fpocket:fpocket /app/apps/task-fpocket /app/apps/task-fpocket
+# The editable task-kit install resolves via a .pth pointing at this source
+# tree (see /app/.venv/.../task_kit.pth), not a copied/compiled package --
+# without it the app fails at import time with ModuleNotFoundError.
+COPY --from=python-build --chown=fpocket:fpocket /app/packages/task-kit /app/packages/task-kit
 
 USER fpocket
 CMD ["fpocket-server"]

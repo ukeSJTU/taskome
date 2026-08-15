@@ -26,8 +26,8 @@ Milestones 1-3 are Taskome's shared foundation; they don't depend on each other 
 4. **`task-fpocket` end to end, via MCP and Direct API Client — In progress.** MCP Agent and Direct API Client ship together here because both reach Gateway directly — no Web BFF work is needed for either.
     - [ ] Gateway has a real Job/Task data model
     - [ ] The dispatch path — a durable queue, then a resource request to Ray — is wired in and working, not infrastructure that exists on paper with no real consumer — [ADR-0004](../adr/0004-gateway-owned-job-dispatch.md)
-    - [ ] `task-fpocket` actually calls `build_task_server()`
-    - [ ] Both the MCP and REST surfaces are verified end to end for `task-fpocket`
+    - [x] `task-fpocket` actually calls `build_task_server()`
+    - [x] Both the MCP and REST surfaces are verified end to end for `task-fpocket`, standalone (not yet reachable through Gateway's dispatch path above)
 5. **Web App channel — Not started.** Reuses milestone 4's dispatch path; no new Gateway-side work.
     - [ ] Web's BFF can submit a `task-fpocket` Job through Gateway
     - [ ] Web's BFF can surface a Job's status

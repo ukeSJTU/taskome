@@ -77,7 +77,7 @@ Gateway is the one place a Job gets queued and dispatched. When it receives a Jo
 
 Gateway does both jobs today — serving API requests and consuming the queue — in one deployable. That's a deliberate v1 simplification, not an oversight: vision.md's Future direction already anticipates splitting queue consumption and Ray brokering into an independent scheduler once single-machine scheduling stops being enough (deeper allocation strategies, queue fairness, multi-machine deployment). Now isn't that point yet.
 
-> **Status note (delete once built):** None of this queue-to-dispatch path exists in code yet — Gateway has no Job/Task data model, no taskiq usage, and nothing calls Ray. `task-fpocket` also doesn't call `build_task_server()` yet, despite depending on `task-kit`; see [`apps/task-fpocket`'s own docs](../../apps/task-fpocket/README.md) for its current wiring, which is expected to change faster than this page.
+> **Status note (delete once built):** None of this queue-to-dispatch path exists in code yet — Gateway has no Job/Task data model, no taskiq usage, and nothing calls Ray. `task-fpocket` itself does call `build_task_server()` and is independently reachable over REST/MCP (see [`apps/task-fpocket`'s own docs](../../apps/task-fpocket/README.md)), but nothing dispatches to it — this whole queue-to-dispatch path is still the gap.
 
 ## File storage
 
