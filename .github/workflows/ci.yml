@@ -38,7 +38,9 @@ jobs:
           pnpm install --frozen-lockfile
           uv sync --locked
       - name: Run static checks
-        run: mise run check
+        run: |
+          mise run check
+          mise run //apps/cli:security
       - name: Minimize uv cache
         run: uv cache prune --ci
 
@@ -69,6 +71,7 @@ jobs:
       - name: Run unit tests
         run: |
           mise run cli:test
+          mise run //apps/cli:test:race
           mise run ts:test
           mise run gateway:test:unit
           mise run //packages/task-kit:test:unit

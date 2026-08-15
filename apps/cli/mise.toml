@@ -11,15 +11,38 @@ arg "[args]..." help="Arguments passed to taskome"
 '''
 run = "go run ./cmd/taskome $usage_args"
 
+[tasks.format]
+description = "Format Taskome CLI Go source"
+hide = true
+run = "gofmt -w ."
+
 [tasks.check]
 description = "Run read-only Taskome CLI checks"
 hide = true
-run = ["test -z \"$(gofmt -l .)\"", "go vet ./..."]
+run = ["test -z \"$(gofmt -l .)\"", "go vet ./...", "staticcheck ./...", "go mod tidy -diff"]
 
 [tasks.test]
 description = "Run Taskome CLI tests"
 hide = true
 run = "go test ./..."
+
+[tasks."test:race"]
+description = "Run Taskome CLI tests with the race detector"
+hide = true
+run = "go test -race ./..."
+
+[tasks."test:coverage"]
+description = "Report Taskome CLI test coverage"
+hide = true
+run = [
+  "go test -coverprofile=coverage.out ./internal/cli ./internal/gateway",
+  "go tool cover -func=coverage.out",
+]
+
+[tasks.security]
+description = "Scan Taskome CLI dependencies for reachable known vulnerabilities"
+hide = true
+run = "govulncheck ./..."
 
 [tasks."api-client:generate"]
 description = "Generate the Taskome CLI Gateway client from OpenAPI"

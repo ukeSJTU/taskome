@@ -2,7 +2,10 @@ module github.com/ukeSJTU/taskome/apps/cli
 
 go 1.26.6
 
-require github.com/spf13/cobra v1.10.2
+require (
+	github.com/oapi-codegen/runtime v1.6.0
+	github.com/spf13/cobra v1.10.2
+)
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
@@ -13,7 +16,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0 // indirect
-	github.com/oapi-codegen/runtime v1.6.0 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect

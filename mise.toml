@@ -6,6 +6,8 @@ config_roots = ["apps/cli", "apps/gateway", "apps/docs", "apps/task-fpocket", "p
 
 [tools]
 go = "1.26.6"
+"go:honnef.co/go/tools/cmd/staticcheck" = "0.7.0"
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.7.0"
 node = "24"
 python = "3.14"
 pnpm = "11"
@@ -61,6 +63,10 @@ output = "prefix"
 [tasks."cli:build"]
 description = "Build the Taskome CLI binary"
 run = "mise run //apps/cli:build"
+
+[tasks."cli:format"]
+description = "Format Taskome CLI Go source"
+run = "mise run //apps/cli:format"
 
 [tasks."cli:run"]
 description = "Run the Taskome CLI from source"

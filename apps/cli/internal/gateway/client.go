@@ -12,10 +12,10 @@ import (
 // NewClient constructs the CLI-owned Gateway boundary for a Personal API Key.
 func NewClient(baseURL, personalAPIKey string, httpClient *http.Client) (*generated.ClientWithResponses, error) {
 	if strings.TrimSpace(baseURL) == "" {
-		return nil, fmt.Errorf("Gateway base URL is required")
+		return nil, fmt.Errorf("gateway base URL is required")
 	}
 	if strings.TrimSpace(personalAPIKey) == "" {
-		return nil, fmt.Errorf("Personal API Key is required")
+		return nil, fmt.Errorf("personal API key is required")
 	}
 
 	return generated.NewClientWithResponses(
