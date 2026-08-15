@@ -6,11 +6,21 @@
  */
 
 export * from "./createInputFileRequest";
+export * from "./createJobRequest";
+export * from "./createJobRequestParams";
 export * from "./credentialKind";
 export * from "./deleteInputFilePathParameters";
 export * from "./downloadUrlResponse";
 export * from "./getInputFileDownloadUrlPathParameters";
+export * from "./getJobPathParameters";
 export * from "./identity";
+export * from "./jobListResponse";
+export * from "./jobResponse";
+export * from "./jobResponseErrorDetail";
+export * from "./jobResponseParams";
+export * from "./jobResponseResult";
+export * from "./jobStatus";
+export * from "./listJobsParams";
 export * from "./problemDetails";
 export * from "./uploadUrlResponse";
 export * from "./validationIssue";

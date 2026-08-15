@@ -52,7 +52,7 @@ def test_migrate_creates_gateway_history_without_touching_public(database_url: s
             "preserve me",
         )
         assert connection.execute("SELECT version_num FROM gateway.alembic_version").fetchone() == (
-            "20260813_01",
+            "20260815_03",
         )
         assert connection.execute("SELECT to_regclass('public.alembic_version')").fetchone() == (
             None,

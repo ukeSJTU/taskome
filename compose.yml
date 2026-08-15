@@ -38,14 +38,16 @@ services:
       - path: apps/task-fpocket/.env
         required: false
     environment:
-      # Nothing dispatches to this Task Server yet (ADR-0004's Gateway queue
-      # isn't built) -- these are placeholders so the required setting is
-      # present, not a real address anything calls out to.
-      GATEWAY_INTERNAL_URL: http://gateway.internal.invalid:8000
+      # Gateway runs natively in dev (`mise run dev`), not in this Compose network --
+      # host.docker.internal reaches it from inside the container for Input File
+      # resolution callbacks (ADR-0007).
+      GATEWAY_INTERNAL_URL: http://host.docker.internal:8000
       GATEWAY_TASK_HMAC_SECRET: ${GATEWAY_TASK_HMAC_SECRET:-taskome-local-fpocket-gateway-hmac-secret}
       SEAWEEDFS_INTERNAL_ENDPOINT: http://seaweedfs:8333
       SEAWEEDFS_ACCESS_KEY: taskome-dev
       SEAWEEDFS_SECRET_KEY: ${SEAWEEDFS_SECRET_KEY:-taskome-dev-secret-change-me}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:18000:8000" # dev-only: manual signed-request verification (see scripts/sign-internal-request.py)
     depends_on:

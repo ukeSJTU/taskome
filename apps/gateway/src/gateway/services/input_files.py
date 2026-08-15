@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Protocol
 from uuid import UUID, uuid4
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from datetime import datetime
 
     from gateway.repositories.input_files import InputFileRecord
@@ -36,6 +37,15 @@ class DownloadUrl:
     expires_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class ResolvedInputFile:
+    """One Input File resolved for a Task Server to materialize."""
+
+    id: UUID
+    download_url: str
+    size_bytes: int
+
+
 class InputFileRepositoryPort(Protocol):
     """What `InputFileService` needs from a repository.
 
@@ -47,6 +57,7 @@ class InputFileRepositoryPort(Protocol):
         input_file_id: UUID,
         owner_user_id: str,
         original_filename: str,
+        size_bytes: int,
     ) -> InputFileRecord: ...
 
     async def find_active_owned(
@@ -136,6 +147,7 @@ class InputFileService:
             input_file_id,
             owner_user_id,
             original_filename,
+            size_bytes,
         )
         return UploadUrl(id=input_file.id, upload_url=upload_url, expires_at=expires_at)
 
@@ -165,6 +177,42 @@ class InputFileService:
             self._url_ttl_seconds,
         )
         return DownloadUrl(download_url=download_url, expires_at=expires_at)
+
+    async def resolve_for_dispatch(
+        self, owner_user_id: str, input_file_ids: Sequence[UUID]
+    ) -> tuple[ResolvedInputFile, ...]:
+        """Resolve the Input Files a Job's Task Server needs to materialize.
+
+        Called from the internal, HMAC-signed boundary a Task Server uses to fetch
+        the files a Job's Params reference (ADR-0007) -- `owner_user_id` here is the
+        Job's own recorded owner, not an authenticated REST/MCP caller.
+
+        Raises:
+            InputFileNotFoundError: If any requested file is absent, deleted, or
+                not owned by the Job's owner.
+            RuntimeError: If called outside the application lifespan.
+        """
+
+        storage = self._require_storage()
+        resolved: list[ResolvedInputFile] = []
+        for input_file_id in input_file_ids:
+            input_file = await self._repository.find_active_owned(owner_user_id, input_file_id)
+            if input_file is None:
+                raise InputFileNotFoundError
+            await asyncio.to_thread(storage.ensure_bucket)
+            download_url, _expires_at = await asyncio.to_thread(
+                storage.mint_download_url,
+                self._storage_key(input_file.id),
+                self._url_ttl_seconds,
+            )
+            resolved.append(
+                ResolvedInputFile(
+                    id=input_file.id,
+                    download_url=download_url,
+                    size_bytes=input_file.size_bytes,
+                )
+            )
+        return tuple(resolved)
 
     async def delete(self, owner_user_id: str, input_file_id: UUID) -> None:
         """Commit the deletion marker before issuing the storage delete.

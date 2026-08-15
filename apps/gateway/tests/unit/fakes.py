@@ -1,23 +1,31 @@
-"""Fakes for the Input File seam, shared across the `unit` tier.
+"""Fakes for the Input File and Job seams, shared across the `unit` tier.
 
 `FakeInputFileRepository`/`FakeStorage` satisfy `InputFileRepositoryPort`/`StoragePort`
 (see `gateway.services.input_files`) so `InputFileService` can be exercised without
 Postgres or SeaweedFS. `FakeInputFileService` stands in one level up, for tests of the
-REST/MCP layers that only care whether they delegate correctly.
+REST/MCP layers that only care whether they delegate correctly. `FakeJobRepository`/
+`FakeDispatcher` do the same for `JobService` (see `gateway.services.jobs`).
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
+from gateway.models.jobs import JobStatus
 from gateway.repositories.input_files import InputFileRecord
+from gateway.repositories.jobs import JobRecord
 from gateway.services.input_files import DownloadUrl, InputFileNotFoundError, UploadUrl
+from gateway.services.jobs import JobNotFoundError
+from gateway.services.task_dispatch import DispatchFailure, DispatchOutcome, DispatchSuccess
 
 
 class FakeInputFileRepository:
     def __init__(self, events: list[str] | None = None) -> None:
         self._owner_by_id: dict[UUID, str] = {}
+        self._size_by_id: dict[UUID, int] = {}
         self._deleted_ids: set[UUID] = set()
         self._events = events
 
@@ -26,11 +34,13 @@ class FakeInputFileRepository:
         input_file_id: UUID,
         owner_user_id: str,
         original_filename: str,  # noqa: ARG002 - part of the port's signature
+        size_bytes: int = 1024,
     ) -> InputFileRecord:
         if self._events is not None:
             self._events.append("repository.create")
-        record = InputFileRecord(id=input_file_id)
+        record = InputFileRecord(id=input_file_id, size_bytes=size_bytes)
         self._owner_by_id[record.id] = owner_user_id
+        self._size_by_id[record.id] = size_bytes
         return record
 
     async def find_active_owned(
@@ -39,7 +49,7 @@ class FakeInputFileRepository:
         input_file_id: UUID,
     ) -> InputFileRecord | None:
         if self._is_active_owned(owner_user_id, input_file_id):
-            return InputFileRecord(id=input_file_id)
+            return InputFileRecord(id=input_file_id, size_bytes=self._size_by_id[input_file_id])
         return None
 
     async def mark_deleted(
@@ -52,7 +62,7 @@ class FakeInputFileRepository:
         self._deleted_ids.add(input_file_id)
         if self._events is not None:
             self._events.append("repository.mark_deleted")
-        return InputFileRecord(id=input_file_id)
+        return InputFileRecord(id=input_file_id, size_bytes=self._size_by_id[input_file_id])
 
     def _is_active_owned(self, owner_user_id: str, input_file_id: UUID) -> bool:
         return (
@@ -133,3 +143,225 @@ class FakeInputFileService:
         self.deleted_for = (owner_user_id, input_file_id)
         if owner_user_id != "user-a":
             raise InputFileNotFoundError
+
+
+class FakeJobRepository:
+    def __init__(self, events: list[str] | None = None) -> None:
+        self._jobs: dict[UUID, JobRecord] = {}
+        self._events = events
+
+    async def create(  # noqa: PLR0913
+        self,
+        *,
+        job_id: UUID,
+        owner_user_id: str,
+        task_server_name: str,
+        task_name: str,
+        params: dict[str, Any],
+        params_schema_version: int,
+    ) -> JobRecord:
+        now = datetime.now(UTC)
+        record = JobRecord(
+            id=job_id,
+            owner_user_id=owner_user_id,
+            task_server_name=task_server_name,
+            task_name=task_name,
+            params=params,
+            params_schema_version=params_schema_version,
+            status=JobStatus.QUEUED,
+            result=None,
+            error_detail=None,
+            created_at=now,
+            updated_at=now,
+        )
+        self._jobs[job_id] = record
+        if self._events is not None:
+            self._events.append("repository.create")
+        return record
+
+    async def find_owned(self, owner_user_id: str, job_id: UUID) -> JobRecord | None:
+        record = self._jobs.get(job_id)
+        if record is None or record.owner_user_id != owner_user_id:
+            return None
+        return record
+
+    async def find_by_id(self, job_id: UUID) -> JobRecord | None:
+        return self._jobs.get(job_id)
+
+    async def list_owned(
+        self,
+        owner_user_id: str,
+        *,
+        status: JobStatus | None,
+        task_name: str | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[JobRecord, ...]:
+        matches = [
+            record
+            for record in self._jobs.values()
+            if record.owner_user_id == owner_user_id
+            and (status is None or record.status is status)
+            and (task_name is None or record.task_name == task_name)
+        ]
+        matches.sort(key=lambda record: record.created_at, reverse=True)
+        return tuple(matches[offset : offset + limit])
+
+    async def mark_running(self, job_id: UUID) -> JobRecord | None:
+        if self._events is not None:
+            self._events.append("repository.mark_running")
+        return self._transition(job_id, status=JobStatus.RUNNING)
+
+    async def mark_completed(self, job_id: UUID, *, result: dict[str, Any]) -> JobRecord | None:
+        if self._events is not None:
+            self._events.append("repository.mark_completed")
+        return self._transition(job_id, status=JobStatus.COMPLETED, result=result)
+
+    async def mark_failed(self, job_id: UUID, *, error_detail: dict[str, Any]) -> JobRecord | None:
+        if self._events is not None:
+            self._events.append("repository.mark_failed")
+        return self._transition(job_id, status=JobStatus.FAILED, error_detail=error_detail)
+
+    def _transition(
+        self,
+        job_id: UUID,
+        *,
+        status: JobStatus,
+        result: dict[str, Any] | None = None,
+        error_detail: dict[str, Any] | None = None,
+    ) -> JobRecord | None:
+        record = self._jobs.get(job_id)
+        if record is None:
+            return None
+        changes: dict[str, Any] = {"status": status, "updated_at": datetime.now(UTC)}
+        if result is not None:
+            changes["result"] = result
+        if error_detail is not None:
+            changes["error_detail"] = error_detail
+        updated = replace(record, **changes)
+        self._jobs[job_id] = updated
+        return updated
+
+    def force_updated_at(self, job_id: UUID, updated_at: datetime) -> None:
+        """Test-only hook to age a Job for the running-timeout reconciliation."""
+
+        self._jobs[job_id] = replace(self._jobs[job_id], updated_at=updated_at)
+
+
+class FakeDispatcher:
+    """Controllable stand-in for `TaskDispatcher` -- no HTTP, no HMAC."""
+
+    def __init__(self, outcome: DispatchOutcome | None = None) -> None:
+        self.outcome = outcome or DispatchSuccess(result={"value": {}, "outputs": []})
+        self.calls: list[tuple[str, str, UUID, dict[str, Any]]] = []
+
+    async def dispatch(
+        self,
+        *,
+        task_server_name: str,
+        task_name: str,
+        job_id: UUID,
+        params: dict[str, Any],
+    ) -> DispatchOutcome:
+        self.calls.append((task_server_name, task_name, job_id, params))
+        return self.outcome
+
+
+class FakeJobService:
+    """Stands in for the whole `JobService` in REST/MCP-layer tests."""
+
+    def __init__(self) -> None:
+        self.job_id = uuid4()
+        self.submitted_for: tuple[str, str, str, dict[str, Any]] | None = None
+        self.fetched_for: tuple[str, UUID] | None = None
+        self.listed_for: tuple[str, JobStatus | None, str | None, int, int] | None = None
+        self.raise_on_submit: Exception | None = None
+        self.waited_for: tuple[str, str, str, dict[str, Any]] | None = None
+        self.raise_on_wait: Exception | None = None
+        self.wait_result: JobRecord | None = None
+
+    def make_record(self, **overrides: Any) -> JobRecord:  # noqa: ANN401
+        now = datetime.now(UTC)
+        fields: dict[str, Any] = {
+            "id": self.job_id,
+            "owner_user_id": "user-a",
+            "task_server_name": "fpocket",
+            "task_name": "detect_pockets",
+            "params": {"structure": str(uuid4())},
+            "params_schema_version": 1,
+            "status": JobStatus.QUEUED,
+            "result": None,
+            "error_detail": None,
+            "created_at": now,
+            "updated_at": now,
+        }
+        fields.update(overrides)
+        return JobRecord(**fields)
+
+    async def submit_job(
+        self,
+        owner_user_id: str,
+        task_server_name: str,
+        task_name: str,
+        params: dict[str, Any],
+    ) -> JobRecord:
+        self.submitted_for = (owner_user_id, task_server_name, task_name, params)
+        if self.raise_on_submit is not None:
+            raise self.raise_on_submit
+        return self.make_record(
+            owner_user_id=owner_user_id,
+            task_server_name=task_server_name,
+            task_name=task_name,
+            params=params,
+        )
+
+    async def submit_job_and_wait(
+        self,
+        owner_user_id: str,
+        task_server_name: str,
+        task_name: str,
+        params: dict[str, Any],
+    ) -> JobRecord:
+        self.waited_for = (owner_user_id, task_server_name, task_name, params)
+        if self.raise_on_wait is not None:
+            raise self.raise_on_wait
+        if self.wait_result is not None:
+            return self.wait_result
+        return self.make_record(
+            owner_user_id=owner_user_id,
+            task_server_name=task_server_name,
+            task_name=task_name,
+            params=params,
+            status=JobStatus.COMPLETED,
+            result={"value": {}, "outputs": []},
+        )
+
+    async def get_job(self, owner_user_id: str, job_id: UUID) -> JobRecord:
+        self.fetched_for = (owner_user_id, job_id)
+        if owner_user_id != "user-a":
+            raise JobNotFoundError
+        return self.make_record(owner_user_id=owner_user_id, id=job_id)
+
+    async def list_jobs(
+        self,
+        owner_user_id: str,
+        *,
+        status: JobStatus | None,
+        task_name: str | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[JobRecord, ...]:
+        self.listed_for = (owner_user_id, status, task_name, limit, offset)
+        return (self.make_record(owner_user_id=owner_user_id),)
+
+
+__all__ = [
+    "DispatchFailure",
+    "DispatchSuccess",
+    "FakeDispatcher",
+    "FakeInputFileRepository",
+    "FakeInputFileService",
+    "FakeJobRepository",
+    "FakeJobService",
+    "FakeStorage",
+]

@@ -108,3 +108,25 @@ def test_production_requires_a_dedicated_web_gateway_secret() -> None:
             web_gateway_hmac_secret="unset",  # noqa: S106 - Invalid test canary.
             _env_file=None,
         )
+
+
+def test_task_servers_registry_includes_fpocket_by_default() -> None:
+    settings = Settings(
+        fpocket_internal_url="http://task-fpocket:8000",
+        fpocket_task_hmac_secret="a-fpocket-gateway-hmac-secret-32b",  # noqa: S106
+        _env_file=None,
+    )
+
+    fpocket = settings.task_servers["fpocket"]
+
+    assert fpocket.base_url == "http://task-fpocket:8000"
+    assert fpocket.hmac_secret == "a-fpocket-gateway-hmac-secret-32b"  # noqa: S105
+
+
+def test_production_requires_a_dedicated_fpocket_task_hmac_secret() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            app_environment=Environment.PRODUCTION,
+            fpocket_task_hmac_secret="unset",  # noqa: S106 - Invalid test canary.
+            _env_file=None,
+        )

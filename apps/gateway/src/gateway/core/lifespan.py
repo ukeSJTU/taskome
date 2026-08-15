@@ -11,9 +11,11 @@ import structlog
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
+from gateway.api.mcp import register_task_tools
 from gateway.core.config import Environment
 from gateway.core.logging import configure_logging
 from gateway.core.observability import create_observability
+from gateway.services.task_manifests import fetch_task_manifests
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable
@@ -49,6 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         resources.push_async_callback(observability.shutdown)
         resources.push_async_callback(database.dispose)
         resources.push_async_callback(app.state.personal_api_key_verifier.aclose)
+        resources.push_async_callback(app.state.dispatch_http_client.aclose)
 
         try:
             if hasattr(database, "start"):
@@ -71,6 +74,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             resources.push_async_callback(jwks_http_client.aclose)
             for verifier in app.state.managed_token_verifiers:
                 verifier.start(jwks_http_client)
+
+            if settings.app_environment is not Environment.TEST:
+                manifests = await fetch_task_manifests(
+                    settings.task_servers, app.state.dispatch_http_client
+                )
+                app.state.owned_job_service.attach_manifests(manifests)
+                register_task_tools(app.state.mcp, app.state.owned_job_service, manifests)
+            resources.push_async_callback(app.state.owned_job_service.wait_for_background_dispatch)
 
             if settings.app_environment is not Environment.TEST and (
                 not await database.is_available()

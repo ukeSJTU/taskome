@@ -1,5 +1,6 @@
 """Validated Gateway runtime settings and dependency budgets."""
 
+from dataclasses import dataclass
 from enum import StrEnum
 from importlib.metadata import version
 from typing import Annotated
@@ -9,6 +10,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _MIN_INTERNAL_SECRET_LENGTH = 32
 _HMAC_LENGTH_ERROR = "WEB_GATEWAY_HMAC_SECRET must be at least 32 characters"
+_FPOCKET_HMAC_LENGTH_ERROR = "FPOCKET_TASK_HMAC_SECRET must be at least 32 characters"
+
+
+@dataclass(frozen=True, slots=True)
+class TaskServerConfig:
+    """Where and how to reach one registered Task Server (ADR-0007)."""
+
+    base_url: str
+    hmac_secret: str
 
 
 class Environment(StrEnum):
@@ -71,6 +81,8 @@ class Settings(BaseSettings):
     web_internal_url: AnyHttpUrl = AnyHttpUrl("http://localhost:3000")
     gateway_public_url: AnyHttpUrl = AnyHttpUrl("http://localhost:8000")
     web_gateway_hmac_secret: SecretStr = SecretStr("unset")
+    fpocket_internal_url: AnyHttpUrl = AnyHttpUrl("http://localhost:18000")
+    fpocket_task_hmac_secret: SecretStr = SecretStr("unset")
     otel_service_name: str | None = None
     otel_exporter_otlp_endpoint: str | None = None
     # Signal-specific endpoints and headers are read reflectively by
@@ -89,7 +101,23 @@ class Settings(BaseSettings):
             and len(self.web_gateway_hmac_secret.get_secret_value()) < _MIN_INTERNAL_SECRET_LENGTH
         ):
             raise ValueError(_HMAC_LENGTH_ERROR)
+        if (
+            self.app_environment is Environment.PRODUCTION
+            and len(self.fpocket_task_hmac_secret.get_secret_value()) < _MIN_INTERNAL_SECRET_LENGTH
+        ):
+            raise ValueError(_FPOCKET_HMAC_LENGTH_ERROR)
         return self
+
+    @property
+    def task_servers(self) -> dict[str, TaskServerConfig]:
+        """Static registry of reachable Task Servers, keyed by server name."""
+
+        return {
+            "fpocket": TaskServerConfig(
+                base_url=str(self.fpocket_internal_url).rstrip("/"),
+                hmac_secret=self.fpocket_task_hmac_secret.get_secret_value(),
+            ),
+        }
 
     @property
     def expose_docs(self) -> bool:

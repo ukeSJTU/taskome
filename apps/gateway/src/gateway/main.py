@@ -5,12 +5,14 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
+import httpx
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastmcp.utilities.lifespan import combine_lifespans
 from scalar_fastapi import get_scalar_api_reference
 
 from gateway.api.health import router as health_router
+from gateway.api.internal import router as internal_router
 from gateway.api.mcp import create_mcp_server
 from gateway.api.v1.router import router as api_v1_router
 from gateway.core.auth import (
@@ -35,9 +37,12 @@ from gateway.core.personal_api_keys import PersonalApiKeyVerifier, WebPersonalAp
 from gateway.core.public_openapi import public_openapi_schema
 from gateway.db.database import Database
 from gateway.repositories.input_files import InputFileRepository
+from gateway.repositories.jobs import JobRepository
 from gateway.schemas.problem import ProblemDetails
 from gateway.services.input_files import InputFileService
+from gateway.services.jobs import JobService
 from gateway.services.storage import SeaweedFSStorage
+from gateway.services.task_dispatch import TaskDispatcher
 
 if TYPE_CHECKING:
     from fastapi.responses import HTMLResponse
@@ -58,6 +63,7 @@ def create_app(  # noqa: PLR0913
     redis: Redis | None = None,
     storage: SeaweedFSStorage | None = None,
     personal_api_key_verifier: PersonalApiKeyVerifier | None = None,
+    dispatch_http_client: httpx.AsyncClient | None = None,
 ) -> FastAPI:
     """Assemble an app whose external resources are allocated by lifespan.
 
@@ -71,6 +77,7 @@ def create_app(  # noqa: PLR0913
         redis: Optional Redis seam for tests.
         storage: Optional object-storage seam for tests.
         personal_api_key_verifier: Optional Personal API Key verification seam.
+        dispatch_http_client: Optional Task Server dispatch HTTP seam for tests.
 
     Returns:
         A fully routed FastAPI application ready for lifespan startup.
@@ -109,6 +116,15 @@ def create_app(  # noqa: PLR0913
         repository=InputFileRepository(app_database),
         storage=storage,
     )
+    dispatch_client = dispatch_http_client or httpx.AsyncClient(
+        timeout=httpx.Timeout(30, connect=5)
+    )
+    job_service = JobService(
+        repository=JobRepository(app_database),
+        input_files=InputFileRepository(app_database),
+        dispatcher=TaskDispatcher(app_settings.task_servers, dispatch_client),
+        manifests={},
+    )
     mcp_server = create_mcp_server(
         app_settings,
         input_file_service,
@@ -137,6 +153,9 @@ def create_app(  # noqa: PLR0913
     application.state.storage_factory = storage_factory
     application.state.input_file_service = input_file_service
     application.state.owned_input_file_service = input_file_service
+    application.state.job_service = job_service
+    application.state.owned_job_service = job_service
+    application.state.dispatch_http_client = dispatch_client
     application.state.rest_token_verifier = rest_verifier
     application.state.personal_api_key_verifier = api_key_verifier
     application.state.public_openapi_schema = None
@@ -154,6 +173,7 @@ def create_app(  # noqa: PLR0913
     register_error_handlers(application)
     application.include_router(health_router)
     application.include_router(api_v1_router)
+    application.include_router(internal_router)
     application.router.routes.extend(mcp_auth_provider.get_routes("/mcp"))
 
     @application.get("/internal/openapi.json", include_in_schema=False)
