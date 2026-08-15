@@ -9,7 +9,7 @@ A curated compute capability registered in the platform (e.g. `fpocket_detect`, 
 _Avoid_: Model (reserve "model" strictly for the ML model weights a Task may use internally, never for the Task itself), Tool (MCP's own vocabulary for a callable primitive — a Task Server may expose a Task as one or more MCP tools, but "Task" is the platform-level concept). This avoidance is scoped to internal/engineering usage; user-facing product copy (docs site, marketing) may still call a Task a "tool" (e.g. "PepMimic, BindCraft, GraphPep" as the platform's tool set) since that's the vocabulary users already bring.
 
 **Job**:
-Exactly one invocation of one Task with one complete Params object — analogous to an instance of the Task class. A Params object may contain multiple files when they jointly form one logical input, and a Job may produce multiple outputs; processing independent inputs is multiple Jobs, never one platform-level batch invocation. The first implementation is synchronous and resolves the Job to `ok` or `error` within the same Gateway call; asynchronous execution is deferred.
+Exactly one invocation of one Task with one complete Params object — analogous to an instance of the Task class. A Params object may contain multiple files when they jointly form one logical input, and a Job may produce multiple outputs; processing independent inputs is multiple Jobs, never one platform-level batch invocation. Gateway creates a Job durably with status `queued`, returns `202 Accepted` and its id, then dispatches it asynchronously; callers query the Job until it reaches `completed` or `failed`.
 _Avoid_: Run, Submission (use Job consistently).
 
 **Task Server**:
