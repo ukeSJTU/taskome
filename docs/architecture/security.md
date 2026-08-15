@@ -1,6 +1,6 @@
 # Security
 
-This page covers Taskome's identity model — how a request from any of the three Access Channels ends up as one internal notion of "who's asking" — plus where secrets live and what's rate-limited today. For the channels themselves, see [`context.md`](./context.md); for which container does what with this model, see [`containers.md`](./containers.md).
+This page covers Taskome's identity model — how a request from any of the four Access Channels ends up as one internal notion of "who's asking" — plus where secrets live and what's rate-limited today. For the channels themselves, see [`context.md`](./context.md); for which container does what with this model, see [`containers.md`](./containers.md).
 
 ## Identity model
 
@@ -36,7 +36,8 @@ Better-auth's global rate limiting covers its own routes (login, session, OAuth)
 
 ## Related docs
 
-- [`context.md`](./context.md) — the three Access Channels this identity model serves.
+- [`context.md`](./context.md) — the four Access Channels this identity model serves.
 - [`containers.md`](./containers.md) — which container does what.
 - [`overview.md`](./overview.md) — why identity resolution is centralized in Gateway.
-- `docs/adr/` — the access-channels and JWT-auth decisions behind this model, once renumbered.
+- [`docs/adr/0002-identity-and-access-channels.md`](../adr/0002-identity-and-access-channels.md) — the access-channels and JWT-auth decisions behind this model.
+- [`docs/adr/0007-internal-service-hmac-signing.md`](../adr/0007-internal-service-hmac-signing.md) — the Personal API Key verification and internal-signing decision.
