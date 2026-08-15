@@ -23,7 +23,7 @@ async function waitForClientForm(page: Page) {
 }
 
 async function signUp(page: Page, name: string, email: string) {
-  await page.goto("/signup");
+  await page.goto("/en/signup");
   await waitForClientForm(page);
   await page.getByLabel("Full Name").fill(name);
   await page.getByLabel("Email").fill(email);
@@ -34,8 +34,37 @@ async function signUp(page: Page, name: string, email: string) {
 
 test("anonymous dashboard access redirects to sign-in", async ({ page }) => {
   await page.goto("/dashboard");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/en\/login$/);
   await expect(page.getByRole("heading", { name: "Login to your account" })).toBeVisible();
+});
+
+test("public pages preserve the pathname while switching languages", async ({ page }) => {
+  await page.goto("/en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "We design the molecule that binds — not the one that merely predicts.",
+    }),
+  ).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/en$/);
+  await expect(page.locator('link[rel="alternate"][hreflang="zh-CN"]')).toHaveAttribute(
+    "href",
+    process.env.E2E_WEB_URL!,
+  );
+
+  await page.getByRole("link", { name: "切换到中文" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "我们设计真正能够结合的分子，而不止于预测。" }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "关于我们", exact: true }).click();
+  await expect(page).toHaveURL(/\/about$/);
+  await page.getByRole("link", { name: "切换到英文" }).click();
+  await expect(page).toHaveURL(/\/en\/about$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
 });
 
 test("a new user signs up and sees their identity", async ({ page }) => {
@@ -51,7 +80,7 @@ test("a returning user signs in and sees their identity", async ({ page, request
     data: { email, name: "Browser Signin", password },
   });
   await expectOK(signup);
-  await page.goto("/login");
+  await page.goto("/en/login");
   await waitForClientForm(page);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);

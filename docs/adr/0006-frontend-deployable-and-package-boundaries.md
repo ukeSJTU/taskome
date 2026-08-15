@@ -27,7 +27,18 @@ Taskome's frontend surface spans several concerns: the authenticated product, XD
 
 Chosen option: "Group by shared technology and tooling needs, not audience", because it avoids paying for a separate deployment where nothing about the tooling actually differs, while still giving docs the purpose-built toolchain it needs.
 
-`apps/web` hosts both XDenovo's public marketing site (the `(public)` route group) and the authenticated Taskome product (the `(app)` route group) in one Next.js deployment — they're different audiences, but neither needs different technology, and splitting them would mean operating two deployments for the cost of one. `apps/docs` gets its own deployment, because Fumadocs is a genuinely different toolchain that doesn't belong bolted onto the product app. Two corollary decisions follow the same logic: `next-intl` locale routing covers `(public)` and `(auth)` (both need to be reachable by a broad, language-diverse audience), while the authenticated `(app)` dashboard stays English-only and unprefixed, matching `vision.md`'s "semi-internal, known users" framing. `@taskome/ui` is consumed as raw source by both `apps/web` and `apps/docs` — no build or publish step — because every consumer is a sibling in the same monorepo; `apps/docs` takes only its theme tokens, not full components, keeping Fumadocs' own UI independent of the product's component library.
+`apps/web` hosts both XDenovo's public marketing site and the authenticated Taskome product in one Next.js deployment — they're different audiences, but neither needs different technology, and splitting them would mean operating two deployments for the cost of one. `apps/docs` gets its own deployment, because Fumadocs is a genuinely different toolchain that doesn't belong bolted onto the product app.
+
+The Web app has two structurally enforced document trees:
+
+- `(localized)/[locale]` contains all public pages and logged-out identity flows: login, signup, OAuth consent, two-factor verification, and two-factor settings. It supports `zh-CN` and `en` with `next-intl`. Chinese is the default and has unprefixed public URLs; English uses `/en`. Browser and remembered-language detection may redirect an unprefixed request to English. Slugs are shared between languages.
+- `(application)` contains the authenticated dashboard, account, and API documentation. It is English-only and always unprefixed.
+
+The two trees use separate root layouts so the initial HTML has an accurate `lang` attribute without making the statically generated public site request-dependent. Crossing the identity boundary performs a full document navigation, which is acceptable because it also resets authentication-related client state. An explicit proxy allowlist prevents locale negotiation from claiming application or API routes.
+
+Public metadata, canonical URLs, language alternates, and the sitemap share the same routing contract. The production origin comes from `WEB_PUBLIC_URL`. Private identity and application pages are `noindex`. Better Auth localizes API errors from the current document locale (then the shared locale cookie and browser language), while stable machine error codes remain available to clients. Message catalogs are maintained by hand and checked for key parity and valid ICU syntax. Legal and privacy translations ship with an English-controls notice until professional review.
+
+`@taskome/ui` is consumed as raw source by both `apps/web` and `apps/docs` — no build or publish step — because every consumer is a sibling in the same monorepo; `apps/docs` takes only its theme tokens, not full components, keeping Fumadocs' own UI independent of the product's component library.
 
 ### Consequences
 
@@ -35,11 +46,12 @@ Chosen option: "Group by shared technology and tooling needs, not audience", bec
 - Good, because docs gets exactly the toolchain it needs without dragging that dependency into the product app, or forcing docs to hand-build what Fumadocs already provides.
 - Good, because internal UI sharing costs nothing extra — no registry, no versioning, no publish step to maintain.
 - Bad, because `apps/web` now serves two different products (the company's public identity and Taskome's platform) from one deployment — an outage or a bad deploy affects both at once, even though they're conceptually unrelated.
-- Bad, because the i18n scope split (`(public)`/`(auth)` localized, `(app)` not) needs ongoing discipline as routes are added — it's not enforced by anything structural.
+- Good, because the locale boundary is enforced by separate `(localized)` and `(application)` document trees and by proxy contract tests.
+- Bad, because navigation between the localized identity surface and the English-only application is a full document load.
 
 ### Confirmation
 
-A new route added to `apps/web` should be checked against which route group it belongs to (see `apps/web/AGENTS.md`'s Route boundaries) rather than assumed. A new frontend surface that needs different tooling than Next.js (the way Fumadocs did for docs) is the signal to consider a new `apps/*` deployment — needing different technology, not just serving a different audience, is the bar.
+A new route added to `apps/web` must be placed in either the localized or application document tree and, when localized, added to the explicit proxy allowlist. Because the site was not deployed before this decision was implemented, no legacy route migration or compatibility redirect is required. A new frontend surface that needs different tooling than Next.js (the way Fumadocs did for docs) is the signal to consider a new `apps/*` deployment — needing different technology, not just serving a different audience, is the bar.
 
 ## Pros and Cons of the Options
 
