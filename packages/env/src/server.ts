@@ -7,6 +7,7 @@ export const env = createEnv({
     DATABASE_URL: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.url(),
+    WEB_PUBLIC_URL: z.url().default("http://localhost:3000"),
     GATEWAY_PUBLIC_URL: z.url().default("http://localhost:8000"),
     GATEWAY_INTERNAL_URL: z.url().default("http://localhost:8000"),
     WEB_GATEWAY_HMAC_SECRET: z.string().min(32),

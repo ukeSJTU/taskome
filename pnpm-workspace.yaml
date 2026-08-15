@@ -8,6 +8,7 @@ packages:
   - packages/env
   - packages/config
 allowBuilds:
+  "@parcel/watcher": false
   "@scarf/scarf": false
   "@swc/core": true
   esbuild: true

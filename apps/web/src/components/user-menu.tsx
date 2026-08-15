@@ -9,13 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@taskome/ui/components/dropdown-menu";
 import { Skeleton } from "@taskome/ui/components/skeleton";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
 
 export default function UserMenu() {
-  const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
@@ -24,9 +21,9 @@ export default function UserMenu() {
 
   if (!session) {
     return (
-      <Link href="/login">
+      <a href="/login">
         <Button variant="outline">Sign In</Button>
-      </Link>
+      </a>
     );
   }
 
@@ -46,7 +43,7 @@ export default function UserMenu() {
               authClient.signOut({
                 fetchOptions: {
                   onSuccess: () => {
-                    router.push("/");
+                    window.location.assign("/");
                   },
                 },
               });

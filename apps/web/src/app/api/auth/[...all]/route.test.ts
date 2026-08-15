@@ -1,4 +1,5 @@
 import { createTestAuth } from "@taskome/auth/test";
+import { simplifiedChineseAuthErrors } from "@taskome/auth/i18n";
 import { base32 } from "@better-auth/utils/base32";
 import { createLocalJWKSet, jwtVerify } from "jose";
 import { createHash, randomUUID } from "node:crypto";
@@ -59,6 +60,97 @@ async function authenticatedUser(email: string, name: string) {
 }
 
 describe("/api/auth", () => {
+  it("has a Chinese translation for every enabled authentication error code", () => {
+    const auth = createTestAuth();
+    expect(Object.keys(simplifiedChineseAuthErrors).sort()).toEqual(
+      Object.keys(auth.$ERROR_CODES).sort(),
+    );
+  });
+
+  it("localizes API errors from the current page locale while preserving machine codes", async () => {
+    const email = `localized-${randomUUID()}@example.com`;
+    const localizedHeaders = new Headers({
+      "accept-language": "en-US,en;q=0.9",
+      "content-type": "application/json",
+      cookie: "NEXT_LOCALE=en",
+      origin: baseURL,
+      "x-taskome-locale": "zh-CN",
+      "x-forwarded-for": "192.0.2.10",
+    });
+
+    const signUpResponse = await POST(
+      new Request(`${baseURL}/api/auth/sign-up/email`, {
+        body: JSON.stringify({ email, name: "Localized User", password: "password123" }),
+        headers: localizedHeaders,
+        method: "POST",
+      }),
+    );
+    expect(signUpResponse.status).toBe(200);
+
+    const duplicateResponse = await POST(
+      new Request(`${baseURL}/api/auth/sign-up/email`, {
+        body: JSON.stringify({ email, name: "Localized User", password: "password123" }),
+        headers: localizedHeaders,
+        method: "POST",
+      }),
+    );
+    expect(duplicateResponse.status).toBe(422);
+    expect(await duplicateResponse.json()).toMatchObject({
+      code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+      message: "该用户已存在，请使用其他邮箱",
+      originalMessage: expect.any(String),
+    });
+
+    const wrongPasswordResponse = await POST(
+      new Request(`${baseURL}/api/auth/sign-in/email`, {
+        body: JSON.stringify({ email, password: "wrong-password" }),
+        headers: localizedHeaders,
+        method: "POST",
+      }),
+    );
+    expect(wrongPasswordResponse.status).toBe(401);
+    expect(await wrongPasswordResponse.json()).toMatchObject({
+      code: "INVALID_EMAIL_OR_PASSWORD",
+      message: "邮箱或密码错误",
+      originalMessage: expect.any(String),
+    });
+
+    const cookieLocaleResponse = await POST(
+      new Request(`${baseURL}/api/auth/sign-in/email`, {
+        body: JSON.stringify({ email, password: "wrong-password" }),
+        headers: new Headers({
+          "accept-language": "en-US,en;q=0.9",
+          "content-type": "application/json",
+          cookie: "NEXT_LOCALE=zh-CN",
+          origin: baseURL,
+          "x-forwarded-for": "192.0.2.11",
+        }),
+        method: "POST",
+      }),
+    );
+    expect(await cookieLocaleResponse.json()).toMatchObject({
+      code: "INVALID_EMAIL_OR_PASSWORD",
+      message: "邮箱或密码错误",
+    });
+
+    const browserLocaleResponse = await POST(
+      new Request(`${baseURL}/api/auth/sign-in/email`, {
+        body: JSON.stringify({ email, password: "wrong-password" }),
+        headers: new Headers({
+          "accept-language": "zh-CN,zh;q=0.9",
+          "content-type": "application/json",
+          origin: baseURL,
+          "x-forwarded-for": "192.0.2.12",
+        }),
+        method: "POST",
+      }),
+    );
+    expect(await browserLocaleResponse.json()).toMatchObject({
+      code: "INVALID_EMAIL_OR_PASSWORD",
+      message: "邮箱或密码错误",
+    });
+  });
+
   it("creates multiple named Personal API Keys and never lists their secrets", async () => {
     const { context, headers } = await authenticatedUser(
       "automation@example.com",

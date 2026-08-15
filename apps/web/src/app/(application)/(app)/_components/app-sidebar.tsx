@@ -1,0 +1,189 @@
+"use client";
+
+import * as React from "react";
+
+import { NavDocuments } from "@/app/(application)/(app)/_components/nav-documents";
+import { NavMain } from "@/app/(application)/(app)/_components/nav-main";
+import { NavSecondary } from "@/app/(application)/(app)/_components/nav-secondary";
+import { NavUser } from "@/app/(application)/(app)/_components/nav-user";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@taskome/ui/components/sidebar";
+import {
+  LayoutDashboardIcon,
+  ListIcon,
+  ChartBarIcon,
+  FolderIcon,
+  UsersIcon,
+  CameraIcon,
+  FileTextIcon,
+  Settings2Icon,
+  CircleHelpIcon,
+  SearchIcon,
+  DatabaseIcon,
+  FileChartColumnIcon,
+  FileIcon,
+  CommandIcon,
+  BookOpenIcon,
+  KeyRoundIcon,
+} from "lucide-react";
+
+const data = {
+  navMain: [
+    {
+      title: "Dashboard",
+      url: "#",
+      icon: <LayoutDashboardIcon />,
+    },
+    {
+      title: "Lifecycle",
+      url: "#",
+      icon: <ListIcon />,
+    },
+    {
+      title: "Analytics",
+      url: "#",
+      icon: <ChartBarIcon />,
+    },
+    {
+      title: "Projects",
+      url: "#",
+      icon: <FolderIcon />,
+    },
+    {
+      title: "Team",
+      url: "#",
+      icon: <UsersIcon />,
+    },
+  ],
+  navClouds: [
+    {
+      title: "Capture",
+      icon: <CameraIcon />,
+      isActive: true,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Proposal",
+      icon: <FileTextIcon />,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Prompts",
+      icon: <FileTextIcon />,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+  ],
+  navSecondary: [
+    {
+      title: "API Docs",
+      url: "/api-docs",
+      icon: <BookOpenIcon />,
+    },
+    {
+      title: "API keys",
+      url: "/account/api-keys",
+      icon: <KeyRoundIcon />,
+    },
+    {
+      title: "Settings",
+      url: "#",
+      icon: <Settings2Icon />,
+    },
+    {
+      title: "Get Help",
+      url: "#",
+      icon: <CircleHelpIcon />,
+    },
+    {
+      title: "Search",
+      url: "#",
+      icon: <SearchIcon />,
+    },
+  ],
+  documents: [
+    {
+      name: "Data Library",
+      url: "#",
+      icon: <DatabaseIcon />,
+    },
+    {
+      name: "Reports",
+      url: "#",
+      icon: <FileChartColumnIcon />,
+    },
+    {
+      name: "Word Assistant",
+      url: "#",
+      icon: <FileIcon />,
+    },
+  ],
+};
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  user: { name: string; email: string; avatar: string };
+}) {
+  return (
+    <Sidebar collapsible="offcanvas" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="data-[slot=sidebar-menu-button]:p-1.5!"
+              render={<a href="#" />}
+            >
+              <CommandIcon className="size-5!" />
+              <span className="text-base font-semibold">Acme Inc.</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain items={data.navMain} />
+        <NavDocuments items={data.documents} />
+        <NavSecondary items={data.navSecondary} className="mt-auto" />
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={user} />
+      </SidebarFooter>
+    </Sidebar>
+  );
+}

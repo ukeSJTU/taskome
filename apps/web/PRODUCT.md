@@ -10,8 +10,8 @@ web
 
 `apps/web` serves two distinct audiences under one Next.js app:
 
-- **Internal tool platform** (`(app)` route group and auth flows): XDenovo's own internal teams doing binder/de novo protein design work. The audience is mixed — computational/ML researchers comfortable with a tool's real configuration surface, alongside wet-lab scientists who may need more guidance. Accounts are flat and individual (no team-scoped sharing/visibility yet). "Internal only, no billing" is a v1 implementation-scope constraint on _this_ surface specifically (deliberately avoiding over-building account/billing infrastructure this platform doesn't need yet) — it does not describe the company or the public website below.
-- **Public corporate website** (`(public)` route group): genuinely public-facing. Primary visitors are biology-field professionals and researchers (the same kind of user the tool platform itself serves — computational biology, wet-lab, pharma R&D) evaluating XDenovo's actual technology and credibility, since the platform exists to provide real biology-research tools. Secondary visitors: broader potential research/pharma partners, collaborators, and the AI4Bio-interested public. Not scoped to recruiting specifically.
+- **Internal tool platform** (`(application)` document tree): XDenovo's own internal teams doing binder/de novo protein design work. The audience is mixed — computational/ML researchers comfortable with a tool's real configuration surface, alongside wet-lab scientists who may need more guidance. Accounts are flat and individual (no team-scoped sharing/visibility yet). "Internal only, no billing" is a v1 implementation-scope constraint on _this_ surface specifically (deliberately avoiding over-building account/billing infrastructure this platform doesn't need yet) — it does not describe the company or the public website below.
+- **Public corporate website and identity flows** (`(localized)/[locale]` document tree): genuinely public-facing in Simplified Chinese and English. Primary visitors are biology-field professionals and researchers (the same kind of user the tool platform itself serves — computational biology, wet-lab, pharma R&D) evaluating XDenovo's actual technology and credibility. Secondary visitors are broader potential research/pharma partners, collaborators, and the AI4Bio-interested public.
 
 ## Product Purpose
 
@@ -23,7 +23,7 @@ Two independent surfaces sharing one app:
 ## Positioning
 
 - **Tool platform**: modeled on two references, each contributing a different piece — tamarind.bio's GPU-backed compute tools behind one platform, reached from a web UI, combined with subseq.bio's power-user posture (expose a tool's real configuration surface, not a no-code abstraction). A neighboring "no-code" wrapper product could not truthfully copy the power-user parameter surface; a bare internal script runner could not truthfully copy the unified Web/MCP/REST access model.
-- **Public website**: positions XDenovo within AI4Bio (AI-native biotech / de novo protein design). The `(public)` route currently contains only Next.js/Better-T-Stack placeholder scaffolding (an ASCII "BETTER T STACK" banner and an empty "API Status" card) — no real copy has been built into `apps/web` yet, but real company content exists in `references/old-website` (the previous site, kept as content/structure reference only per root AGENTS.md — never reused as code).
+- **Public website**: positions XDeNovo within AI4Bio (AI-native biotech / de novo protein design) through eight complete marketing, company, contact, legal, and privacy pages. The hand-maintained `zh-CN` and English catalogs cover the public site and logged-out identity flows; Chinese is the default URL language and English uses `/en`.
 
 ## Operating Context
 
@@ -32,7 +32,7 @@ Two independent surfaces sharing one app:
 - **Data ownership** (ADR-0001): `apps/web` owns the auth Postgres schema; `apps/gateway` owns jobs and input files. Cross-service access goes through gateway's REST API, never direct SQL.
 - **Task Servers**: each tool ships as its own `apps/task-<name>` uv project built on `packages/task-kit` (ADR-0003), which generates matching REST + MCP wiring from one `ComputeAdapter` per Task. `apps/task-fpocket` (binding pocket detection, wrapping `fpocket`) is the first Task Server — currently a skeleton, not yet calling `build_task_server()` (see `docs/product/roadmap.md`).
 - **Auth**: better-auth (`packages/auth`), consumed via `apps/web/src/lib/auth-client.ts`. Plugins: personal API keys (named, revocable), JWT (short-lived session tokens for BFF→Gateway calls), two-factor auth (issuer "taskome"). Also handles OAuth consent and an OAuth authorization server `.well-known` endpoint for MCP Agent auth.
-- **Routes**: `(public)` public site; `(auth)` login/signup; `(app)` authenticated dashboard, account/API keys, API reference; `oauth/consent`, `security/two-factor`, `two-factor` auth flows.
+- **Routes**: `(localized)/[locale]` contains the public site, login/signup, OAuth consent, and two-factor flows; `(application)` contains the English-only authenticated dashboard, account/API keys, and API reference.
 
 ## Capabilities and Constraints
 
@@ -50,7 +50,7 @@ Two independent surfaces sharing one app:
 
 ## Evidence on Hand
 
-- No copy has been built into `apps/web`'s `(public)` route yet — it is unmodified scaffold placeholder. But real company facts exist in `references/old-website` (previous site's copy, kept as content/structure reference only, never reused as code):
+- The public-site copy is implemented from the following company facts, originally captured in `references/old-website` and since shaped for the current site:
     - **Company**: XDeNovo / 纽肽生物 (Shanghai XDeNovo Biotechnology Co., Ltd.), founded 2025.
     - **Mission**: accelerate drug development through AI-designed novel peptides, addressing difficult-to-drug targets and unmet clinical needs.
     - **Team**: core members from David Baker Laboratory and Shanghai Jiao Tong University; combines peptide engineering expertise with AI.

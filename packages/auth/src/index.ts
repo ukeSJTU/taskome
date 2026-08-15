@@ -7,6 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { jwt, twoFactor } from "better-auth/plugins";
 
 import { oauthGatewayAudience } from "./oauth-audience";
+import { authI18nPlugin } from "./i18n";
 import { mcpOAuthProvider } from "./mcp-oauth";
 import { enforcePersonalApiKeyLifecycle, personalApiKeyPlugin } from "./personal-api-keys";
 
@@ -40,6 +41,7 @@ export function createAuth() {
       mcpOAuthProvider(gatewayMCPResource),
       oauthGatewayAudience(gatewayMCPResource),
       twoFactor({ issuer: "taskome" }),
+      authI18nPlugin(),
       nextCookies(),
     ],
   });

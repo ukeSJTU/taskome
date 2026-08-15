@@ -10,19 +10,19 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Web responsibility
 
-`apps/web` is one Next.js deployment with three deliberately distinct surfaces:
+`apps/web` is one Next.js deployment with deliberately distinct surfaces:
 
-- `(public)` is XDenovo's external corporate website: a credible AI4Bio and de novo protein-design presence for researchers, partners, and the broader field.
-- `(app)` is the authenticated internal Taskome platform: dashboards, account and API-key management, and user-facing API reference.
+- `(localized)/[locale]` contains XDenovo's bilingual corporate website and logged-out identity flows.
+- `(application)` contains the English-only authenticated Taskome platform: dashboards, account and API-key management, and user-facing API reference.
 - The server-side Web layer is the browser's BFF for Gateway-owned data, while also owning Better Auth's Web authentication surface.
 
 The company website may support brand, partnership, and commercial communication. The Taskome platform is still an internal multi-team tool: do not introduce billing, external-customer assumptions, or team-scoped visibility without an explicit product decision.
 
 ## Route boundaries
 
-- Keep public corporate work in `(public)` independent from authenticated application flows and Gateway data. `references/old-website` is content and structural research only; never reuse it as runtime code.
-- Keep product UI in `(app)`. It is an internal power-user interface: expose the curated, meaningful configuration surface of each Task rather than creating a no-code abstraction or an unbounded upstream-config passthrough.
-- `(auth)`, `oauth/consent`, `security/two-factor`, and `two-factor` are security-sensitive authentication flows. Preserve redirect, session, consent, and recovery behavior when changing them.
+- Place public and logged-out identity routes under `(localized)/[locale]`; add every new localized route to `src/i18n/routing.ts` and the explicit matcher in `src/proxy.ts`. Keep English and `zh-CN` catalogs at exact key parity. `references/old-website` is content and structural research only; never reuse it as runtime code.
+- Keep product UI in `(application)`. It is an English-only internal power-user interface: expose the curated, meaningful configuration surface of each Task rather than creating a no-code abstraction or an unbounded upstream-config passthrough.
+- Login, signup, OAuth consent, `security/two-factor`, and `two-factor` are security-sensitive localized flows. Preserve locale, redirect, session, consent, and recovery behavior when changing them.
 - `apps/docs` is a separate static public documentation deployment, not another `apps/web` route group.
 - No feature/domain component folders. Route-private components go in Next.js `_components/` at the nearest common ancestor route of everything that imports them. Cross-route shared components, and global singletons like `providers.tsx`, go flat in top-level `src/components/` — no domain subfolders there either.
 
