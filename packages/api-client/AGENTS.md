@@ -10,7 +10,7 @@
 
 ## Contract changes
 
-- After changing Gateway's public REST contract, update `openapi.json` and regenerate the client with the package's configured generator.
+- After changing Gateway's public REST contract, run root `mise run openapi:generate` to update `openapi.json` and regenerate both the TypeScript and Go clients from the same export.
 - Resolve an inconvenient generated shape by changing the API contract or generation configuration, not by patching a generated file.
 
 ## Completion

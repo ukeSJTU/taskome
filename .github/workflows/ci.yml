@@ -70,10 +70,10 @@ jobs:
           uv sync --locked
       - name: Run unit tests
         run: |
-          mise run cli:test
+          mise run //apps/cli:test
           mise run //apps/cli:test:race
-          mise run ts:test
-          mise run gateway:test:unit
+          mise run //:ts:test
+          mise run //apps/gateway:test:unit
           mise run //packages/task-kit:test:unit
       - name: Minimize uv cache
         run: uv cache prune --ci
@@ -97,7 +97,7 @@ jobs:
         run: uv sync --locked
       - name: Run integration tests
         run: |
-          mise run gateway:test:integration
+          mise run //apps/gateway:test:integration
           mise run //packages/task-kit:test:integration
       - name: Minimize uv cache
         run: uv cache prune --ci

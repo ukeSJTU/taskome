@@ -1,6 +1,6 @@
 # Coding standards
 
-This page covers conventions that tooling can't enforce. `mise run check` already runs `oxlint`, `oxfmt`, `ruff`, and `ty` across the whole repo (TypeScript and Python) — if a rule can be a lint rule, it's a lint rule, not a paragraph here. What's left is judgment: naming, where things depend on each other, and how APIs and schemas take shape.
+This page covers conventions that tooling can't enforce. `mise run check` already runs the configured Go, TypeScript, and Python checks across the whole repo — if a rule can be automated, it belongs in tooling rather than a paragraph here. What's left is judgment: naming, where things depend on each other, and how APIs and schemas take shape.
 
 ## Naming
 
@@ -27,7 +27,7 @@ The `operation_id` convention matters beyond style: `packages/api-client` genera
 
 - A Task's REST/MCP parameters are a curated subset of the underlying tool's real configuration — see [`docs/product/vision.md`](../product/vision.md) for the policy this executes. Don't add a parameter just because the underlying tool exposes it; add it because it's worth exposing.
 - Params and Result types are the schema contract at a Task's boundary (Pydantic on the Task Server side). Keep them flat where the underlying tool allows it — nested optional structures push complexity onto every caller (REST client, MCP agent, and the generated TS client alike).
-- Changing a Gateway REST contract means regenerating `packages/api-client` (`mise run api-client:generate`) in the same change — a schema change without a regenerated client is an incomplete change, not two separate ones.
+- Changing a Gateway REST contract means running `mise run openapi:generate` in the same change. It exports the checked-in schema once and regenerates both `packages/api-client` and the CLI's Go client; a contract change with stale generated clients is incomplete.
 
 ## Not covered here
 

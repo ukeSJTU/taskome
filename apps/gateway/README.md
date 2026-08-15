@@ -12,14 +12,14 @@ From the repository root:
 ```bash
 cp apps/gateway/.env.example apps/gateway/.env
 uv sync
-mise run gateway:dev
+mise run //apps/gateway:dev
 ```
 
 The gateway listens on `http://127.0.0.1:8000`. In development, the Scalar API
 reference is at `/scalar` and its OpenAPI schema is at `/openapi.json`; the MCP
 Streamable HTTP transport is mounted at `/mcp`.
 
-For a production-style process, use `mise run gateway:start`. Gunicorn
+For a production-style process, use `mise run //apps/gateway:start`. Gunicorn
 manages four Uvicorn workers by default, gives in-flight requests 30 seconds to
 finish on shutdown, and recycles workers after a jittered request budget; all
 four values are environment-overridable. Production mode emits JSON logs,
@@ -94,14 +94,14 @@ OpenTelemetry keeps its standard `OTEL_*` names; setting
 ## Development checks
 
 ```bash
-mise run gateway:test
-mise run gateway:check
+mise run //apps/gateway:test
+mise run //apps/gateway:check
 ```
 
 Start the supporting PostgreSQL service with `mise run dev:up`, change a model, then
-generate a reviewed revision with `mise run gateway:db:revision`; it uses a
+generate a reviewed revision with `mise run //apps/gateway:db:revision`; it uses a
 disposable PostgreSQL 18 container and creates no revision when metadata matches the
-existing head. Apply revisions with `mise run gateway:db:migrate` — this is
+existing head. Apply revisions with `mise run //apps/gateway:db:migrate` — this is
 the only path that builds the schema, in development, tests, and production alike
 (see `docs/engineering/testing.md` for why tests run this same path instead of `metadata.create_all`); the production Compose stack runs `db:migrate` once before Gateway
 starts. Native development uses `localhost` in the URL; containers use the `postgres`

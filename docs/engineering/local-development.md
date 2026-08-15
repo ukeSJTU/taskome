@@ -27,7 +27,7 @@ Starts PostgreSQL, Redis, SeaweedFS, and a local `otel-gui` trace/log viewer via
 ## 3. Apply the Gateway schema
 
 ```bash
-mise run gateway:db:migrate
+mise run //apps/gateway:db:migrate
 ```
 
 Gateway owns its schema through Alembic migrations — there's no `db:push`/`create_all` shortcut (see the ADR governing Gateway schema management once it's written).
@@ -38,7 +38,7 @@ Gateway owns its schema through Alembic migrations — there's no `db:push`/`cre
 mise run dev
 ```
 
-Starts Web, Gateway, and Docs together, with prefixed output. To run one at a time: `mise run web:dev`, `mise run gateway:dev`, `mise run docs:dev`.
+Starts Web, Gateway, and Docs together, with prefixed output. To run one at a time, use the owning app's qualified task: `mise run //apps/web:dev`, `mise run //apps/gateway:dev`, or `mise run //apps/docs:dev`.
 
 ## Verify the result
 
@@ -57,7 +57,9 @@ If any of these don't come up, check `mise run dev:logs` for the dev-support ser
 
 ## Command reference
 
-`mise run <task>` is the repository's primary command surface. Application and package `pnpm`/`uv` scripts are implementation details this table doesn't need to expose — `mise run` is what you type.
+`mise run <task>` is the repository-wide command surface. Root tasks coordinate the repository; app and package tasks are addressed by qualified paths such as `//apps/gateway:test` and `//packages/db:migrate`. Their underlying `pnpm`, `uv`, and `go` commands are implementation details.
+
+Run `mise tasks` to list the root workflows. Run `mise tasks --all` when you need the complete public app/package catalog; support tasks hidden from normal discovery remain available to the documented worktree and Browser E2E workflows.
 
 ### Setup and environment
 
@@ -69,37 +71,39 @@ If any of these don't come up, check `mise run dev:logs` for the dev-support ser
 
 ### Running apps
 
-| Task                                            | What it does                             |
-| ----------------------------------------------- | ---------------------------------------- |
-| `mise run dev`                                  | Start Web, Gateway, and Docs together    |
-| `mise run web:dev` / `gateway:dev` / `docs:dev` | Start one app                            |
-| `mise run dev:up` / `dev:down` / `dev:logs`     | Start / stop / tail dev-support services |
-| `mise run build`                                | Build Web and Docs                       |
+| Task                                                                       | What it does                             |
+| -------------------------------------------------------------------------- | ---------------------------------------- |
+| `mise run dev`                                                             | Start Web, Gateway, and Docs together    |
+| `mise run //apps/web:dev` / `//apps/gateway:dev` / `//apps/docs:dev`       | Start one app                            |
+| `mise run //apps/web:start` / `//apps/gateway:start` / `//apps/docs:start` | Start one production-mode app process    |
+| `mise run //apps/cli:run -- <args>`                                        | Run the CLI from source                  |
+| `mise run dev:up` / `dev:down` / `dev:logs`                                | Start / stop / tail dev-support services |
+| `mise run build`                                                           | Build CLI, Web, and Docs                 |
 
 ### Quality
 
-| Task              | What it does                                                         |
-| ----------------- | -------------------------------------------------------------------- |
-| `mise run check`  | Read-only: lint + format check + typecheck, whole repo (TS + Python) |
-| `mise run lint`   | Lint whole repo, with safe autofixes                                 |
-| `mise run format` | Format whole repo                                                    |
-| `mise run test`   | Run every app/package's test suite (not Browser E2E)                 |
+| Task              | What it does                                                      |
+| ----------------- | ----------------------------------------------------------------- |
+| `mise run check`  | Read-only checks across Go, TypeScript, and Python                |
+| `mise run lint`   | Lint TypeScript and Python, with safe autofixes                   |
+| `mise run format` | Format Go, TypeScript, and Python                                 |
+| `mise run test`   | Run every app/package's service-free test suite (not Browser E2E) |
 
 See [`docs/engineering/testing.md`](./testing.md) for per-area test commands and Browser E2E.
 
 ### Database
 
-| Task                                                    | What it does                                |
-| ------------------------------------------------------- | ------------------------------------------- |
-| `mise run web:db:push \| generate \| migrate \| studio` | Operate on the Web-owned Drizzle schema     |
-| `mise run gateway:db:migrate \| revision`               | Operate on the Gateway-owned Alembic schema |
+| Task                                                           | What it does                                |
+| -------------------------------------------------------------- | ------------------------------------------- |
+| `mise run //packages/db:push \| generate \| migrate \| studio` | Operate on the Web-owned Drizzle schema     |
+| `mise run //apps/gateway:db:migrate \| revision`               | Operate on the Gateway-owned Alembic schema |
 
 ### API client
 
-| Task                           | What it does                                                                                   |
-| ------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `mise run api-client:generate` | Regenerate `packages/api-client` from Gateway's OpenAPI spec                                   |
-| `mise run api-client:verify`   | Regenerate and fail if that produces uncommitted changes (what CI-equivalent checks would run) |
+| Task                        | What it does                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `mise run openapi:generate` | Export Gateway OpenAPI once, then regenerate the TypeScript and Go clients in parallel                       |
+| `mise run openapi:verify`   | Force regeneration and fail on staged, unstaged, or untracked changes beneath the checked-in generated paths |
 
 ### Production-shaped stack
 

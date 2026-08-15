@@ -1,0 +1,8 @@
+[tasks.generate]
+description = "Generate the TypeScript Gateway client from OpenAPI"
+depends = ["//apps/gateway:openapi:export"]
+run = "pnpm run generate"
+
+[tasks."check-types"]
+description = "Type-check the generated TypeScript Gateway client"
+run = "pnpm run check-types"

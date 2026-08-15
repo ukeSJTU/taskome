@@ -2,7 +2,7 @@
 
 Taskome is XDenovo's product for running binder and de novo protein design compute — one platform, reachable from a browser, an AI agent, or a script, instead of a pile of one-off tool installs. See [`docs/product/vision.md`](docs/product/vision.md) for what it is and who it's for.
 
-This repository is a pnpm/uv monorepo, scaffolded with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (Next.js, Drizzle, Better-Auth) on the frontend and FastAPI/FastMCP on the backend.
+This repository is a polyglot pnpm, uv, and Go monorepo, scaffolded with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (Next.js, Drizzle, Better-Auth) on the frontend and FastAPI/FastMCP on the backend.
 
 ## Documentation
 
@@ -40,7 +40,7 @@ native applications:
 
 ```bash
 mise run dev:up
-mise run gateway:db:migrate
+mise run //apps/gateway:db:migrate
 mise run dev
 ```
 
@@ -125,7 +125,7 @@ For more details, see the guide on [Deploying with Docker Compose](https://www.b
 
 ## Git Hooks and Formatting
 
-- Run checks (TS + Python, read-only): `mise run check`
+- Run checks (Go + TypeScript + Python, read-only): `mise run check`
 - Lint everything with safe autofixes: `mise run lint`
 - Format everything: `mise run format`
 
@@ -145,17 +145,19 @@ taskome/
 
 ## Available Scripts
 
-`mise run <task>` is the repository's primary command surface. Application and
-package `pnpm` scripts remain implementation details; root `package.json` does
-not proxy repository workflows.
+`mise run <task>` is the repository-wide command surface. App- and package-owned
+tasks use qualified names such as `//apps/gateway:test` and
+`//packages/db:migrate`; their `pnpm`, `uv`, and `go` commands remain
+implementation details. Run `mise tasks` for the small root command surface or
+`mise tasks --all` for every public app/package task.
 
 - `mise run setup`, `mise run env:init`: prepare dependencies, hooks, and local configuration
-- `mise run dev`, `mise run web:dev`, `mise run gateway:dev`, `mise run docs:dev`: start all or one native application
+- `mise run dev`: start Web, Gateway, and Docs; use each app's qualified `:dev` task to run it alone
 - `mise run dev:up`, `mise run dev:down`, `mise run dev:logs`: manage local support services
-- `mise run build`: build Web and Docs
+- `mise run build`: build CLI, Web, and Docs
 - `mise run lint`, `mise run format`, `mise run check`, `mise run test`: repository-wide quality tasks
-- `mise run web:db:push|generate|migrate|studio`: operate on the Web-owned Drizzle schema
-- `mise run gateway:db:migrate|revision`: operate on the Gateway-owned Alembic schema
-- `mise run api-client:generate`, `mise run api-client:verify`: update or verify generated Gateway client code
+- `mise run //packages/db:push|generate|migrate|studio`: operate on the Web-owned Drizzle schema
+- `mise run //apps/gateway:db:migrate|revision`: operate on the Gateway-owned Alembic schema
+- `mise run openapi:generate`, `mise run openapi:verify`: update or verify Gateway OpenAPI plus its TypeScript and Go clients
 - `mise run deps:outdated`: report Node, Python, GitHub Action, and mise tool updates without changing lockfiles
 - `mise run prod:build|up|down|logs`: operate on the production-shaped Compose stack

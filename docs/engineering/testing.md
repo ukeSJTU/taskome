@@ -76,17 +76,19 @@ Whole-repo:
 mise run test
 ```
 
-Runs every app/package's test suite (TS and Python) in parallel. This does not include Browser E2E — see below.
+Runs every app/package's service-free test suite (Go, TypeScript, and Python) in parallel. This does not include Browser E2E — see below.
 
 Per-area:
 
 ```bash
-mise run gateway:test          # all gateway tests
-mise run gateway:test:unit
-mise run gateway:test:integration
-mise run web:test              # web (Vitest)
-mise run web:test:watch
-mise run web:test:coverage
+mise run //apps/gateway:test          # all gateway tests
+mise run //apps/gateway:test:unit
+mise run //apps/gateway:test:integration
+mise run //apps/web:test              # web (Vitest)
+mise run //apps/web:test:watch
+mise run //apps/web:test:coverage
+mise run //apps/cli:test              # CLI (Go)
+mise run //apps/cli:test:race
 ```
 
 `packages/task-kit` and each `apps/task-*` run their own `unit`/`integration` split the same way, scoped with `mise run //packages/task-kit:test:unit` (and similarly for `apps/task-fpocket`).

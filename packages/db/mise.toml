@@ -1,0 +1,15 @@
+[tasks.push]
+description = "Push the Web-owned Drizzle schema"
+run = "pnpm run db:push"
+
+[tasks.generate]
+description = "Generate Web-owned Drizzle migrations"
+run = "pnpm run db:generate"
+
+[tasks.migrate]
+description = "Apply Web-owned Drizzle migrations"
+run = "pnpm run db:migrate"
+
+[tasks.studio]
+description = "Open the Web-owned Drizzle Studio"
+run = "pnpm run db:studio"

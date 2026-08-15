@@ -1,8 +1,17 @@
-# Remeber to run `mise lock` after changing this file to update the lockfile.
+# Remember to run `mise lock` after changing this file to update the lockfile.
 monorepo_root = true
 
 [monorepo]
-config_roots = ["apps/cli", "apps/gateway", "apps/docs", "apps/task-fpocket", "packages/task-kit"]
+config_roots = [
+  "apps/cli",
+  "apps/docs",
+  "apps/gateway",
+  "apps/task-fpocket",
+  "apps/web",
+  "packages/api-client",
+  "packages/db",
+  "packages/task-kit",
+]
 
 [tools]
 go = "1.26.6"
@@ -40,132 +49,13 @@ run = "bash scripts/init-local-env.sh"
 
 [tasks.dev]
 description = "Start all apps in development mode"
-depends = ["web:dev", "gateway:dev", "docs:dev"]
+depends = ["//apps/web:dev", "//apps/gateway:dev", "//apps/docs:dev"]
 output = "prefix"
-
-[tasks."web:dev"]
-description = "Run Web in development mode on port 3000"
-run = "pnpm --dir apps/web run dev"
-
-[tasks."gateway:dev"]
-description = "Run Gateway with development reload on port 8000"
-run = "mise run //apps/gateway:dev"
-
-[tasks."docs:dev"]
-description = "Run Docs in development mode on port 3001"
-run = "pnpm --dir apps/docs run dev"
 
 [tasks.build]
-description = "Build applications across the repository"
-depends = ["cli:build", "web:build", "docs:build"]
+description = "Build CLI, Web, and Docs"
+depends = ["//apps/cli:build", "//apps/web:build", "//apps/docs:build"]
 output = "prefix"
-
-[tasks."cli:build"]
-description = "Build the Taskome CLI binary"
-run = "mise run //apps/cli:build"
-
-[tasks."cli:format"]
-description = "Format Taskome CLI Go source"
-run = "mise run //apps/cli:format"
-
-[tasks."cli:run"]
-description = "Run the Taskome CLI from source"
-usage = '''
-arg "[args]..." help="Arguments passed to taskome"
-'''
-run = "go -C apps/cli run ./cmd/taskome $usage_args"
-
-[tasks."web:build"]
-description = "Build Web"
-run = "pnpm --dir apps/web run build"
-
-[tasks."docs:build"]
-description = "Build Docs"
-run = "pnpm --dir apps/docs run build"
-
-[tasks."web:start"]
-description = "Run the production Web server on port 3000"
-run = "pnpm --dir apps/web run start"
-
-[tasks."docs:start"]
-description = "Run the production Docs server on port 3001"
-run = "pnpm --dir apps/docs run start"
-
-[tasks."web:check-types"]
-description = "Type-check Web"
-run = "pnpm --dir apps/web run check-types"
-
-[tasks."docs:check-types"]
-description = "Type-check Docs"
-run = "pnpm --dir apps/docs run check-types"
-
-[tasks."web:test"]
-description = "Run Web tests"
-run = "pnpm --dir apps/web run test"
-
-[tasks."web:test:watch"]
-description = "Run Web tests in watch mode"
-run = "pnpm --dir apps/web run test:watch"
-
-[tasks."web:test:coverage"]
-description = "Run Web tests with coverage"
-run = "pnpm --dir apps/web run test:coverage"
-
-[tasks."web:db:push"]
-description = "Push the Web-owned Drizzle schema"
-run = "pnpm --filter @taskome/db run db:push"
-
-[tasks."web:db:generate"]
-description = "Generate Web-owned Drizzle migrations"
-run = "pnpm --filter @taskome/db run db:generate"
-
-[tasks."web:db:migrate"]
-description = "Apply Web-owned Drizzle migrations"
-run = "pnpm --filter @taskome/db run db:migrate"
-
-[tasks."web:db:studio"]
-description = "Open the Web-owned Drizzle Studio"
-run = "pnpm --filter @taskome/db run db:studio"
-
-[tasks."gateway:start"]
-description = "Run Gateway in production mode on port 8000"
-run = "mise run //apps/gateway:start"
-
-[tasks."gateway:lint"]
-description = "Lint Gateway with safe autofixes"
-run = "mise run //apps/gateway:lint"
-
-[tasks."gateway:format"]
-description = "Format Gateway"
-run = "mise run //apps/gateway:format"
-
-[tasks."gateway:check"]
-description = "Run read-only Gateway checks"
-run = "mise run //apps/gateway:check"
-
-[tasks."gateway:test"]
-description = "Run all Gateway tests"
-run = "mise run //apps/gateway:test"
-
-[tasks."gateway:test:unit"]
-description = "Run Gateway unit tests"
-run = "mise run //apps/gateway:test:unit"
-
-[tasks."gateway:test:integration"]
-description = "Run Gateway integration tests"
-run = "mise run //apps/gateway:test:integration"
-
-[tasks."gateway:db:migrate"]
-description = "Apply Gateway Alembic migrations"
-run = "mise run //apps/gateway:db:migrate"
-
-[tasks."gateway:db:revision"]
-description = "Generate a Gateway Alembic revision"
-run = "mise run //apps/gateway:db:revision"
-
-[tasks."gateway:openapi:export"]
-description = "Export Gateway OpenAPI"
-run = "mise run //apps/gateway:openapi:export"
 
 [tasks."ts:lint"]
 hide = true
@@ -189,75 +79,79 @@ run = "bash scripts/browser-e2e.sh"
 
 [tasks."test:browser-e2e:ui"]
 description = "Run Browser E2E interactively in the Playwright UI"
+hide = true
 run = "bash scripts/browser-e2e.sh --ui"
 
 [tasks."test:browser-e2e:debug"]
 description = "Run Browser E2E headed with the Playwright Inspector"
+hide = true
 run = "bash scripts/browser-e2e.sh --debug"
 
 [tasks."deps:outdated"]
 description = "Report available dependency and tool updates without changing lockfiles"
 run = "bash scripts/deps-outdated.sh"
 
-[tasks."api-client:generate"]
-description = "Refresh generated Gateway clients"
-run = [
-  "mise run gateway:openapi:export",
-  "pnpm --filter @taskome/api-client generate",
-  "mise run //apps/cli:api-client:generate",
-]
+[tasks."openapi:generate"]
+description = "Export Gateway OpenAPI and regenerate the TypeScript and Go clients"
+depends = ["//packages/api-client:generate", "//apps/cli:api-client:generate"]
+output = "prefix"
 
-[tasks."api-client:verify"]
-description = "Regenerate the API client and require no uncommitted generated changes"
-run = [
-  "mise run //:api-client:generate",
-  "git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/generated apps/cli/internal/gateway/generated",
-]
+[tasks."openapi:verify"]
+description = "Regenerate Gateway clients and require all checked-in generated files to be current"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+mise run --force //:openapi:generate
+
+generated_status="$(git status --porcelain --untracked-files=all -- \
+  packages/api-client/openapi.json \
+  packages/api-client/src/generated \
+  apps/cli/internal/gateway/generated)"
+
+if [[ -n "$generated_status" ]]; then
+  printf '%s\n' "Generated Gateway clients are out of date:" "$generated_status"
+  exit 1
+fi
+'''
 
 [tasks.lint]
 description = "Lint the whole repo (TS + Python), safe autofixes"
-depends = ["ts:lint", "gateway:lint", "//apps/task-fpocket:lint", "//packages/task-kit:lint"]
+depends = ["ts:lint", "//apps/gateway:lint", "//apps/task-fpocket:lint", "//packages/task-kit:lint"]
 output = "prefix"
 
 [tasks.format]
-description = "Format the whole repo (TS + Python)"
+description = "Format the whole repo (Go + TS + Python)"
 depends = [
   "ts:format",
-  "gateway:format",
+  "//apps/cli:format",
+  "//apps/gateway:format",
   "//apps/task-fpocket:format",
   "//packages/task-kit:format",
 ]
 output = "prefix"
 
 [tasks.check]
-description = "Read-only check across the whole repo (lint + format + types)"
+description = "Read-only check across the whole repo (Go + TS + Python)"
 depends = [
-  "cli:check",
+  "//apps/cli:check",
   "ts:check",
-  "gateway:check",
+  "//apps/gateway:check",
   "//apps/task-fpocket:check",
   "//packages/task-kit:check",
 ]
 output = "prefix"
 
-[tasks."cli:check"]
-description = "Run read-only Taskome CLI checks"
-run = "mise run //apps/cli:check"
-
 [tasks.test]
 description = "Run tests across the repo"
 depends = [
-  "cli:test",
+  "//apps/cli:test",
   "ts:test",
-  "gateway:test",
+  "//apps/gateway:test",
   "//apps/task-fpocket:test",
   "//packages/task-kit:test",
 ]
 output = "prefix"
-
-[tasks."cli:test"]
-description = "Run Taskome CLI tests"
-run = "mise run //apps/cli:test"
 
 [tasks."dev:up"]
 description = "Start and wait for dev-support services (PostgreSQL, Redis, SeaweedFS, otel-gui)"
@@ -289,6 +183,7 @@ run = "docker compose -f compose.yml -f compose.prod.yml logs -f"
 
 [tasks."worktree:create"]
 description = "Create a feature worktree from origin/main"
+hide = true
 usage = '''
 arg "<type>" help="Branch type: feat, fix, or chore"
 arg "<slug>" help="Lowercase kebab-case feature name"
@@ -297,6 +192,7 @@ run = "bash scripts/create-worktree.sh"
 
 [tasks."worktree:remove"]
 description = "Remove a clean feature worktree and its local branch"
+hide = true
 usage = '''
 arg "<type>" help="Branch type: feat, fix, or chore"
 arg "<slug>" help="Lowercase kebab-case feature name"
@@ -305,6 +201,7 @@ run = "bash scripts/remove-worktree.sh"
 
 [tasks."ref:sync"]
 description = "Sync submodule config and checkout the pinned reference revisions"
+hide = true
 run = [
   "git submodule sync --recursive",
   "git submodule update --init --recursive --recommend-shallow",
@@ -312,8 +209,10 @@ run = [
 
 [tasks."ref:status"]
 description = "Show the current reference submodule revisions"
+hide = true
 run = "git submodule status --recursive"
 
 [tasks."ref:reset"]
 description = "Discard all local changes in reference submodules, restoring them to read-only pinned state"
+hide = true
 run = "git submodule foreach --recursive 'git clean -fdx && git checkout -- .'"
