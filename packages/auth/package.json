@@ -11,9 +11,9 @@
   },
   "scripts": {},
   "dependencies": {
-    "@better-auth/api-key": "1.6.26",
-    "@better-auth/i18n": "1.6.26",
-    "@better-auth/oauth-provider": "^1.6.26",
+    "@better-auth/api-key": "1.6.27",
+    "@better-auth/i18n": "1.6.27",
+    "@better-auth/oauth-provider": "^1.6.27",
     "@taskome/db": "workspace:*",
     "@taskome/env": "workspace:*",
     "better-auth": "catalog:",
