@@ -175,7 +175,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["python", "-m", "scripts.database", "migrate"]
+    command: ["alembic", "upgrade", "head"]
     security_opt:
       - no-new-privileges:true
     cap_drop:

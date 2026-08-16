@@ -34,7 +34,7 @@ apps/gateway/tests/
     └── api/test_input_file_api.py
 ```
 
-No `@pytest.mark.unit`/`integration` markers — the directory split already does the selection. The database fixture is a session-scoped Postgres testcontainer with the schema built by running real `alembic upgrade head` (not `metadata.create_all`); test isolation is transaction rollback, not truncate or per-test containers. Running the real migration is slower than building the schema directly from models, but `create_all` can't catch a broken or missing migration — the trade-off is deliberate: these tests are also the thing that would notice a migration bug before production does.
+No `@pytest.mark.unit`/`integration` markers — the directory split already does the selection. The database fixture is a session-scoped Postgres testcontainer with the schema built by Alembic's real `command.upgrade(..., "head")` path (not `metadata.create_all`); test isolation is transaction rollback, not truncate or per-test containers. Running the real migration is slower than building the schema directly from models, but `create_all` can't catch a broken or missing migration — the trade-off is deliberate: these tests are also the thing that would notice a migration bug before production does.
 
 ### `packages/task-kit` and `apps/task-*` (pytest)
 

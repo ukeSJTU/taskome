@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import os
+
 from alembic import context
 from gateway.db.base import GATEWAY_SCHEMA
 from gateway.models import metadata
 from sqlalchemy import engine_from_config, pool, text
 
 config = context.config
+database_url = os.environ.get("DATABASE_URL")
+if database_url is None:
+    raise RuntimeError("DATABASE_URL is required to run Gateway migrations")  # noqa: TRY003, EM101
+config.set_main_option("sqlalchemy.url", database_url)
 target_metadata = metadata
 
 

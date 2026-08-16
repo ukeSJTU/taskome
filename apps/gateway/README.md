@@ -98,17 +98,22 @@ mise run //apps/gateway:test
 mise run //apps/gateway:check
 ```
 
-Start the supporting PostgreSQL service with `mise run dev:up`, change a model, then
-generate a reviewed revision with `mise run //apps/gateway:db:revision`; it uses a
-disposable PostgreSQL 18 container and creates no revision when metadata matches the
-existing head. Apply revisions with `mise run //apps/gateway:db:migrate` — this is
-the only path that builds the schema, in development, tests, and production alike
-(see `docs/engineering/testing.md` for why tests run this same path instead of `metadata.create_all`); the production Compose stack runs `db:migrate` once before Gateway
-starts. Native development uses `localhost` in the URL; containers use the `postgres`
-host. Liveness is process-only; readiness checks Postgres and Redis concurrently
-and returns a separate `ok` or `error` result for each. SeaweedFS and JWKS are
-intentionally excluded because a transient downstream failure should fail only
-the affected request, not pull the Gateway out of rotation.
+Start the supporting PostgreSQL service with `mise run dev:up`, then apply checked-in
+revisions with `mise run //apps/gateway:db:migrate`. After a model change, generate
+one reviewed candidate with `mise run //apps/gateway:db:revision "describe change"`
+then apply it with `mise run //apps/gateway:db:migrate` before running `mise run
+//apps/gateway:db:check`. Alembic reads the Gateway `DATABASE_URL` from the local
+`.env`; the `mise` tasks load that file before running native Alembic commands. See
+the [full development, CI, and production
+workflow](../../docs/engineering/local-development.md#gateway-migration-workflow).
+
+The production Compose stack runs `alembic upgrade head` once before Gateway starts;
+it is the only production database-changing command. Native development uses
+`localhost` in the URL; containers use the `postgres` host. Liveness is process-only;
+readiness checks Postgres and Redis concurrently and returns a separate `ok` or
+`error` result for each. SeaweedFS and JWKS are intentionally excluded because a
+transient downstream failure should fail only the affected request, not pull the
+Gateway out of rotation.
 
 The source tree separates transport (`api`), operational concerns (`core`),
 contracts (`schemas`), persistence (`models` and `repositories`), and business

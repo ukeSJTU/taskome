@@ -36,8 +36,15 @@ run = "uv run python scripts/export_openapi.py"
 
 [tasks."db:migrate"]
 description = "Upgrade the Gateway schema through checked-in Alembic revisions"
-run = "uv run python -m scripts.database migrate"
+run = "set -a && . .env && set +a && uv run alembic upgrade head"
 
 [tasks."db:revision"]
-description = "Generate a reviewed Gateway Alembic revision in disposable PostgreSQL"
-run = "uv run python -m scripts.database revision"
+description = "Generate a reviewed Gateway Alembic revision from the local schema"
+usage = '''
+arg "<message>" help="Migration description"
+'''
+run = "set -a && . .env && set +a && uv run alembic revision --autogenerate -m \"$usage_message\""
+
+[tasks."db:check"]
+description = "Check whether Gateway models require a new Alembic revision"
+run = "set -a && . .env && set +a && uv run alembic check"
