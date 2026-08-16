@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "taskome-gateway": {
+      "type": "streamable-http",
+      "url": "http://localhost:8000/mcp",
+      "protocolEra": "modern"
+    }
+  }
+}
