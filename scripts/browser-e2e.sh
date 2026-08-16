@@ -24,5 +24,5 @@ trap cleanup EXIT INT TERM
 docker compose -p "$project" -f infra/e2e/compose.yml up -d --wait
 pnpm --filter @taskome/db db:migrate
 export DATABASE_URL="postgresql+psycopg://postgres:e2e-password@127.0.0.1:$postgres_port/taskome"
-(cd apps/gateway && PYTHONPATH=. uv run python -m scripts.database migrate)
+(cd apps/gateway && uv run alembic upgrade head)
 pnpm --dir apps/web exec playwright test "$@"

@@ -32,6 +32,41 @@ mise run //apps/gateway:db:migrate
 
 Gateway owns its schema through Alembic migrations — there's no `db:push`/`create_all` shortcut (see the ADR governing Gateway schema management once it's written).
 
+### Gateway migration workflow
+
+Alembic receives its connection URL from `DATABASE_URL`. Gateway's `mise` database
+tasks load `apps/gateway/.env` and execute native Alembic commands; use `mise run
+setup` before them so that local file exists.
+
+**Development:** Apply shared revisions with `mise run //apps/gateway:db:migrate`.
+Once a model change is ready to test and review, first ensure the local database is at
+head, then generate a candidate migration:
+
+```bash
+mise run //apps/gateway:db:migrate
+mise run //apps/gateway:db:revision "add job priority"
+mise run //apps/gateway:db:migrate
+mise run //apps/gateway:db:check
+```
+
+`db:revision` does not apply migrations itself, so `db:migrate` must run again before
+`db:check`. Review generated operations and amend them for renames, data backfills,
+non-null constraints, indexing, or destructive changes. A migration that only exists
+on a feature branch can be rewritten; after rewriting it, rebuild the local `gateway`
+schema and run `db:migrate` from empty to verify the complete history. A migration
+merged into `main` is immutable.
+
+**CI:** Integration tests create an isolated Postgres database, upgrade it through
+the checked-in Alembic history, and run `alembic check`. A model change without a
+matching migration therefore fails before merge.
+
+**Production:** The one-shot `gateway-migrate` Compose service runs `alembic upgrade
+head` after Postgres is healthy. Gateway waits for that service to complete
+successfully. Production never runs `revision` or `check`; it consumes reviewed,
+checked-in migrations only. For deployed data, make incompatible changes in expand →
+compatible deploy → backfill → contract stages unless an explicit maintenance window
+has been chosen.
+
 ## 4. Run the apps
 
 ```bash
@@ -96,7 +131,7 @@ See [`docs/engineering/testing.md`](./testing.md) for per-area test commands and
 | Task                                                           | What it does                                |
 | -------------------------------------------------------------- | ------------------------------------------- |
 | `mise run //packages/db:push \| generate \| migrate \| studio` | Operate on the Web-owned Drizzle schema     |
-| `mise run //apps/gateway:db:migrate \| revision`               | Operate on the Gateway-owned Alembic schema |
+| `mise run //apps/gateway:db:migrate \| revision \| check`      | Operate on the Gateway-owned Alembic schema |
 
 ### API client
 

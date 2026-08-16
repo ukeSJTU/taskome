@@ -157,7 +157,7 @@ implementation details. Run `mise tasks` for the small root command surface or
 - `mise run build`: build CLI, Web, and Docs
 - `mise run lint`, `mise run format`, `mise run check`, `mise run test`: repository-wide quality tasks
 - `mise run //packages/db:push|generate|migrate|studio`: operate on the Web-owned Drizzle schema
-- `mise run //apps/gateway:db:migrate|revision`: operate on the Gateway-owned Alembic schema
+- `mise run //apps/gateway:db:migrate|revision|check`: operate on the Gateway-owned Alembic schema
 - `mise run openapi:generate`, `mise run openapi:verify`: update or verify Gateway OpenAPI plus its TypeScript and Go clients
 - `mise run deps:outdated`: report Node, Python, GitHub Action, and mise tool updates without changing lockfiles
 - `mise run prod:build|up|down|logs`: operate on the production-shaped Compose stack

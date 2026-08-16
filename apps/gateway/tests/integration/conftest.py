@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from gateway.db.database import Database
 from gateway.models import metadata
-from scripts.database import migrate
 from testcontainers.postgres import PostgresContainer
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+GATEWAY_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="session")
@@ -22,7 +26,9 @@ def postgres_url() -> Iterator[str]:
         database_url = postgres.get_connection_url().replace(
             "postgresql+psycopg2", "postgresql+psycopg"
         )
-        migrate(database_url)
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setenv("DATABASE_URL", database_url)
+            command.upgrade(Config(str(GATEWAY_ROOT / "alembic.ini")), "head")
         yield database_url
 
 
