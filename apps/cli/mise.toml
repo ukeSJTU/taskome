@@ -7,7 +7,7 @@ description = "Run the Taskome CLI from source"
 usage = '''
 arg "[args]..." help="Arguments passed to taskome"
 '''
-run = "go run ./cmd/taskome $usage_args"
+run = "TASKOME_CONFIG_FILE=config/development.yaml go run ./cmd/taskome $usage_args"
 
 [tasks.format]
 description = "Format Taskome CLI Go source"

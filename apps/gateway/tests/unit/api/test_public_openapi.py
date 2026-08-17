@@ -39,11 +39,12 @@ def test_public_openapi_projects_only_direct_api_client_operations(
     }
     assert schema["servers"] == [{"url": "https://api.taskome.test/v1"}]
     assert schema["components"]["securitySchemes"] == {
-        "APIKeyHeader": {"in": "header", "name": "X-API-Key", "type": "apiKey"}
+        "BearerAuth": {"scheme": "bearer", "type": "http"},
+        "APIKeyHeader": {"in": "header", "name": "X-API-Key", "type": "apiKey"},
     }
     for path_item in schema["paths"].values():
         for operation in path_item.values():
-            assert operation["security"] == [{"APIKeyHeader": []}]
+            assert operation["security"] == [{"BearerAuth": []}, {"APIKeyHeader": []}]
 
 
 def test_public_openapi_is_cached_and_never_enables_cors(

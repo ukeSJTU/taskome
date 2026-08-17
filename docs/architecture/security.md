@@ -20,8 +20,6 @@ Web signs both session JWTs and OAuth access tokens using better-auth's `jwt` pl
 
 OAuth supports `authorization_code` with S256 PKCE for every public client. MCP Agents continue to use rate-limited dynamic registration; the official CLI is one server-seeded public client and uses a loopback callback. CLI login additionally requests `offline_access` and uses refresh-token rotation. Device Authorization Grant is deliberately deferred. See [ADR-0009](../adr/0009-cli-oauth-login-and-api-key-automation.md).
 
-> **Status note (delete once built):** CLI REST OAuth is the accepted target of ADR-0009, not a live credential path yet. Today Gateway REST accepts a Web session JWT or a Personal API Key; Gateway's OAuth verifier remains MCP-only.
-
 ### Personal API Key verification
 
 Gateway doesn't verify Personal API Keys itself — it POSTs the raw key to a narrow internal endpoint on Web, HMAC-signing the request (a shared secret plus a timestamp, checked against a 300-second max age with a constant-time comparison) so the call can't be replayed or spoofed. Web looks the key up through better-auth and returns whether it's active and which user it belongs to.

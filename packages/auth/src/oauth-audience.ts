@@ -1,5 +1,7 @@
 import type { BetterAuthPlugin } from "better-auth";
 
+import { taskomeCLIClientID } from "./mcp-oauth";
+
 const OAUTH_TOKEN_PATH = "/oauth2/token";
 
 /**
@@ -7,7 +9,7 @@ const OAUTH_TOKEN_PATH = "/oauth2/token";
  * present. Keep that implementation detail inside the auth package so OAuth
  * clients do not need to opt into RFC 8707 resource binding themselves.
  */
-export function oauthGatewayAudience(audience: string): BetterAuthPlugin {
+export function oauthGatewayAudience(mcpResource: string, restResource: string): BetterAuthPlugin {
   return {
     id: "oauth-gateway-audience",
     onRequest: async (request) => {
@@ -21,7 +23,10 @@ export function oauthGatewayAudience(audience: string): BetterAuthPlugin {
       }
 
       const body = new URLSearchParams(await request.clone().text());
-      body.set("resource", audience);
+      body.set(
+        "resource",
+        body.get("client_id") === taskomeCLIClientID ? restResource : mcpResource,
+      );
       const headers = new Headers(request.headers);
       headers.delete("content-length");
       return { request: new Request(request.url, { body, headers, method: "POST" }) };

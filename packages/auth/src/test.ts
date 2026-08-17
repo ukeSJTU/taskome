@@ -29,8 +29,8 @@ export function createTestAuth() {
     plugins: [
       personalApiKeyPlugin(),
       jwt({ jwt: { audience: "http://localhost:8000/v1" } }),
-      mcpOAuthProvider("http://localhost:8000/mcp"),
-      oauthGatewayAudience("http://localhost:8000/mcp"),
+      mcpOAuthProvider("http://localhost:8000/mcp", "http://localhost:8000/v1"),
+      oauthGatewayAudience("http://localhost:8000/mcp", "http://localhost:8000/v1"),
       twoFactor({ issuer: "taskome" }),
       authI18nPlugin(),
       testUtils({ captureOTP: true }),

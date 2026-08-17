@@ -4,18 +4,18 @@
 
 ## Web's schema (Drizzle-managed, auth only)
 
-| Table                                       | Purpose                                                                                                                     |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `user`                                      | Core user identity                                                                                                          |
-| `session`                                   | Active login sessions                                                                                                       |
-| `account`                                   | Linked credential/OAuth provider accounts                                                                                   |
-| `verification`                              | Email/OTP verification tokens                                                                                               |
-| `apikey`                                    | Personal API Keys                                                                                                           |
-| `jwks`                                      | JWT signing keypairs                                                                                                        |
-| `oauth_client`                              | OAuth clients Web issues as an OAuth provider (MCP Agents register dynamically; ADR-0009 adds a seeded official CLI client) |
-| `oauth_refresh_token`, `oauth_access_token` | OAuth tokens for MCP; ADR-0009 extends them to the interactive CLI                                                          |
-| `oauth_consent`                             | User consent grants per OAuth client                                                                                        |
-| `two_factor`                                | TOTP secrets and backup codes                                                                                               |
+| Table                                       | Purpose                                                                                                                    |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `user`                                      | Core user identity                                                                                                         |
+| `session`                                   | Active login sessions                                                                                                      |
+| `account`                                   | Linked credential/OAuth provider accounts                                                                                  |
+| `verification`                              | Email/OTP verification tokens                                                                                              |
+| `apikey`                                    | Personal API Keys                                                                                                          |
+| `jwks`                                      | JWT signing keypairs                                                                                                       |
+| `oauth_client`                              | OAuth clients Web issues as an OAuth provider (MCP Agents register dynamically; `taskome-cli` is a seeded official client) |
+| `oauth_refresh_token`, `oauth_access_token` | OAuth tokens for MCP Agents and the interactive CLI                                                                        |
+| `oauth_consent`                             | User consent grants per OAuth client                                                                                       |
+| `two_factor`                                | TOTP secrets and backup codes                                                                                              |
 
 Every foreign key here is intra-schema. Web owns all of it, and nothing outside Web queries these tables directly.
 

@@ -18,8 +18,10 @@ from gateway.api.v1.router import router as api_v1_router
 from gateway.core.auth import (
     ManagedJWTVerifier,
     MCPPrincipalVerifier,
+    RESTPrincipalVerifier,
     create_mcp_auth_provider,
     create_mcp_token_verifier,
+    create_rest_auth_provider,
     create_rest_token_verifier,
 )
 from gateway.core.config import Environment, Settings
@@ -52,7 +54,7 @@ if TYPE_CHECKING:
     from redis.asyncio import Redis
 
 
-def create_app(  # noqa: PLR0913
+def create_app(  # noqa: PLR0913, PLR0915
     settings: Settings | None = None,
     *,
     database: Database | None = None,
@@ -97,6 +99,7 @@ def create_app(  # noqa: PLR0913
         if mcp_token_verifier is not None
         else create_mcp_token_verifier(app_settings)
     )
+    rest_auth_provider = create_rest_auth_provider(app_settings, rest_verifier)
     mcp_auth_provider = create_mcp_auth_provider(app_settings, mcp_verifier)
     api_key_verifier = personal_api_key_verifier or WebPersonalApiKeyVerifier(
         url=app_settings.personal_api_key_verification_url,
@@ -162,18 +165,21 @@ def create_app(  # noqa: PLR0913
     application.state.mcp = mcp_server
     application.state.span_exporter = span_exporter
     application.state.log_exporter = log_exporter
+    rest_managed_verifiers = (
+        (rest_verifier.session_verifier, rest_verifier.oauth_verifier)
+        if isinstance(rest_verifier, RESTPrincipalVerifier)
+        else (rest_verifier,)
+    )
     application.state.managed_token_verifiers = tuple(
         verifier
-        for verifier in (
-            rest_verifier,
-            mcp_verifier.token_verifier,
-        )
+        for verifier in (*rest_managed_verifiers, mcp_verifier.token_verifier)
         if isinstance(verifier, ManagedJWTVerifier)
     )
     register_error_handlers(application)
     application.include_router(health_router)
     application.include_router(api_v1_router)
     application.include_router(internal_router)
+    application.router.routes.extend(rest_auth_provider.get_routes("/v1"))
     application.router.routes.extend(mcp_auth_provider.get_routes("/mcp"))
 
     @application.get("/internal/openapi.json", include_in_schema=False)

@@ -47,14 +47,15 @@ SeaweedFS URLs, with the upload tool also returning a new Input File id; callers
 transfer bytes directly to or from SeaweedFS. The REST equivalent is
 `POST /v1/input-files`, with presigned download and delete endpoints under
 `/v1/input-files/{id}`. REST accepts Web BFF session JWTs bound to the public
-`/v1` resource; MCP accepts OAuth access tokens bound to the public `/mcp`
-resource. `GET /v1/me` reports the normalized Principal identity for REST calls.
+`/v1` resource; the official CLI's OAuth access tokens are also bound to `/v1`.
+MCP accepts OAuth access tokens bound to the public `/mcp` resource. Personal
+API Keys remain an alternative REST credential for Direct API Clients and CLI
+automation. `GET /v1/me` reports the normalized Principal identity for REST calls.
 
-> **Status note (delete once built):** [ADR-0009](../../docs/adr/0009-cli-oauth-login-and-api-key-automation.md) adds OAuth access tokens bound to `/v1` for the interactive CLI. Until then, REST accepts session JWTs and Personal API Keys; OAuth remains MCP-only.
-
-MCP clients discover the protected resource at
-`/.well-known/oauth-protected-resource/mcp`; its metadata points to Web's public
-Better Auth issuer. Better Auth 1.6.26 cannot yet onboard clients through Client ID
+REST and MCP clients discover their protected resources at
+`/.well-known/oauth-protected-resource/v1` and
+`/.well-known/oauth-protected-resource/mcp`; their metadata points to Web's public
+Better Auth issuer. Better Auth 1.6.26 cannot yet onboard MCP clients through Client ID
 Metadata Documents, so Taskome temporarily exposes unauthenticated Dynamic Client
 Registration as a compatibility fallback. It creates only public authorization-code
 clients with the `taskome` scope. Login, explicit consent, exact redirect matching,
@@ -86,14 +87,15 @@ Gateway owns only the `gateway` schema; Web/Auth's Drizzle-managed tables remain
 client uses explicit two-second connect and I/O timeouts.
 
 At the production edge, Caddy sends only `/v1`, `/mcp`, and
-`/.well-known/oauth-protected-resource/mcp` to Gateway. Development docs, health,
+`/.well-known/oauth-protected-resource/{v1,mcp}` to Gateway. Development docs, health,
 auth, and `/internal` operations remain reachable only inside the deployment;
 Web and Gateway publish no host ports, so Caddy is their sole public entry point.
 OpenTelemetry keeps its standard `OTEL_*` names; setting
 `OTEL_EXPORTER_OTLP_ENDPOINT` enables OTLP/HTTP traces and logs. See
 `.env.example` for the local template.
 
-ADR-0009 adds REST protected-resource metadata alongside the MCP metadata so the CLI can discover Web's OAuth authorization server from its configured Gateway URL.
+The interactive CLI discovers Web's OAuth authorization server from REST
+protected-resource metadata, so `gateway_url` is its only endpoint setting.
 
 ## Development checks
 

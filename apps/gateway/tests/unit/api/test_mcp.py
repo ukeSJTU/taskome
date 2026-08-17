@@ -207,6 +207,24 @@ def test_mcp_publishes_protected_resource_metadata(
     }
 
 
+def test_rest_publishes_protected_resource_metadata(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app(Settings(app_environment=Environment.TEST))
+
+    with TestClient(app) as client:
+        response = client.get("/.well-known/oauth-protected-resource/v1")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "authorization_servers": ["http://localhost:3000/api/auth"],
+        "bearer_methods_supported": ["header"],
+        "resource": "http://localhost:8000/v1",
+        "resource_name": "Taskome REST API",
+        "scopes_supported": ["taskome"],
+    }
+
+
 def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:
     class FakeInputFileService:
         async def mint_upload_url(

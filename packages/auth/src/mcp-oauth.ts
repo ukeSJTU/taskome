@@ -1,9 +1,12 @@
 import { oauthProvider } from "@better-auth/oauth-provider";
 
-export function mcpOAuthProvider(mcpResource: string) {
+export const taskomeCLIClientID = "taskome-cli";
+export const taskomeCLIRedirectURI = "http://127.0.0.1/callback";
+
+export function mcpOAuthProvider(mcpResource: string, restResource: string) {
   return oauthProvider({
-    scopes: ["openid", "profile", "email", "taskome"],
-    validAudiences: [mcpResource],
+    scopes: ["openid", "profile", "email", "offline_access", "taskome"],
+    validAudiences: [mcpResource, restResource],
     disableJwtPlugin: false,
     loginPage: "/login",
     consentPage: "/oauth/consent",
@@ -11,7 +14,7 @@ export function mcpOAuthProvider(mcpResource: string) {
     allowUnauthenticatedClientRegistration: true,
     clientRegistrationDefaultScopes: ["taskome"],
     clientRegistrationAllowedScopes: ["taskome"],
-    grantTypes: ["authorization_code"],
+    grantTypes: ["authorization_code", "refresh_token"],
     rateLimit: { register: { max: 5, window: 60 } },
   });
 }

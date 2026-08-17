@@ -38,8 +38,8 @@ export function createAuth() {
     plugins: [
       personalApiKeyPlugin(),
       jwt({ jwt: { audience: gatewayRESTResource } }),
-      mcpOAuthProvider(gatewayMCPResource),
-      oauthGatewayAudience(gatewayMCPResource),
+      mcpOAuthProvider(gatewayMCPResource, gatewayRESTResource),
+      oauthGatewayAudience(gatewayMCPResource, gatewayRESTResource),
       twoFactor({ issuer: "taskome" }),
       authI18nPlugin(),
       nextCookies(),
