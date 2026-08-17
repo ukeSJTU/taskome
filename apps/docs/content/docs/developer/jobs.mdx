@@ -1,0 +1,10 @@
+---
+title: Jobs
+description: Submit one Task invocation and observe its asynchronous outcome.
+---
+
+A Job invokes one registered Task with one complete `params` object. Create one with `POST /v1/jobs`; Taskome responds with `202 Accepted` after the Job is durably queued.
+
+Read a specific Job with `GET /v1/jobs/{job_id}` or list your Jobs with `GET /v1/jobs`. The list is newest first and supports `status`, `task_name`, `limit`, and `offset`; `limit` is capped at 100.
+
+Poll the returned Job until it reaches `completed` or `failed`. Its response contains the frozen parameters, result when available, and error detail when processing fails.

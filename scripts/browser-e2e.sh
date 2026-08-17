@@ -9,9 +9,9 @@ logs_dir="${E2E_LOG_DIR:-$root/apps/web/test-results/services-$run_id}"
 mkdir -p "$logs_dir"
 
 pick_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()'; }
-postgres_port="$(pick_port)"; redis_port="$(pick_port)"; seaweed_port="$(pick_port)"; web_port="$(pick_port)"; gateway_port="$(pick_port)"
+postgres_port="$(pick_port)"; redis_port="$(pick_port)"; seaweed_port="$(pick_port)"; web_port="$(pick_port)"; gateway_port="$(pick_port)"; docs_port="$(pick_port)"
 export E2E_POSTGRES_PORT="$postgres_port" E2E_REDIS_PORT="$redis_port" E2E_SEAWEED_PORT="$seaweed_port"
-export E2E_WEB_URL="http://localhost:$web_port" E2E_GATEWAY_URL="http://127.0.0.1:$gateway_port"
+export E2E_WEB_URL="http://localhost:$web_port" E2E_GATEWAY_URL="http://127.0.0.1:$gateway_port" E2E_DOCS_URL="http://127.0.0.1:$docs_port"
 export E2E_DISABLE_AUTH_RATE_LIMIT=true
 export DATABASE_URL="postgresql://postgres:e2e-password@127.0.0.1:$postgres_port/taskome"
 web_database_url="$DATABASE_URL"

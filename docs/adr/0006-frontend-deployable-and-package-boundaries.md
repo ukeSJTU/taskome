@@ -32,13 +32,15 @@ Chosen option: "Group by shared technology and tooling needs, not audience", bec
 The Web app has two structurally enforced document trees:
 
 - `(localized)/[locale]` contains all public pages and logged-out identity flows: login, signup, OAuth consent, two-factor verification, and two-factor settings. It supports `zh-CN` and `en` with `next-intl`. Chinese is the default and has unprefixed public URLs; English uses `/en`. Browser and remembered-language detection may redirect an unprefixed request to English. Slugs are shared between languages.
-- `(application)` contains the authenticated dashboard, account, and API documentation. It is English-only and always unprefixed.
+- `(application)` contains the authenticated dashboard and account surfaces. It is English-only and always unprefixed.
 
 The two trees use separate root layouts so the initial HTML has an accurate `lang` attribute without making the statically generated public site request-dependent. Crossing the identity boundary performs a full document navigation, which is acceptable because it also resets authentication-related client state. An explicit proxy allowlist prevents locale negotiation from claiming application or API routes.
 
 Public metadata, canonical URLs, language alternates, and the sitemap share the same routing contract. The production origin comes from `WEB_PUBLIC_URL`. Private identity and application pages are `noindex`. Better Auth localizes API errors from the current document locale (then the shared locale cookie and browser language), while stable machine error codes remain available to clients. Message catalogs are maintained by hand and checked for key parity and valid ICU syntax. Legal and privacy translations ship with an English-controls notice until professional review.
 
 `@taskome/ui` is consumed as raw source by both `apps/web` and `apps/docs` — no build or publish step — because every consumer is a sibling in the same monorepo; `apps/docs` takes only its theme tokens, not full components, keeping Fumadocs' own UI independent of the product's component library.
+
+Developer-facing REST documentation is a public, static surface of `apps/docs`, not an authenticated product route. Gateway supplies two intentionally distinct OpenAPI views: its complete live schema and development-only Scalar reference for Taskome engineers, and a checked-in public `/v1` projection for Direct API Clients. The static Docs deployment serves that reviewed projection at `/openapi.json` and renders its read-only reference at `/docs/api`; it has no runtime Gateway dependency, proxy, or credential handling.
 
 ### Consequences
 

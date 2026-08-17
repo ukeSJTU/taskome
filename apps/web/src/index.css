@@ -1,6 +1,5 @@
-@layer theme, base, scalar-theme, components, utilities;
+@layer theme, base, components, utilities;
 @import "@taskome/ui/globals.css";
-@import "@scalar/api-reference-react/style.css" layer(scalar-theme);
 
 /*
  * Public-site design world (XDeNovo corporate site, `(public)` route group).
