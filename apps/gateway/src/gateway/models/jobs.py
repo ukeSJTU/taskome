@@ -50,3 +50,4 @@ class Job(Base):
         onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

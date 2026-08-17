@@ -42,9 +42,9 @@ from gateway.repositories.input_files import InputFileRepository
 from gateway.repositories.jobs import JobRepository
 from gateway.schemas.problem import ProblemDetails
 from gateway.services.input_files import InputFileService
-from gateway.services.jobs import JobService
+from gateway.services.job_queue import TaskiqJobQueue
+from gateway.services.jobs import JobQueuePort, JobService
 from gateway.services.storage import SeaweedFSStorage
-from gateway.services.task_dispatch import TaskDispatcher
 
 if TYPE_CHECKING:
     from fastapi.responses import HTMLResponse
@@ -66,6 +66,7 @@ def create_app(  # noqa: PLR0913, PLR0915
     storage: SeaweedFSStorage | None = None,
     personal_api_key_verifier: PersonalApiKeyVerifier | None = None,
     dispatch_http_client: httpx.AsyncClient | None = None,
+    job_queue: JobQueuePort | None = None,
 ) -> FastAPI:
     """Assemble an app whose external resources are allocated by lifespan.
 
@@ -122,15 +123,17 @@ def create_app(  # noqa: PLR0913, PLR0915
     dispatch_client = dispatch_http_client or httpx.AsyncClient(
         timeout=httpx.Timeout(30, connect=5)
     )
+    queue = job_queue or TaskiqJobQueue(app_settings.redis_url.get_secret_value())
     job_service = JobService(
         repository=JobRepository(app_database),
         input_files=InputFileRepository(app_database),
-        dispatcher=TaskDispatcher(app_settings.task_servers, dispatch_client),
+        queue=queue,
         manifests={},
     )
     mcp_server = create_mcp_server(
         app_settings,
         input_file_service,
+        job_service=job_service,
         auth_provider=mcp_auth_provider,
     )
     mcp_protocol_app = mcp_server.http_app(path="/")
@@ -158,6 +161,7 @@ def create_app(  # noqa: PLR0913, PLR0915
     application.state.owned_input_file_service = input_file_service
     application.state.job_service = job_service
     application.state.owned_job_service = job_service
+    application.state.job_queue = queue
     application.state.dispatch_http_client = dispatch_client
     application.state.rest_token_verifier = rest_verifier
     application.state.personal_api_key_verifier = api_key_verifier

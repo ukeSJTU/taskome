@@ -12,7 +12,6 @@ from pydantic import PrivateAttr
 
 from gateway.core.auth import current_mcp_principal
 from gateway.core.config import Environment
-from gateway.models.jobs import JobStatus
 from gateway.schemas.input_files import (  # noqa: TC001 - FastMCP resolves annotations at runtime.
     InputFileSize,
     OriginalFilename,
@@ -20,6 +19,7 @@ from gateway.schemas.input_files import (  # noqa: TC001 - FastMCP resolves anno
 from gateway.services.jobs import (
     InvalidJobParamsError,
     JobInputFileNotFoundError,
+    JobNotFoundError,
     TaskNotFoundError,
 )
 
@@ -46,7 +46,7 @@ class MCPInputFileService(Protocol):
 
 
 class MCPJobService(Protocol):
-    async def submit_job_and_wait(
+    async def submit_job(
         self,
         owner_user_id: str,
         task_server_name: str,
@@ -54,11 +54,18 @@ class MCPJobService(Protocol):
         params: dict[str, Any],
     ) -> JobRecord: ...
 
+    async def get_job(self, owner_user_id: str, job_id: UUID) -> JobRecord: ...
+
+    async def wait_job(
+        self, owner_user_id: str, job_id: UUID, timeout_seconds: int
+    ) -> JobRecord: ...
+
 
 def create_mcp_server(
     settings: Settings,
     service: MCPInputFileService,
     *,
+    job_service: MCPJobService,
     auth_provider: AuthProvider,
 ) -> FastMCP:
     """Register the Gateway's curated MCP tools and authentication provider."""
@@ -94,6 +101,27 @@ def create_mcp_server(
             "expires_at": result.expires_at.isoformat(),
         }
 
+    @server.tool(name="get_job")
+    async def get_job(job_id: UUID) -> dict[str, Any]:
+        """Return the current state and terminal outcome of one owned Job."""
+
+        try:
+            record = await job_service.get_job(current_mcp_principal().user_id, job_id)
+        except JobNotFoundError:
+            return {"error": "Job not found."}
+        return _job_status(record)
+
+    @server.tool(name="wait_job")
+    async def wait_job(job_id: UUID, timeout_seconds: int = 60) -> dict[str, Any]:
+        """Wait at most five minutes, always returning the Job's latest state."""
+
+        timeout = min(max(timeout_seconds, 1), 300)
+        try:
+            record = await job_service.wait_job(current_mcp_principal().user_id, job_id, timeout)
+        except JobNotFoundError:
+            return {"error": "Job not found."}
+        return _job_status(record)
+
     return server
 
 
@@ -109,15 +137,15 @@ class _JobTaskTool(Tool):
         handler: Callable[[dict[str, Any]], Awaitable[ToolResult]],
     ) -> None:
         super().__init__(
-            name=manifest.task_name,
+            name=f"submit_{manifest.task_name}",
             description=manifest.description,
             parameters=manifest.params_schema,
             output_schema={
                 "type": "object",
-                "required": ["value", "outputs"],
+                "required": ["job_id", "status"],
                 "properties": {
-                    "value": manifest.result_schema,
-                    "outputs": {"type": "array"},
+                    "job_id": {"type": "string", "format": "uuid"},
+                    "status": {"const": "queued"},
                 },
                 "additionalProperties": False,
             },
@@ -138,10 +166,10 @@ def _task_handler(
     task_name: str,
 ) -> Callable[[dict[str, Any]], Awaitable[ToolResult]]:
     async def call_task(arguments: dict[str, Any]) -> ToolResult:
-        """Submit and block on one Job, mirroring calling the Task Server's own MCP tool."""
+        """Submit one Job and return its queued identifier immediately."""
         principal = current_mcp_principal()
         try:
-            record = await job_service.submit_job_and_wait(
+            record = await job_service.submit_job(
                 principal.user_id, task_server_name, task_name, arguments
             )
         except TaskNotFoundError:
@@ -150,13 +178,7 @@ def _task_handler(
             return _mcp_error("invalid_input", str(error))
         except JobInputFileNotFoundError as error:
             return _mcp_error("input_file_not_found", str(error))
-        if record.status is JobStatus.FAILED:
-            detail = record.error_detail or {}
-            return _mcp_error(
-                str(detail.get("error_type", "compute_failed")),
-                str(detail.get("detail", "Task execution failed.")),
-            )
-        envelope = record.result or {}
+        envelope = {"job_id": str(record.id), "status": record.status.value}
         return ToolResult(
             content=json.dumps(envelope, separators=(",", ":")),
             structured_content=envelope,
@@ -170,15 +192,7 @@ def register_task_tools(
     job_service: MCPJobService,
     manifests: TaskManifestRegistry,
 ) -> None:
-    """Register one MCP tool per known Task, named for the Task itself.
-
-    Called once during lifespan startup, after the Task manifest registry is fetched
-    -- a Task Server's Tasks become callable through Gateway's MCP surface only once
-    its manifest has been discovered. Each tool call blocks until the Job it creates
-    reaches a terminal state, mirroring calling the Task Server's own MCP tool
-    directly -- an MCP caller expects one call to return the actual result, not a
-    Job id to poll.
-    """
+    """Register one non-blocking MCP submit tool per discovered Task."""
 
     for server_name, tasks in manifests.items():
         for task_name, manifest in tasks.items():
@@ -188,3 +202,12 @@ def register_task_tools(
                     handler=_task_handler(job_service, server_name, task_name),
                 )
             )
+
+
+def _job_status(record: JobRecord) -> dict[str, Any]:
+    return {
+        "job_id": str(record.id),
+        "status": record.status.value,
+        "result": record.result,
+        "error_detail": record.error_detail,
+    }

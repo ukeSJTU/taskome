@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Generic, Mapping, Protocol, TypeVar
 from uuid import UUID
@@ -25,6 +25,9 @@ class InputFileId(RootModel[UUID]):
 
 ParamsT = TypeVar("ParamsT", bound=BaseModel)
 ResultT = TypeVar("ResultT", bound=BaseModel)
+_CPU_REQUIREMENT_ERROR = "Task CPU requirement must be positive"
+_GPU_REQUIREMENT_ERROR = "Task GPU requirement cannot be negative"
+_EXECUTION_CEILING_ERROR = "Task execution ceiling must be positive"
 
 
 class ComputeError(Exception):
@@ -71,9 +74,29 @@ class ComputeAdapter(Protocol[ParamsT, ResultT]):
 
 
 @dataclass(frozen=True, slots=True)
+class TaskResources:
+    """CPU and GPU capacity a Task needs for one invocation."""
+
+    num_cpus: float = 1
+    num_gpus: float = 0
+
+    def __post_init__(self) -> None:
+        if self.num_cpus <= 0:
+            raise ValueError(_CPU_REQUIREMENT_ERROR)
+        if self.num_gpus < 0:
+            raise ValueError(_GPU_REQUIREMENT_ERROR)
+
+
+@dataclass(frozen=True, slots=True)
 class TaskDefinition(Generic[ParamsT, ResultT]):
     name: str
     description: str
     params_model: type[ParamsT]
     result_model: type[ResultT]
     adapter: ComputeAdapter[ParamsT, ResultT]
+    resources: TaskResources = field(default_factory=TaskResources)
+    max_duration_seconds: int = 3600
+
+    def __post_init__(self) -> None:
+        if self.max_duration_seconds <= 0:
+            raise ValueError(_EXECUTION_CEILING_ERROR)

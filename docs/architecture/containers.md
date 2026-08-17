@@ -85,8 +85,6 @@ A stuck Job is detected two ways, deliberately not by a single fixed timeout: a 
 
 Gateway's API and Worker processes are one deployable, two processes — a deliberate v1 simplification, not an oversight: `vision.md`'s Future direction already anticipates splitting queue consumption and Ray brokering into an independent scheduler once single-machine scheduling stops being enough (deeper allocation strategies, queue fairness, multi-machine deployment). Now isn't that point yet.
 
-> **Status note (delete once built):** Gateway's API process today already has a real Job data model, REST `POST /v1/jobs` (`202` + background dispatch) and `GET /v1/jobs/{id}`, and an MCP surface — but MCP still dispatches synchronously (`submit_job_and_wait`, one call blocks until terminal), unlike REST's async shape. The queue-to-dispatch path this section describes doesn't exist in code yet: dispatch today is an in-process `asyncio.create_task` fire-and-forget, not a taskiq-backed Gateway Worker; nothing calls Ray; Redis is connected but only used for a startup health check. This whole section — the Gateway Worker container, the claim/execute task chain, Ray brokering, and MCP's `submit`/`get_job`/`wait_job` split — is target design from ADR-0008, not yet built.
-
 ## File storage
 
 Large Input Files and Job outputs never pass through Gateway's own request path. SeaweedFS issues presigned URLs that a client uploads or downloads against directly, and `task-fpocket` (through `task-kit`'s `TaskServerRuntime` port) resolves inputs and publishes outputs the same way. Gateway only mints the URLs — it never proxies the bytes.

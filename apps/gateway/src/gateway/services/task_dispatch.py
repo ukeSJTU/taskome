@@ -35,6 +35,10 @@ class DispatchFailure:
 DispatchOutcome = DispatchSuccess | DispatchFailure
 
 
+class RetryableDispatchError(Exception):
+    """A connection failure known to have happened before Task Server receipt."""
+
+
 class TaskDispatcher:
     """Sign and send one Job's Params to its Task Server, over `httpx`."""
 
@@ -53,6 +57,7 @@ class TaskDispatcher:
         task_name: str,
         job_id: UUID,
         params: dict[str, Any],
+        timeout_seconds: int = 30,
     ) -> DispatchOutcome:
         """Call `POST /internal/tasks/{task_name}`, translating the result or failure."""
 
@@ -69,13 +74,25 @@ class TaskDispatcher:
         headers["content-type"] = "application/json"
         try:
             response = await self._client.post(
-                f"{config.base_url}{target}", content=body, headers=headers
+                f"{config.base_url}{target}",
+                content=body,
+                headers=headers,
+                timeout=httpx.Timeout(timeout_seconds, connect=min(5, timeout_seconds)),
+            )
+        except (httpx.ConnectError, httpx.ConnectTimeout) as error:
+            raise RetryableDispatchError from error
+        except httpx.ReadTimeout:
+            return DispatchFailure(
+                error_detail={
+                    "error_type": "execution_timed_out",
+                    "detail": "The Task Server exceeded this Task's execution ceiling.",
+                }
             )
         except httpx.HTTPError:
             return DispatchFailure(
                 error_detail={
-                    "error_type": "task_server_unreachable",
-                    "detail": "The Task Server was unreachable.",
+                    "error_type": "dispatch_ambiguous_failure",
+                    "detail": "Task Server dispatch failed after the request may have been sent.",
                 }
             )
         if response.status_code == httpx.codes.OK:

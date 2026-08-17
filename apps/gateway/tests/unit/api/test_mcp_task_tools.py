@@ -17,9 +17,9 @@ from fastmcp.utilities.tests import ASGIServer
 from gateway.api.mcp import create_mcp_server, register_task_tools
 from gateway.core.auth import MCPPrincipalVerifier
 from gateway.core.config import Environment, Settings
-from gateway.models.jobs import JobStatus
 from gateway.services.jobs import InvalidJobParamsError, TaskNotFoundError
 from gateway.services.task_manifests import TaskManifest
+from task_kit import TaskResources
 
 from tests.unit.fakes import FakeInputFileService, FakeJobService
 
@@ -46,6 +46,8 @@ _MANIFEST = TaskManifest(
     params_schema=_PARAMS_SCHEMA,
     result_schema=_RESULT_SCHEMA,
     schema_version=1,
+    resources=TaskResources(num_cpus=1, num_gpus=0),
+    max_duration_seconds=600,
 )
 
 
@@ -54,6 +56,7 @@ async def _connected_client(job_service: FakeJobService) -> AsyncIterator[Client
     server = create_mcp_server(
         Settings(app_environment=Environment.TEST),
         FakeInputFileService(),
+        job_service=job_service,
         auth_provider=MCPPrincipalVerifier(
             StaticTokenVerifier(
                 {"test-token": {"client_id": "test-client", "scopes": [], "sub": "user-a"}}
@@ -80,61 +83,37 @@ def test_task_tool_is_listed_alongside_the_static_tools() -> None:
             return [tool.name for tool in tools]
 
     names = asyncio.run(list_tools())
-    assert "detect_pockets" in names
+    assert "submit_detect_pockets" in names
     assert "prepare_input_file_upload" in names
 
 
-def test_task_tool_blocks_and_returns_the_result_envelope() -> None:
+def test_task_tool_returns_a_queued_job_identifier_immediately() -> None:
     job_service = FakeJobService()
-    job_service.wait_result = job_service.make_record(
-        status=JobStatus.COMPLETED,
-        result={"value": {"pocket_count": 3}, "outputs": []},
-    )
 
     async def call_tool() -> object:
         async with _connected_client(job_service) as client:
-            return await client.call_tool("detect_pockets", {"structure": str(uuid4())})
+            return await client.call_tool("submit_detect_pockets", {"structure": str(uuid4())})
 
     result = asyncio.run(call_tool())
 
     assert result.is_error is False
-    assert result.structured_content == {"value": {"pocket_count": 3}, "outputs": []}
-    assert job_service.waited_for is not None
-    owner, server_name, task_name, params = job_service.waited_for
+    assert result.structured_content == {"job_id": str(job_service.job_id), "status": "queued"}
+    assert job_service.submitted_for is not None
+    owner, server_name, task_name, params = job_service.submitted_for
     assert owner == "user-a"
     assert server_name == "fpocket"
     assert task_name == "detect_pockets"
     assert "structure" in params
 
 
-def test_task_tool_surfaces_a_failed_job_as_an_mcp_error() -> None:
-    job_service = FakeJobService()
-    job_service.wait_result = job_service.make_record(
-        status=JobStatus.FAILED,
-        error_detail={"error_type": "compute_failed", "detail": "fpocket exited non-zero."},
-    )
-
-    async def call_tool() -> object:
-        async with _connected_client(job_service) as client:
-            return await client.call_tool(
-                "detect_pockets", {"structure": str(uuid4())}, raise_on_error=False
-            )
-
-    result = asyncio.run(call_tool())
-
-    assert result.is_error is True
-    assert result.meta["taskome"]["error_code"] == "compute_failed"
-    assert result.content[0].text == "fpocket exited non-zero."
-
-
 def test_task_tool_maps_invalid_params_to_an_mcp_error() -> None:
     job_service = FakeJobService()
-    job_service.raise_on_wait = InvalidJobParamsError("min_alpha_size must be positive")
+    job_service.raise_on_submit = InvalidJobParamsError("min_alpha_size must be positive")
 
     async def call_tool() -> object:
         async with _connected_client(job_service) as client:
             return await client.call_tool(
-                "detect_pockets", {"structure": str(uuid4())}, raise_on_error=False
+                "submit_detect_pockets", {"structure": str(uuid4())}, raise_on_error=False
             )
 
     result = asyncio.run(call_tool())
@@ -145,12 +124,12 @@ def test_task_tool_maps_invalid_params_to_an_mcp_error() -> None:
 
 def test_task_tool_maps_task_not_found_to_an_mcp_error() -> None:
     job_service = FakeJobService()
-    job_service.raise_on_wait = TaskNotFoundError()
+    job_service.raise_on_submit = TaskNotFoundError()
 
     async def call_tool() -> object:
         async with _connected_client(job_service) as client:
             return await client.call_tool(
-                "detect_pockets", {"structure": str(uuid4())}, raise_on_error=False
+                "submit_detect_pockets", {"structure": str(uuid4())}, raise_on_error=False
             )
 
     result = asyncio.run(call_tool())
