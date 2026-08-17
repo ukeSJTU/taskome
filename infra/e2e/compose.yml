@@ -24,6 +24,7 @@ services:
       retries: 30
 
   seaweedfs:
+    profiles: [storage]
     image: chrislusf/seaweedfs:3.93
     command: server -dir=/data -s3
     ports:

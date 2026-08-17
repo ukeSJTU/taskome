@@ -19,10 +19,47 @@ export E2E_WEB_DATABASE_URL="$web_database_url"
 export BETTER_AUTH_URL="$E2E_WEB_URL" AUTH_TRUSTED_ORIGIN="$E2E_WEB_URL" WEB_PUBLIC_URL="$E2E_WEB_URL" GATEWAY_PUBLIC_URL="$E2E_GATEWAY_URL" GATEWAY_INTERNAL_URL="$E2E_GATEWAY_URL"
 export WEB_INTERNAL_URL="$E2E_WEB_URL" REDIS_URL="redis://127.0.0.1:$redis_port/0" SEAWEEDFS_INTERNAL_ENDPOINT="http://127.0.0.1:$seaweed_port" SEAWEEDFS_PUBLIC_ENDPOINT="http://127.0.0.1:$seaweed_port"
 export BETTER_AUTH_SECRET="e2e-better-auth-secret-${run_id}-minimum-32-characters" WEB_GATEWAY_HMAC_SECRET="e2e-web-gateway-secret-${run_id}-minimum-32-characters" SEAWEEDFS_SECRET_KEY="e2e-seaweedfs-secret-key-${run_id}-minimum-32-characters" FPOCKET_TASK_HMAC_SECRET="e2e-fpocket-task-hmac-secret-${run_id}-minimum-32-characters"
-cleanup() { status=$?; if [[ $status -ne 0 ]]; then mkdir -p "$logs_dir"; docker compose -p "$project" -f infra/e2e/compose.yml logs >"$logs_dir/compose.log" 2>&1 || true; fi; docker compose -p "$project" -f infra/e2e/compose.yml down --volumes --remove-orphans || true; exit "$status"; }
+browser_install_pid=""
+web_build_pid=""
+docs_build_pid=""
+cleanup() {
+  local status="$?"
+  local pid
+  for pid in "$browser_install_pid" "$web_build_pid" "$docs_build_pid"; do
+    if [[ -n "$pid" ]]; then
+      kill "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+    fi
+  done
+  if [[ $status -ne 0 ]]; then
+    mkdir -p "$logs_dir"
+    docker compose -p "$project" -f infra/e2e/compose.yml logs >"$logs_dir/compose.log" 2>&1 || true
+  fi
+  docker compose -p "$project" -f infra/e2e/compose.yml down --timeout 1 --volumes --remove-orphans || true
+  exit "$status"
+}
 trap cleanup EXIT INT TERM
+if [[ "${E2E_INSTALL_CHROMIUM:-0}" == "1" ]]; then
+  pnpm --dir apps/web exec playwright install --with-deps chromium &
+  browser_install_pid="$!"
+fi
 docker compose -p "$project" -f infra/e2e/compose.yml up -d --wait
 pnpm --filter @taskome/db db:migrate
 export DATABASE_URL="postgresql+psycopg://postgres:e2e-password@127.0.0.1:$postgres_port/taskome"
 (cd apps/gateway && uv run alembic upgrade head)
+if [[ "${E2E_PRODUCTION:-0}" == "1" ]]; then
+  pnpm --dir apps/web build &
+  web_build_pid="$!"
+  pnpm --dir apps/docs build &
+  docs_build_pid="$!"
+  wait "$web_build_pid"
+  web_build_pid=""
+  wait "$docs_build_pid"
+  docs_build_pid=""
+  export E2E_PREBUILT="1"
+fi
+if [[ -n "$browser_install_pid" ]]; then
+  wait "$browser_install_pid"
+  browser_install_pid=""
+fi
 pnpm --dir apps/web exec playwright test "$@"
