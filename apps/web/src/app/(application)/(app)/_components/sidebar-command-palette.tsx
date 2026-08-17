@@ -46,7 +46,7 @@ const routeGroups: { heading: string; items: PaletteRoute[] }[] = [
   {
     heading: "Viewers",
     items: [
-      { title: "PDB Viewer", href: "/viewers/pdb", keywords: ["protein", "structure"] },
+      { title: "PDB Viewer", href: "/viewers/structure", keywords: ["protein", "structure"] },
       { title: "MSA Viewer", href: "/viewers/msa", keywords: ["alignment", "sequence"] },
       {
         title: "Molecule Drawer",
