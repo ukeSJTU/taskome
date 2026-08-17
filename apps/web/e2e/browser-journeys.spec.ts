@@ -90,6 +90,9 @@ test("a returning user signs in and sees their identity", async ({ page, request
 });
 
 test("an authenticated user opens a local PDB in the Structure Viewer", async ({ page }) => {
+  // Mol* compiles WebGL shaders on its first production load, which can exceed
+  // Playwright's default test timeout on CI runners.
+  test.setTimeout(90_000);
   await signUp(page, "Structure Viewer", address("structure-viewer"));
   const publicStructureRequest = page
     .waitForRequest((request) => /rcsb|pdbe|alphafold|modelarchive|emdb/i.test(request.url()), {
@@ -99,7 +102,7 @@ test("an authenticated user opens a local PDB in the Structure Viewer", async ({
 
   await page.goto("/viewers/structure");
   await page.locator('input[type="file"]').setInputFiles("e2e/fixtures/alanine.pdb");
-  await expect(page.getByRole("status")).toHaveText("Structure ready", { timeout: 30_000 });
+  await expect(page.getByRole("status")).toHaveText("Structure ready", { timeout: 90_000 });
   await expect(page.locator("canvas").first()).toBeVisible();
   await page.getByLabel("Representation").selectOption("cartoon");
   await page.getByLabel("Coloring").selectOption("element");
