@@ -37,6 +37,7 @@ describe("JobsList", () => {
     render(<JobsList />);
 
     expect(await screen.findByText("No Jobs yet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "New Job" })).toHaveAttribute("href", "/results/new");
     await waitFor(() => expect(screen.queryByLabelText("Loading Jobs")).not.toBeInTheDocument());
   });
 });

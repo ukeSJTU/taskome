@@ -86,6 +86,7 @@ export function JobsList() {
         <EmptyHeader>
           <EmptyTitle>No Jobs yet</EmptyTitle>
           <EmptyDescription>Run a Task to see its status and results here.</EmptyDescription>
+          <Button render={<Link href="/results/new" />}>New Job</Button>
         </EmptyHeader>
       </Empty>
     );
