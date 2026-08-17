@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 
 import ray
 from gateway.services.resource_broker import RayResourceBroker
 from task_kit import TaskResources
 
-_WORKSPACE_ROOT = Path(__file__).parents[5]
-
 
 async def test_ray_resource_broker_reserves_and_releases_declared_cpu_capacity() -> None:
-    ray.init(num_cpus=2, runtime_env={"working_dir": str(_WORKSPACE_ROOT)})
+    ray.init(num_cpus=2)
     broker = RayResourceBroker("local")
     try:
         assert ray.available_resources()["CPU"] == 2

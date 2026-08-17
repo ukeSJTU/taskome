@@ -24,7 +24,7 @@ run = "uv run pytest tests/unit"
 
 [tasks."test:integration"]
 description = "Run gateway integration tests (real Postgres/SeaweedFS via testcontainers)"
-run = "uv run pytest tests/integration"
+run = "RAY_ENABLE_UV_RUN_RUNTIME_ENV=0 uv run pytest tests/integration"
 
 [tasks.test]
 description = "Run all gateway tests"
