@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from gateway.models.jobs import JobStatus
+from gateway.services.input_files import DownloadUrl
 from gateway.services.jobs import (
     InvalidJobParamsError,
     JobInputFileNotFoundError,
@@ -112,6 +114,77 @@ def test_get_job_returns_the_callers_own_job(
     assert response.status_code == 200
     assert response.json()["id"] == str(service.job_id)
     assert service.fetched_for == ("user-a", service.job_id)
+
+
+def test_get_job_hides_an_output_storage_key(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app, service = _authed_app(create_test_app)
+    service.get_result = {
+        "outputs": [
+            {
+                "download_name": "pockets.pdb",
+                "media_type": "chemical/x-pdb",
+                "name": "annotated_structure",
+                "sha256": "a" * 64,
+                "size_bytes": 1024,
+                "storage_key": f"fpocket/{service.job_id}/annotated_structure",
+            }
+        ],
+        "value": {"pocket_count": 3},
+    }
+
+    with TestClient(app) as client:
+        response = client.get(f"/v1/jobs/{service.job_id}", headers=_TOKEN_HEADERS)
+
+    assert response.status_code == 200
+    assert response.json()["result"] == {
+        "outputs": [
+            {
+                "download_name": "pockets.pdb",
+                "media_type": "chemical/x-pdb",
+                "name": "annotated_structure",
+                "sha256": "a" * 64,
+                "size_bytes": 1024,
+            }
+        ],
+        "value": {"pocket_count": 3},
+    }
+
+
+def test_download_job_output_requires_an_owned_completed_output(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app, service = _authed_app(create_test_app)
+    output_service = _FakeJobOutputService()
+    app.state.job_output_service = output_service
+
+    with TestClient(app) as client:
+        response = client.get(
+            f"/v1/jobs/{service.job_id}/outputs/annotated_structure/download-url",
+            headers=_TOKEN_HEADERS,
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "download_url": "http://seaweedfs/download",
+        "expires_at": "2026-08-17T00:15:00Z",
+    }
+    assert output_service.requested_for == ("user-a", service.job_id, "annotated_structure")
+
+
+class _FakeJobOutputService:
+    def __init__(self) -> None:
+        self.requested_for: tuple[str, object, str] | None = None
+
+    async def mint_download_url(
+        self, owner_user_id: str, job_id: object, output_name: str
+    ) -> DownloadUrl:
+        self.requested_for = (owner_user_id, job_id, output_name)
+        return DownloadUrl(
+            download_url="http://seaweedfs/download",
+            expires_at=datetime(2026, 8, 17, 0, 15, tzinfo=UTC),
+        )
 
 
 def test_get_job_hides_a_job_the_caller_does_not_own(

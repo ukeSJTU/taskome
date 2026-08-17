@@ -39,6 +39,27 @@ class JobResponse(BaseModel):
     updated_at: datetime
 
 
+_PUBLIC_OUTPUT_FIELDS = frozenset({"name", "media_type", "download_name", "size_bytes", "sha256"})
+
+
+def job_response(record: object) -> JobResponse:
+    """Serialize a Job while keeping Task Server storage keys private."""
+
+    response = JobResponse.model_validate(record)
+    if not isinstance(response.result, dict):
+        return response
+    outputs = response.result.get("outputs")
+    if not isinstance(outputs, list):
+        return response
+    safe_result = dict(response.result)
+    safe_result["outputs"] = [
+        {key: value for key, value in output.items() if key in _PUBLIC_OUTPUT_FIELDS}
+        for output in outputs
+        if isinstance(output, dict)
+    ]
+    return response.model_copy(update={"result": safe_result})
+
+
 class JobListResponse(BaseModel):
     """A page of the caller's own Jobs, newest first."""
 

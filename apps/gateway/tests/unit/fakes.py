@@ -365,6 +365,7 @@ class FakeJobService:
         self.waited_for: tuple[str, UUID, int] | None = None
         self.raise_on_wait: Exception | None = None
         self.wait_result: JobRecord | None = None
+        self.get_result: dict[str, Any] | None = None
 
     def make_record(self, **overrides: Any) -> JobRecord:  # noqa: ANN401
         now = datetime.now(UTC)
@@ -408,13 +409,13 @@ class FakeJobService:
             raise self.raise_on_wait
         if self.wait_result is not None:
             return self.wait_result
-        return self.make_record(owner_user_id=owner_user_id, id=job_id)
+        return self.make_record(owner_user_id=owner_user_id, id=job_id, result=self.get_result)
 
     async def get_job(self, owner_user_id: str, job_id: UUID) -> JobRecord:
         self.fetched_for = (owner_user_id, job_id)
         if owner_user_id != "user-a":
             raise JobNotFoundError
-        return self.make_record(owner_user_id=owner_user_id, id=job_id)
+        return self.make_record(owner_user_id=owner_user_id, id=job_id, result=self.get_result)
 
     async def list_jobs(
         self,

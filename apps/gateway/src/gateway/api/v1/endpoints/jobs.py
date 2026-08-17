@@ -10,7 +10,9 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from gateway.core.auth import Principal, current_principal
 from gateway.core.errors import AppError, problem_responses
 from gateway.models.jobs import JobStatus  # noqa: TC001 - FastAPI resolves this at runtime.
-from gateway.schemas.jobs import CreateJobRequest, JobListResponse, JobResponse
+from gateway.schemas.input_files import DownloadUrlResponse
+from gateway.schemas.jobs import CreateJobRequest, JobListResponse, JobResponse, job_response
+from gateway.services.job_outputs import JobOutputNotFoundError, JobOutputService
 from gateway.services.jobs import (
     InvalidJobParamsError,
     JobInputFileNotFoundError,
@@ -30,12 +32,27 @@ def job_service(request: Request) -> JobService:
     return request.app.state.job_service
 
 
+def job_output_service(request: Request) -> JobOutputService:
+    """Resolve the lifespan-owned Job Output service."""
+
+    return request.app.state.job_output_service
+
+
 def job_not_found() -> AppError:
     return AppError(
         error_type="job-not-found",
         title="Job Not Found",
         status_code=status.HTTP_404_NOT_FOUND,
         detail="The requested Job is not available.",
+    )
+
+
+def job_output_not_found() -> AppError:
+    return AppError(
+        error_type="job-output-not-found",
+        title="Job Output Not Found",
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="The requested Job Output is not available.",
     )
 
 
@@ -78,7 +95,7 @@ async def create_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
         ) from error
-    return JobResponse.model_validate(record)
+    return job_response(record)
 
 
 @router.get(
@@ -98,7 +115,28 @@ async def get_job(
         record = await service.get_job(principal.user_id, job_id)
     except JobNotFoundError as error:
         raise job_not_found() from error
-    return JobResponse.model_validate(record)
+    return job_response(record)
+
+
+@router.get(
+    "/{job_id}/outputs/{output_name}/download-url",
+    response_model=DownloadUrlResponse,
+    operation_id="getJobOutputDownloadUrl",
+    responses=problem_responses(400, 401, 404, 422, 503),
+)
+async def download_job_output(
+    job_id: UUID,
+    output_name: str,
+    principal: Annotated[Principal, Depends(current_principal)],
+    service: Annotated[JobOutputService, Depends(job_output_service)],
+) -> DownloadUrlResponse:
+    """Return a download URL for a caller-owned completed Job Output."""
+
+    try:
+        result = await service.mint_download_url(principal.user_id, job_id, output_name)
+    except JobOutputNotFoundError as error:
+        raise job_output_not_found() from error
+    return DownloadUrlResponse.model_validate(result)
 
 
 @router.get(
@@ -124,4 +162,4 @@ async def list_jobs(  # noqa: PLR0913, PLR0917
         limit=limit,
         offset=offset,
     )
-    return JobListResponse(jobs=[JobResponse.model_validate(record) for record in records])
+    return JobListResponse(jobs=[job_response(record) for record in records])

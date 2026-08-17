@@ -12,6 +12,7 @@ export * from "./credentialKind";
 export * from "./deleteInputFilePathParameters";
 export * from "./downloadUrlResponse";
 export * from "./getInputFileDownloadUrlPathParameters";
+export * from "./getJobOutputDownloadUrlPathParameters";
 export * from "./getJobPathParameters";
 export * from "./identity";
 export * from "./jobListResponse";

@@ -34,6 +34,7 @@ def test_public_openapi_projects_only_direct_api_client_operations(
         "/input-files/{input_file_id}/download-url",
         "/jobs",
         "/jobs/{job_id}",
+        "/jobs/{job_id}/outputs/{output_name}/download-url",
         "/me",
     }
     assert schema["servers"] == [{"url": "https://api.taskome.test/v1"}]

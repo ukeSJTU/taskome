@@ -41,6 +41,7 @@ from gateway.repositories.input_files import InputFileRepository
 from gateway.repositories.jobs import JobRepository
 from gateway.schemas.problem import ProblemDetails
 from gateway.services.input_files import InputFileService
+from gateway.services.job_outputs import JobOutputService
 from gateway.services.job_queue import TaskiqJobQueue
 from gateway.services.jobs import JobQueuePort, JobService
 from gateway.services.storage import SeaweedFSStorage
@@ -129,6 +130,7 @@ def create_app(  # noqa: PLR0913, PLR0915
         queue=queue,
         manifests={},
     )
+    job_output_service = JobOutputService(repository=JobRepository(app_database), storage=storage)
     mcp_server = create_mcp_server(
         app_settings,
         input_file_service,
@@ -160,6 +162,8 @@ def create_app(  # noqa: PLR0913, PLR0915
     application.state.owned_input_file_service = input_file_service
     application.state.job_service = job_service
     application.state.owned_job_service = job_service
+    application.state.job_output_service = job_output_service
+    application.state.owned_job_output_service = job_output_service
     application.state.job_queue = queue
     application.state.dispatch_http_client = dispatch_client
     application.state.rest_token_verifier = rest_verifier
