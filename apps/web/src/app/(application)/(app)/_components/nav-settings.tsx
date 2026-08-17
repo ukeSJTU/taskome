@@ -4,14 +4,9 @@ import { SidebarGroup, SidebarMenu, SidebarMenuItem } from "@taskome/ui/componen
 
 import { SidebarNavItem, type SidebarNavItemData } from "./sidebar-nav-item";
 
-export function NavSecondary({
-  items,
-  ...props
-}: {
-  items: SidebarNavItemData[];
-} & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
+export function NavSettings({ items }: { items: SidebarNavItemData[] }) {
   return (
-    <SidebarGroup {...props}>
+    <SidebarGroup>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.title}>
