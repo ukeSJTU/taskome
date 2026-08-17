@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	keyring "github.com/zalando/go-keyring"
 )
@@ -13,8 +15,9 @@ var errCredentialNotFound = errors.New("credential not found")
 const credentialService = "taskome"
 
 type oauthTokens struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken          string    `json:"access_token"`
+	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
+	RefreshToken         string    `json:"refresh_token"`
 }
 
 type gatewayAuthentication struct {
@@ -101,7 +104,9 @@ func deleteKeyringCredential(account string) error {
 }
 
 func resolveGatewayAuthentication(
+	ctx context.Context,
 	credentials credentialStore,
+	oauth oauthClient,
 	gatewayURL, environmentAPIKey string,
 ) (gatewayAuthentication, error) {
 	if environmentAPIKey != "" {
@@ -113,6 +118,19 @@ func resolveGatewayAuthentication(
 		return gatewayAuthentication{}, err
 	}
 	if tokens, err := credentials.getOAuthTokens(gatewayURL); err == nil {
+		if !tokens.AccessTokenExpiresAt.IsZero() && !tokens.AccessTokenExpiresAt.After(time.Now().Add(30*time.Second)) {
+			refreshed, refreshErr := oauth.refresh(ctx, gatewayURL, tokens)
+			if refreshErr != nil {
+				return gatewayAuthentication{}, fmt.Errorf("refresh OAuth credentials: %w; sign in again with taskome login", refreshErr)
+			}
+			if storeErr := credentials.setOAuthTokens(gatewayURL, refreshed); storeErr != nil {
+				return gatewayAuthentication{}, storeErr
+			}
+			tokens = refreshed
+		}
+		if tokens.AccessToken == "" {
+			return gatewayAuthentication{}, errors.New("stored OAuth credentials did not include an access token")
+		}
 		return gatewayAuthentication{accessToken: tokens.AccessToken}, nil
 	} else if !errors.Is(err, errCredentialNotFound) {
 		return gatewayAuthentication{}, err

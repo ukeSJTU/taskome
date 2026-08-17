@@ -25,6 +25,7 @@ var errBrowserUnavailable = errors.New("unable to open system browser")
 
 type oauthClient interface {
 	login(context.Context, string) (oauthTokens, error)
+	refresh(context.Context, string, oauthTokens) (oauthTokens, error)
 	revoke(context.Context, string, oauthTokens) error
 }
 
@@ -45,6 +46,7 @@ type authorizationServerMetadata struct {
 
 type tokenResponse struct {
 	AccessToken  string `json:"access_token"`
+	ExpiresIn    int    `json:"expires_in"`
 	RefreshToken string `json:"refresh_token"`
 }
 
@@ -140,8 +142,14 @@ func (client browserOAuthClient) login(ctx context.Context, gatewayURL string) (
 
 func (client browserOAuthClient) revoke(ctx context.Context, gatewayURL string, tokens oauthTokens) error {
 	metadata, err := client.discover(ctx, gatewayURL)
-	if err != nil || metadata.RevocationEndpoint == "" || tokens.RefreshToken == "" {
+	if err != nil {
 		return err
+	}
+	if metadata.RevocationEndpoint == "" {
+		return errors.New("authorization server did not publish a revocation endpoint")
+	}
+	if tokens.RefreshToken == "" {
+		return errors.New("stored OAuth credentials did not include a refresh token")
 	}
 	request, err := http.NewRequestWithContext(
 		ctx,
@@ -231,7 +239,51 @@ func (client browserOAuthClient) exchange(
 	if token.AccessToken == "" || token.RefreshToken == "" {
 		return oauthTokens{}, errors.New("OAuth token response did not include access and refresh tokens")
 	}
-	return oauthTokens(token), nil
+	return oauthTokens{
+		AccessToken:          token.AccessToken,
+		AccessTokenExpiresAt: time.Now().Add(time.Duration(token.ExpiresIn) * time.Second),
+		RefreshToken:         token.RefreshToken,
+	}, nil
+}
+
+func (client browserOAuthClient) refresh(
+	ctx context.Context,
+	gatewayURL string,
+	tokens oauthTokens,
+) (oauthTokens, error) {
+	if tokens.RefreshToken == "" {
+		return oauthTokens{}, errors.New("stored OAuth credentials did not include a refresh token")
+	}
+	metadata, err := client.discover(ctx, gatewayURL)
+	if err != nil {
+		return oauthTokens{}, err
+	}
+	request, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		metadata.TokenEndpoint,
+		strings.NewReader(url.Values{
+			"client_id":     {taskomeCLIClientID},
+			"grant_type":    {"refresh_token"},
+			"refresh_token": {tokens.RefreshToken},
+		}.Encode()),
+	)
+	if err != nil {
+		return oauthTokens{}, fmt.Errorf("create OAuth refresh request: %w", err)
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	var refreshed tokenResponse
+	if err := client.getJSON(request, &refreshed); err != nil {
+		return oauthTokens{}, fmt.Errorf("refresh OAuth access token: %w", err)
+	}
+	if refreshed.AccessToken == "" || refreshed.RefreshToken == "" {
+		return oauthTokens{}, errors.New("OAuth refresh response did not include access and refresh tokens")
+	}
+	return oauthTokens{
+		AccessToken:          refreshed.AccessToken,
+		AccessTokenExpiresAt: time.Now().Add(time.Duration(refreshed.ExpiresIn) * time.Second),
+		RefreshToken:         refreshed.RefreshToken,
+	}, nil
 }
 
 func (client browserOAuthClient) getJSON(request *http.Request, destination any) error {

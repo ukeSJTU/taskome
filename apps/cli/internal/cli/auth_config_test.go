@@ -3,9 +3,13 @@ package cli
 import (
 	"bytes"
 	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestConfigCommandsReadAndWriteGatewayURL(t *testing.T) {
@@ -108,7 +112,9 @@ func TestEnvironmentAPIKeyTakesPrecedenceOverStoredOAuthCredentials(t *testing.T
 	}
 
 	authentication, err := resolveGatewayAuthentication(
+		context.Background(),
 		credentials,
+		fakeOAuthClient{},
 		"https://api.example.com",
 		"taskome_ci-key",
 	)
@@ -169,13 +175,111 @@ func TestInteractiveLoginExplainsAPIKeyFallbackWhenBrowserCannotOpen(t *testing.
 	}
 }
 
+func TestWhoAmIUsesEnvironmentAPIKeyOverStoredOAuthCredentials(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if got := request.Header.Get("X-API-Key"); got != "taskome_ci-key" {
+			t.Fatalf("X-API-Key = %q, want TASKOME_API_KEY", got)
+		}
+		if got := request.Header.Get("Authorization"); got != "" {
+			t.Fatalf("Authorization = %q, want empty", got)
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(writer, `{"user_id":"user-1","credential_kind":"personal_api_key"}`)
+	}))
+	defer server.Close()
+	t.Setenv("TASKOME_API_KEY", "taskome_ci-key")
+
+	configuration := newConfiguration(filepath.Join(t.TempDir(), "config.yaml"), server.URL)
+	credentials := newMemoryCredentialStore()
+	if err := credentials.setOAuthTokens(server.URL, oauthTokens{AccessToken: "stored-access"}); err != nil {
+		t.Fatalf("set OAuth tokens: %v", err)
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	exitCode := executeWith(
+		context.Background(),
+		[]string{"whoami"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		commandDependencies{
+			configuration: configuration,
+			credentials:   credentials,
+			httpClient:    server.Client(),
+			oauth:         fakeOAuthClient{},
+		},
+	)
+	if exitCode != 0 {
+		t.Fatalf("whoami exit code = %d, want 0; stderr = %q", exitCode, stderr.String())
+	}
+	if got := stdout.String(); got != "user-1 (personal_api_key)\n" {
+		t.Fatalf("whoami output = %q", got)
+	}
+}
+
+func TestWhoAmIRefreshesExpiredOAuthCredentials(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if got := request.Header.Get("Authorization"); got != "Bearer refreshed-access" {
+			t.Fatalf("Authorization = %q, want refreshed OAuth access token", got)
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(writer, `{"user_id":"user-1","credential_kind":"oauth"}`)
+	}))
+	defer server.Close()
+
+	configuration := newConfiguration(filepath.Join(t.TempDir(), "config.yaml"), server.URL)
+	credentials := newMemoryCredentialStore()
+	if err := credentials.setOAuthTokens(server.URL, oauthTokens{
+		AccessToken:          "expired-access",
+		AccessTokenExpiresAt: time.Now().Add(-time.Minute),
+		RefreshToken:         "old-refresh",
+	}); err != nil {
+		t.Fatalf("set OAuth tokens: %v", err)
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	exitCode := executeWith(
+		context.Background(),
+		[]string{"whoami"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		commandDependencies{
+			configuration: configuration,
+			credentials:   credentials,
+			httpClient:    server.Client(),
+			oauth: fakeOAuthClient{refreshed: oauthTokens{
+				AccessToken:          "refreshed-access",
+				AccessTokenExpiresAt: time.Now().Add(time.Hour),
+				RefreshToken:         "new-refresh",
+			}},
+		},
+	)
+	if exitCode != 0 {
+		t.Fatalf("whoami exit code = %d, want 0; stderr = %q", exitCode, stderr.String())
+	}
+	if got := stdout.String(); got != "user-1 (oauth)\n" {
+		t.Fatalf("whoami output = %q", got)
+	}
+	if tokens, err := credentials.getOAuthTokens(server.URL); err != nil || tokens.RefreshToken != "new-refresh" {
+		t.Fatalf("stored refreshed OAuth tokens = %#v, %v", tokens, err)
+	}
+}
+
 type fakeOAuthClient struct {
-	err    error
-	tokens oauthTokens
+	err       error
+	refreshed oauthTokens
+	tokens    oauthTokens
 }
 
 func (client fakeOAuthClient) login(context.Context, string) (oauthTokens, error) {
 	return client.tokens, client.err
+}
+
+func (client fakeOAuthClient) refresh(context.Context, string, oauthTokens) (oauthTokens, error) {
+	return client.refreshed, client.err
 }
 
 func (client fakeOAuthClient) revoke(context.Context, string, oauthTokens) error {

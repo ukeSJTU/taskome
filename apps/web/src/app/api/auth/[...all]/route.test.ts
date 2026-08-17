@@ -660,6 +660,30 @@ describe("/api/auth", () => {
         issuer: oauthIssuer,
       }),
     ).resolves.toBeDefined();
+
+    const revokeResponse = await POST(
+      new Request(`${baseURL}/api/auth/oauth2/revoke`, {
+        body: new URLSearchParams({
+          client_id: "taskome-cli",
+          token: refreshed.refresh_token,
+          token_type_hint: "refresh_token",
+        }),
+        headers: new Headers({
+          origin: baseURL,
+          "content-type": "application/x-www-form-urlencoded",
+        }),
+        method: "POST",
+      }),
+    );
+    expect(revokeResponse.status).toBe(200);
+    const rejectedRefresh = await exchange(
+      new URLSearchParams({
+        client_id: "taskome-cli",
+        grant_type: "refresh_token",
+        refresh_token: refreshed.refresh_token,
+      }),
+    );
+    expect(rejectedRefresh.status).toBe(400);
   });
 
   it("enables TOTP, gates password sign-in, and accepts a backup code", async () => {

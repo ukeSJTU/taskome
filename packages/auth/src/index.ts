@@ -8,7 +8,7 @@ import { jwt, twoFactor } from "better-auth/plugins";
 
 import { oauthGatewayAudience } from "./oauth-audience";
 import { authI18nPlugin } from "./i18n";
-import { mcpOAuthProvider } from "./mcp-oauth";
+import { taskomeOAuthProvider } from "./mcp-oauth";
 import { enforcePersonalApiKeyLifecycle, personalApiKeyPlugin } from "./personal-api-keys";
 
 export function createAuth() {
@@ -38,7 +38,7 @@ export function createAuth() {
     plugins: [
       personalApiKeyPlugin(),
       jwt({ jwt: { audience: gatewayRESTResource } }),
-      mcpOAuthProvider(gatewayMCPResource, gatewayRESTResource),
+      taskomeOAuthProvider(gatewayMCPResource, gatewayRESTResource),
       oauthGatewayAudience(gatewayMCPResource, gatewayRESTResource),
       twoFactor({ issuer: "taskome" }),
       authI18nPlugin(),

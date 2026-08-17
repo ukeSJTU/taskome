@@ -1,6 +1,9 @@
 [tasks.build]
-description = "Build the Taskome CLI binary"
-run = ["mkdir -p bin", "go build -o bin/taskome ./cmd/taskome"]
+description = "Build the Taskome CLI binary (set TASKOME_GATEWAY_URL for a release build)"
+run = [
+  "mkdir -p bin",
+  "go build -ldflags \"${TASKOME_CLI_LDFLAGS:-} -X github.com/ukeSJTU/taskome/apps/cli/internal/cli.DefaultGatewayURL=${TASKOME_GATEWAY_URL:-}\" -o bin/taskome ./cmd/taskome",
+]
 
 [tasks.run]
 description = "Run the Taskome CLI from source"

@@ -4,7 +4,7 @@ import { jwt, testUtils, twoFactor } from "better-auth/plugins";
 
 import { oauthGatewayAudience } from "./oauth-audience";
 import { authI18nPlugin } from "./i18n";
-import { mcpOAuthProvider } from "./mcp-oauth";
+import { taskomeOAuthProvider } from "./mcp-oauth";
 import { enforcePersonalApiKeyLifecycle, personalApiKeyPlugin } from "./personal-api-keys";
 
 export function createTestAuth() {
@@ -29,7 +29,7 @@ export function createTestAuth() {
     plugins: [
       personalApiKeyPlugin(),
       jwt({ jwt: { audience: "http://localhost:8000/v1" } }),
-      mcpOAuthProvider("http://localhost:8000/mcp", "http://localhost:8000/v1"),
+      taskomeOAuthProvider("http://localhost:8000/mcp", "http://localhost:8000/v1"),
       oauthGatewayAudience("http://localhost:8000/mcp", "http://localhost:8000/v1"),
       twoFactor({ issuer: "taskome" }),
       authI18nPlugin(),

@@ -1,6 +1,6 @@
 import type { BetterAuthPlugin } from "better-auth";
 
-import { taskomeCLIClientID } from "./mcp-oauth";
+import { taskomeCliClientId } from "./mcp-oauth";
 
 const OAUTH_TOKEN_PATH = "/oauth2/token";
 
@@ -25,7 +25,7 @@ export function oauthGatewayAudience(mcpResource: string, restResource: string):
       const body = new URLSearchParams(await request.clone().text());
       body.set(
         "resource",
-        body.get("client_id") === taskomeCLIClientID ? restResource : mcpResource,
+        body.get("client_id") === taskomeCliClientId ? restResource : mcpResource,
       );
       const headers = new Headers(request.headers);
       headers.delete("content-length");

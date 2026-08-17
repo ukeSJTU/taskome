@@ -1,9 +1,9 @@
 import { oauthProvider } from "@better-auth/oauth-provider";
 
-export const taskomeCLIClientID = "taskome-cli";
+export const taskomeCliClientId = "taskome-cli";
 export const taskomeCLIRedirectURI = "http://127.0.0.1/callback";
 
-export function mcpOAuthProvider(mcpResource: string, restResource: string) {
+export function taskomeOAuthProvider(mcpResource: string, restResource: string) {
   return oauthProvider({
     scopes: ["openid", "profile", "email", "offline_access", "taskome"],
     validAudiences: [mcpResource, restResource],

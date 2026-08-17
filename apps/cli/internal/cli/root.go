@@ -5,9 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/ukeSJTU/taskome/apps/cli/internal/gateway"
+	generated "github.com/ukeSJTU/taskome/apps/cli/internal/gateway/generated"
 )
 
 // Version is supplied by the release build through -ldflags.
@@ -16,6 +20,7 @@ var Version = "devel"
 type commandDependencies struct {
 	configuration configuration
 	credentials   credentialStore
+	httpClient    *http.Client
 	oauth         oauthClient
 }
 
@@ -23,6 +28,7 @@ func defaultCommandDependencies() commandDependencies {
 	return commandDependencies{
 		configuration: defaultConfiguration(),
 		credentials:   defaultCredentialStore(),
+		httpClient:    http.DefaultClient,
 		oauth:         defaultOAuthClient(),
 	}
 }
@@ -43,8 +49,66 @@ func newRootCommand(dependencies commandDependencies) *cobra.Command {
 	command.AddCommand(newConfigCommand(dependencies.configuration))
 	command.AddCommand(newLoginCommand(dependencies.configuration, dependencies.credentials, dependencies.oauth))
 	command.AddCommand(newLogoutCommand(dependencies.configuration, dependencies.credentials, dependencies.oauth))
+	command.AddCommand(newWhoAmICommand(dependencies.configuration, dependencies.credentials, dependencies.httpClient, dependencies.oauth))
 
 	return command
+}
+
+func newWhoAmICommand(
+	configuration configuration,
+	credentials credentialStore,
+	httpClient *http.Client,
+	oauth oauthClient,
+) *cobra.Command {
+	return &cobra.Command{
+		Use:   "whoami",
+		Short: "Show the Taskome identity for the active credential",
+		Args:  cobra.NoArgs,
+		RunE: func(command *cobra.Command, _ []string) error {
+			gatewayURL, err := configuration.gatewayURL()
+			if err != nil {
+				return err
+			}
+			authentication, err := resolveGatewayAuthentication(
+				command.Context(),
+				credentials,
+				oauth,
+				gatewayURL,
+				os.Getenv("TASKOME_API_KEY"),
+			)
+			if err != nil {
+				return fmt.Errorf("resolve gateway credentials: %w", err)
+			}
+			if authentication.personalAPIKey != "" {
+				apiClient, err := gateway.NewClient(gatewayURL, authentication.personalAPIKey, httpClient)
+				if err != nil {
+					return err
+				}
+				response, err := apiClient.GetCurrentIdentityWithResponse(command.Context())
+				return printIdentity(command, response, err)
+			}
+			oauthClient, err := gateway.NewOAuthClient(gatewayURL, authentication.accessToken, httpClient)
+			if err != nil {
+				return err
+			}
+			response, err := oauthClient.GetCurrentIdentityWithResponse(command.Context())
+			return printIdentity(command, response, err)
+		},
+	}
+}
+
+func printIdentity(command *cobra.Command, response *generated.GetCurrentIdentityResponse, err error) error {
+	if err != nil {
+		return fmt.Errorf("load current identity: %w", err)
+	}
+	if response == nil || response.JSON200 == nil {
+		if response != nil && response.HTTPResponse != nil {
+			return fmt.Errorf("gateway returned unexpected response status %d", response.HTTPResponse.StatusCode)
+		}
+		return errors.New("gateway returned an empty identity response")
+	}
+	_, err = fmt.Fprintf(command.OutOrStdout(), "%s (%s)\n", response.JSON200.UserId, response.JSON200.CredentialKind)
+	return err
 }
 
 func newConfigCommand(configuration configuration) *cobra.Command {

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestBrowserOAuthLoginDiscoversMetadataAndUsesPKCE(t *testing.T) {
@@ -42,7 +43,7 @@ func TestBrowserOAuthLoginDiscoversMetadataAndUsesPKCE(t *testing.T) {
 					t.Fatalf("code_challenge = %q, want derived S256 value", authorizationQuery.Get("code_challenge"))
 				}
 			}
-			_ = json.NewEncoder(writer).Encode(tokenResponse{AccessToken: "access", RefreshToken: "refresh"})
+			_ = json.NewEncoder(writer).Encode(tokenResponse{AccessToken: "access", ExpiresIn: 3600, RefreshToken: "refresh"})
 		default:
 			http.NotFound(writer, request)
 		}
@@ -80,7 +81,86 @@ func TestBrowserOAuthLoginDiscoversMetadataAndUsesPKCE(t *testing.T) {
 	if err != nil {
 		t.Fatalf("login() error = %v", err)
 	}
-	if tokens != (oauthTokens{AccessToken: "access", RefreshToken: "refresh"}) {
+	if tokens.AccessToken != "access" || tokens.RefreshToken != "refresh" || tokens.AccessTokenExpiresAt.Before(time.Now()) {
+		t.Fatalf("tokens = %#v", tokens)
+	}
+}
+
+func TestBrowserOAuthRevokeUsesAuthorizationServerMetadata(t *testing.T) {
+	var revokedToken string
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/.well-known/oauth-protected-resource/v1":
+			_ = json.NewEncoder(writer).Encode(map[string]any{
+				"authorization_servers": []string{serverURL(request)},
+			})
+		case "/.well-known/oauth-authorization-server":
+			_ = json.NewEncoder(writer).Encode(map[string]any{
+				"authorization_endpoint": serverURL(request) + "/authorize",
+				"revocation_endpoint":    serverURL(request) + "/revoke",
+				"token_endpoint":         serverURL(request) + "/token",
+			})
+		case "/revoke":
+			if err := request.ParseForm(); err != nil {
+				t.Fatalf("ParseForm() error = %v", err)
+			}
+			if got := request.Form.Get("client_id"); got != taskomeCLIClientID {
+				t.Fatalf("client_id = %q, want %q", got, taskomeCLIClientID)
+			}
+			revokedToken = request.Form.Get("token")
+			writer.WriteHeader(http.StatusOK)
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+
+	client := browserOAuthClient{httpClient: server.Client()}
+	if err := client.revoke(context.Background(), server.URL, oauthTokens{RefreshToken: "refresh-token"}); err != nil {
+		t.Fatalf("revoke() error = %v", err)
+	}
+	if revokedToken != "refresh-token" {
+		t.Fatalf("revoked token = %q, want refresh-token", revokedToken)
+	}
+}
+
+func TestBrowserOAuthRefreshRotatesCredentials(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/.well-known/oauth-protected-resource/v1":
+			_ = json.NewEncoder(writer).Encode(map[string]any{
+				"authorization_servers": []string{serverURL(request)},
+			})
+		case "/.well-known/oauth-authorization-server":
+			_ = json.NewEncoder(writer).Encode(map[string]any{
+				"authorization_endpoint": serverURL(request) + "/authorize",
+				"token_endpoint":         serverURL(request) + "/token",
+			})
+		case "/token":
+			if err := request.ParseForm(); err != nil {
+				t.Fatalf("ParseForm() error = %v", err)
+			}
+			if got := request.Form.Get("grant_type"); got != "refresh_token" {
+				t.Fatalf("grant_type = %q, want refresh_token", got)
+			}
+			if got := request.Form.Get("refresh_token"); got != "old-refresh-token" {
+				t.Fatalf("refresh_token = %q, want old-refresh-token", got)
+			}
+			_ = json.NewEncoder(writer).Encode(tokenResponse{
+				AccessToken: "refreshed-access-token", ExpiresIn: 3600, RefreshToken: "new-refresh-token",
+			})
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+
+	client := browserOAuthClient{httpClient: server.Client()}
+	tokens, err := client.refresh(context.Background(), server.URL, oauthTokens{RefreshToken: "old-refresh-token"})
+	if err != nil {
+		t.Fatalf("refresh() error = %v", err)
+	}
+	if tokens.AccessToken != "refreshed-access-token" || tokens.RefreshToken != "new-refresh-token" || tokens.AccessTokenExpiresAt.Before(time.Now()) {
 		t.Fatalf("tokens = %#v", tokens)
 	}
 }
