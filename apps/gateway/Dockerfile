@@ -24,6 +24,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV APP_ENVIRONMENT=production
 
 COPY --from=builder --chown=gateway:gateway /app/.venv /app/.venv
+COPY --from=builder --chown=gateway:gateway /app/packages/task-kit /app/packages/task-kit
 COPY --from=builder --chown=gateway:gateway /app/apps/gateway /app/apps/gateway
 
 EXPOSE 8000

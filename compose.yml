@@ -83,6 +83,7 @@ services:
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
       REDIS_URL: redis://redis-taskiq:6379/0
       RAY_ADDRESS: ray://ray-head:10001
+      WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
       FPOCKET_INTERNAL_URL: http://task-fpocket:8000
       FPOCKET_TASK_HMAC_SECRET: ${GATEWAY_TASK_HMAC_SECRET:-taskome-local-fpocket-gateway-hmac-secret}
     command:
