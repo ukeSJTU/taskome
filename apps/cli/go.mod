@@ -3,10 +3,12 @@ module github.com/ukeSJTU/taskome/apps/cli
 go 1.26.6
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/oapi-codegen/runtime v1.6.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/zalando/go-keyring v0.2.8
+	golang.org/x/term v0.45.0
 )
 
 require (
@@ -19,7 +21,6 @@ require (
 	github.com/go-openapi/swag/jsonname v0.26.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect
