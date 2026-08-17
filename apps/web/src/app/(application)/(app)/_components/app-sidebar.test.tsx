@@ -107,9 +107,9 @@ describe("AppSidebar", () => {
     );
     expect(screen.getByRole("link", { name: "Usage" })).toHaveAttribute("href", "/settings/usage");
     expect(screen.getByRole("link", { name: "Back to App" })).toHaveAttribute("href", "/dashboard");
-    expect(screen.getByRole("button", { name: "API Keys" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
+    expect(screen.getByRole("link", { name: "API Keys" })).toHaveAttribute(
+      "href",
+      "/settings/api-keys",
     );
     expect(screen.getByText("Back to App")).toHaveClass("sr-only");
     expect(screen.queryByRole("link", { name: "Docs" })).not.toBeInTheDocument();

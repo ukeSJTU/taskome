@@ -56,7 +56,7 @@ const secondaryNavigation: SidebarNavItemData[] = [
 const settingsNavigation: SidebarNavItemData[] = [
   { title: "General", href: "/settings/general", icon: <Settings2Icon /> },
   { title: "Usage", href: "/settings/usage", icon: <ListChecksIcon /> },
-  { title: "API Keys", icon: <WrenchIcon />, disabled: true },
+  { title: "API Keys", href: "/settings/api-keys", icon: <WrenchIcon /> },
   { title: "Notifications", icon: <BotIcon />, disabled: true },
   { title: "Security", icon: <DnaIcon />, disabled: true },
 ];

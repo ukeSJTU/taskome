@@ -4,7 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useTestAuth } from "@/test/auth";
 import { render, screen } from "@/test/render";
 
-import { ApiKeysPanel } from "./api-keys-panel";
+import { ApiKeysManager } from "./api-keys-manager";
+import { ApiKeysTable } from "./api-keys-table";
+
+function ApiKeysPanel() {
+  return (
+    <ApiKeysManager>
+      <ApiKeysTable initialKeys={[]} />
+    </ApiKeysManager>
+  );
+}
 
 describe("ApiKeysPanel with the auth backend", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -19,7 +28,8 @@ describe("ApiKeysPanel with the auth backend", () => {
 
     render(<ApiKeysPanel />);
 
-    expect(await screen.findByText("No active keys")).toBeInTheDocument();
+    expect(screen.getByText("No active keys")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "New API key" }));
     await user.click(screen.getByRole("button", { name: "Create API key" }));
     expect(
       screen.getByText("Enter a name that identifies the script or machine using this key."),
@@ -30,24 +40,24 @@ describe("ApiKeysPanel with the auth backend", () => {
     const revealedSecret = await screen.findByLabelText("New Personal API Key");
     expect(revealedSecret).toHaveTextContent(/^taskome_/);
     expect(screen.getByText(/Copy this key now/)).toBeInTheDocument();
-    expect(screen.getByText("Workstation")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "I've saved it" }));
     expect(screen.queryByLabelText("New Personal API Key")).not.toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Workstation" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Last used" })).toBeInTheDocument();
+    expect(screen.getByText("Never")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Revoke Workstation" }));
     expect(screen.getByRole("alertdialog", { name: "Revoke Workstation?" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Workstation" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Revoke Workstation" }));
     await user.click(screen.getByRole("button", { name: "Revoke permanently" }));
 
     expect(await screen.findByText("No active keys")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Revoked history" })).toBeInTheDocument();
-    expect(screen.getByText("Workstation")).toBeInTheDocument();
-    expect(screen.getByText("Revoked")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Re-enable Workstation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Revoked history" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Workstation")).not.toBeInTheDocument();
   });
 
   it("keeps the secret visible and explains manual recovery when copying fails", async () => {
@@ -64,7 +74,7 @@ describe("ApiKeysPanel with the auth backend", () => {
     });
 
     render(<ApiKeysPanel />);
-    await screen.findByText("No active keys");
+    await user.click(screen.getByRole("button", { name: "New API key" }));
     await user.type(screen.getByLabelText("Key name"), "Copy failure");
     await user.click(screen.getByRole("button", { name: "Create API key" }));
     await user.click(await screen.findByRole("button", { name: "Copy key" }));
