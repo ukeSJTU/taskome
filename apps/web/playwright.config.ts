@@ -34,6 +34,7 @@ export default defineConfig({
       cwd: ".",
       env: { ...process.env, DATABASE_URL: process.env.E2E_WEB_DATABASE_URL! },
       reuseExistingServer: false,
+      timeout: 180_000,
       url: `${webURL}/login`,
     },
     {

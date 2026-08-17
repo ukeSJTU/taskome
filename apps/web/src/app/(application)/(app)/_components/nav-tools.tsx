@@ -31,7 +31,7 @@ import {
 import { SidebarNavItem, type SidebarNavItemData } from "./sidebar-nav-item";
 
 const viewerItems: { title: string; href: Route }[] = [
-  { title: "PDB Viewer", href: "/viewers/pdb" },
+  { title: "Structure Viewer", href: "/viewers/structure" },
   { title: "MSA Viewer", href: "/viewers/msa" },
   { title: "Molecule Drawer", href: "/viewers/molecule-drawer" },
 ];
