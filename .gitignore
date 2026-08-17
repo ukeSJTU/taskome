@@ -6,24 +6,6 @@ node_modules
 # Local feature worktrees
 .worktrees/
 
-# Build outputs
-dist
-build
-*.tsbuildinfo
-
-# Go CLI local build and test artifacts
-apps/cli/bin/
-apps/cli/*.test
-apps/cli/coverage.out
-apps/cli/coverage.html
-
-# Python bytecode
-__pycache__/
-*.py[cod]
-
-# Generated files
-apps/web/src/routeTree.gen.ts
-
 # Environment variables
 .env
 .env*.local
@@ -57,13 +39,6 @@ lerna-debug.log*
 # Better-T-Stack
 .alchemy
 .vercel
-
-# Testing
-coverage
-.nyc_output
-apps/web/playwright-report/
-apps/web/test-results/
-apps/web/e2e/.auth/
 
 # Misc
 *.tgz

@@ -10,6 +10,9 @@
 
 # Testing
 /coverage
+/playwright-report/
+/test-results/
+/e2e/.auth/
 
 # Build outputs
 /.next/
@@ -53,6 +56,9 @@ next-env.d.ts
 
 # Other
 dev-dist
+
+# Generated routes
+/src/routeTree.gen.ts
 
 .wrangler
 .dev.vars*
