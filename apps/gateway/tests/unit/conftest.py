@@ -6,6 +6,8 @@ import pytest
 from gateway.core.config import Environment, Settings
 from gateway.main import create_app
 
+from tests.unit.fakes import FakeJobQueue
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -56,6 +58,7 @@ def create_test_app() -> Callable[..., FastAPI]:
     def _create(settings: Settings | None = None, **overrides: Any) -> FastAPI:  # noqa: ANN401
         overrides.setdefault("database", cast("Database", FakeDatabase()))
         overrides.setdefault("redis", cast("Redis", FakeRedis()))
+        overrides.setdefault("job_queue", FakeJobQueue())
         overrides.setdefault("personal_api_key_verifier", FakePersonalApiKeyVerifier())
         return create_app(settings or Settings(app_environment=Environment.TEST), **overrides)
 

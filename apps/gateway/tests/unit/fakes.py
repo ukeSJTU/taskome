@@ -337,6 +337,14 @@ class FakeJobQueue:
     def __init__(self) -> None:
         self.job_ids: list[UUID] = []
         self.dispatch_job_ids: list[UUID] = []
+        self.started = False
+        self.closed = False
+
+    async def start(self) -> None:
+        self.started = True
+
+    async def aclose(self) -> None:
+        self.closed = True
 
     async def enqueue_claim(self, job_id: UUID) -> None:
         self.job_ids.append(job_id)
