@@ -113,7 +113,11 @@ export function JobsList() {
           <TableBody>
             {jobs.map((job) => (
               <TableRow key={job.id}>
-                <TableCell className="font-medium">{job.task_name}</TableCell>
+                <TableCell className="font-medium">
+                  <Link className="hover:underline" href={`/results/${job.id}`}>
+                    {job.task_name}
+                  </Link>
+                </TableCell>
                 <TableCell className="capitalize">{job.status}</TableCell>
                 <TableCell>{formatDate(job.created_at)}</TableCell>
                 <TableCell>{formatDate(job.updated_at)}</TableCell>
