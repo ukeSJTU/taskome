@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/ukeSJTU/taskome/apps/cli/internal/gateway"
 	generated "github.com/ukeSJTU/taskome/apps/cli/internal/gateway/generated"
+	"golang.org/x/term"
 )
 
 // Version is supplied by the release build through -ldflags.
@@ -22,6 +23,7 @@ type commandDependencies struct {
 	credentials   credentialStore
 	httpClient    *http.Client
 	oauth         oauthClient
+	isTerminal    func(io.Writer) bool
 }
 
 func defaultCommandDependencies() commandDependencies {
@@ -30,6 +32,10 @@ func defaultCommandDependencies() commandDependencies {
 		credentials:   defaultCredentialStore(),
 		httpClient:    http.DefaultClient,
 		oauth:         defaultOAuthClient(),
+		isTerminal: func(writer io.Writer) bool {
+			file, ok := writer.(*os.File)
+			return ok && term.IsTerminal(int(file.Fd()))
+		},
 	}
 }
 
@@ -47,6 +53,7 @@ func newRootCommand(dependencies commandDependencies) *cobra.Command {
 	}
 	command.AddCommand(newCompletionCommand())
 	command.AddCommand(newConfigCommand(dependencies.configuration))
+	command.AddCommand(newFileCommand(dependencies))
 	command.AddCommand(newLoginCommand(dependencies.configuration, dependencies.credentials, dependencies.oauth))
 	command.AddCommand(newLogoutCommand(dependencies.configuration, dependencies.credentials, dependencies.oauth))
 	command.AddCommand(newWhoAmICommand(dependencies.configuration, dependencies.credentials, dependencies.httpClient, dependencies.oauth))
