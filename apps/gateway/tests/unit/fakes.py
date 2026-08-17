@@ -9,9 +9,10 @@ REST/MCP layers that only care whether they delegate correctly. `FakeJobReposito
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from gateway.models.jobs import JobStatus
@@ -20,6 +21,9 @@ from gateway.repositories.jobs import JobRecord
 from gateway.services.input_files import DownloadUrl, InputFileNotFoundError, UploadUrl
 from gateway.services.jobs import JobNotFoundError
 from gateway.services.task_dispatch import DispatchFailure, DispatchOutcome, DispatchSuccess
+
+if TYPE_CHECKING:
+    from task_kit import TaskResources
 
 
 class FakeInputFileRepository:
@@ -173,6 +177,7 @@ class FakeJobRepository:
             error_detail=None,
             created_at=now,
             updated_at=now,
+            last_heartbeat_at=None,
         )
         self._jobs[job_id] = record
         if self._events is not None:
@@ -210,7 +215,20 @@ class FakeJobRepository:
     async def mark_running(self, job_id: UUID) -> JobRecord | None:
         if self._events is not None:
             self._events.append("repository.mark_running")
-        return self._transition(job_id, status=JobStatus.RUNNING)
+        record = self._jobs.get(job_id)
+        if record is None or record.status is not JobStatus.QUEUED:
+            return None
+        return self._transition(
+            job_id, status=JobStatus.RUNNING, last_heartbeat_at=datetime.now(UTC)
+        )
+
+    async def touch_heartbeat(self, job_id: UUID) -> JobRecord | None:
+        record = self._jobs.get(job_id)
+        if record is None or record.status is not JobStatus.RUNNING:
+            return None
+        return self._transition(
+            job_id, status=JobStatus.RUNNING, last_heartbeat_at=datetime.now(UTC)
+        )
 
     async def mark_completed(self, job_id: UUID, *, result: dict[str, Any]) -> JobRecord | None:
         if self._events is not None:
@@ -222,6 +240,22 @@ class FakeJobRepository:
             self._events.append("repository.mark_failed")
         return self._transition(job_id, status=JobStatus.FAILED, error_detail=error_detail)
 
+    async def mark_stale_failed(
+        self,
+        job_id: UUID,
+        *,
+        stale_before: datetime,
+        error_detail: dict[str, Any],
+    ) -> JobRecord | None:
+        record = self._jobs.get(job_id)
+        if (
+            record is None
+            or record.status is not JobStatus.RUNNING
+            or (record.last_heartbeat_at is not None and record.last_heartbeat_at > stale_before)
+        ):
+            return None
+        return self._transition(job_id, status=JobStatus.FAILED, error_detail=error_detail)
+
     def _transition(
         self,
         job_id: UUID,
@@ -229,6 +263,7 @@ class FakeJobRepository:
         status: JobStatus,
         result: dict[str, Any] | None = None,
         error_detail: dict[str, Any] | None = None,
+        last_heartbeat_at: datetime | None = None,
     ) -> JobRecord | None:
         record = self._jobs.get(job_id)
         if record is None:
@@ -238,22 +273,31 @@ class FakeJobRepository:
             changes["result"] = result
         if error_detail is not None:
             changes["error_detail"] = error_detail
+        if last_heartbeat_at is not None:
+            changes["last_heartbeat_at"] = last_heartbeat_at
         updated = replace(record, **changes)
         self._jobs[job_id] = updated
         return updated
 
     def force_updated_at(self, job_id: UUID, updated_at: datetime) -> None:
-        """Test-only hook to age a Job for the running-timeout reconciliation."""
+        """Test-only hook to age a Job's general update timestamp."""
 
         self._jobs[job_id] = replace(self._jobs[job_id], updated_at=updated_at)
+
+    def force_heartbeat_at(self, job_id: UUID, heartbeat_at: datetime) -> None:
+        self._jobs[job_id] = replace(self._jobs[job_id], last_heartbeat_at=heartbeat_at)
 
 
 class FakeDispatcher:
     """Controllable stand-in for `TaskDispatcher` -- no HTTP, no HMAC."""
 
-    def __init__(self, outcome: DispatchOutcome | None = None) -> None:
+    def __init__(
+        self, outcome: DispatchOutcome | None = None, error: Exception | None = None
+    ) -> None:
         self.outcome = outcome or DispatchSuccess(result={"value": {}, "outputs": []})
+        self.error = error
         self.calls: list[tuple[str, str, UUID, dict[str, Any]]] = []
+        self.timeouts: list[int] = []
 
     async def dispatch(
         self,
@@ -262,9 +306,51 @@ class FakeDispatcher:
         task_name: str,
         job_id: UUID,
         params: dict[str, Any],
+        timeout_seconds: int = 30,
     ) -> DispatchOutcome:
         self.calls.append((task_server_name, task_name, job_id, params))
+        self.timeouts.append(timeout_seconds)
+        if self.error is not None:
+            raise self.error
         return self.outcome
+
+
+class FakeResourceBroker:
+    """In-memory resource reservation boundary for worker orchestration tests."""
+
+    def __init__(self) -> None:
+        self.reserved: list[TaskResources] = []
+        self.released: list[TaskResources] = []
+
+    @asynccontextmanager
+    async def reserve(self, resources: TaskResources):
+        self.reserved.append(resources)
+        try:
+            yield
+        finally:
+            self.released.append(resources)
+
+
+class FakeJobQueue:
+    """In-memory queue boundary for service-layer submission tests."""
+
+    def __init__(self) -> None:
+        self.job_ids: list[UUID] = []
+        self.dispatch_job_ids: list[UUID] = []
+        self.started = False
+        self.closed = False
+
+    async def start(self) -> None:
+        self.started = True
+
+    async def aclose(self) -> None:
+        self.closed = True
+
+    async def enqueue_claim(self, job_id: UUID) -> None:
+        self.job_ids.append(job_id)
+
+    async def enqueue_dispatch(self, job_id: UUID) -> None:
+        self.dispatch_job_ids.append(job_id)
 
 
 class FakeJobService:
@@ -276,7 +362,7 @@ class FakeJobService:
         self.fetched_for: tuple[str, UUID] | None = None
         self.listed_for: tuple[str, JobStatus | None, str | None, int, int] | None = None
         self.raise_on_submit: Exception | None = None
-        self.waited_for: tuple[str, str, str, dict[str, Any]] | None = None
+        self.waited_for: tuple[str, UUID, int] | None = None
         self.raise_on_wait: Exception | None = None
         self.wait_result: JobRecord | None = None
 
@@ -294,6 +380,7 @@ class FakeJobService:
             "error_detail": None,
             "created_at": now,
             "updated_at": now,
+            "last_heartbeat_at": None,
         }
         fields.update(overrides)
         return JobRecord(**fields)
@@ -315,26 +402,13 @@ class FakeJobService:
             params=params,
         )
 
-    async def submit_job_and_wait(
-        self,
-        owner_user_id: str,
-        task_server_name: str,
-        task_name: str,
-        params: dict[str, Any],
-    ) -> JobRecord:
-        self.waited_for = (owner_user_id, task_server_name, task_name, params)
+    async def wait_job(self, owner_user_id: str, job_id: UUID, timeout_seconds: int) -> JobRecord:
+        self.waited_for = (owner_user_id, job_id, timeout_seconds)
         if self.raise_on_wait is not None:
             raise self.raise_on_wait
         if self.wait_result is not None:
             return self.wait_result
-        return self.make_record(
-            owner_user_id=owner_user_id,
-            task_server_name=task_server_name,
-            task_name=task_name,
-            params=params,
-            status=JobStatus.COMPLETED,
-            result={"value": {}, "outputs": []},
-        )
+        return self.make_record(owner_user_id=owner_user_id, id=job_id)
 
     async def get_job(self, owner_user_id: str, job_id: UUID) -> JobRecord:
         self.fetched_for = (owner_user_id, job_id)
@@ -361,7 +435,9 @@ __all__ = [
     "FakeDispatcher",
     "FakeInputFileRepository",
     "FakeInputFileService",
+    "FakeJobQueue",
     "FakeJobRepository",
     "FakeJobService",
+    "FakeResourceBroker",
     "FakeStorage",
 ]

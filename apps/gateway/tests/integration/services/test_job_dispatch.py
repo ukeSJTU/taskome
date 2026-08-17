@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import urllib.request
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, cast
 
 import httpx
@@ -24,6 +25,8 @@ from gateway.core.config import Environment, Settings
 from gateway.db.database import Database
 from gateway.main import create_app
 from gateway.models.jobs import JobStatus
+from gateway.repositories.jobs import JobRepository
+from gateway.services.job_dispatch import JobDispatchService
 from gateway.services.task_dispatch import TaskDispatcher
 from gateway.services.task_manifests import TaskManifest
 from pydantic import BaseModel
@@ -33,12 +36,13 @@ from task_kit import (
     ComputeResult,
     InputFileId,
     TaskDefinition,
+    TaskResources,
     build_task_server,
 )
 from task_kit.runtime import GatewayHMACVerifier, GatewayInputFileResolver, TaskServerRuntime
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import AsyncIterator, Collection
     from pathlib import Path
     from uuid import UUID
 
@@ -66,9 +70,7 @@ class _LifespanStateApp:
 
 
 class _FakeRedis:
-    """Stands in for the Redis client `lifespan` pings on every startup, in every
-    environment -- Gateway's queue intake isn't built yet (ADR-0004), so this test
-    has no real broker to point at and doesn't need one."""
+    """Stands in for the Redis health check; queue behavior uses the typed fake below."""
 
     async def ping(self) -> bool:
         return True
@@ -153,6 +155,8 @@ def _manifest() -> TaskManifest:
         params_schema=_DetectPocketsParams.model_json_schema(),
         result_schema=_DetectPocketsValue.model_json_schema(),
         schema_version=1,
+        resources=TaskResources(num_cpus=1, num_gpus=0),
+        max_duration_seconds=600,
     )
 
 
@@ -194,6 +198,7 @@ def _gateway_app(*, postgres_url: str, storage: SeaweedFSStorage) -> FastAPI:
         database=Database(postgres_url),
         storage=_UnclosableStorage(storage),
         redis=cast("Redis", _FakeRedis()),
+        job_queue=_Queue(),
     )
     app.state.job_service.attach_manifests({"fpocket": {"detect_pockets": _manifest()}})
     return app
@@ -214,15 +219,53 @@ async def _upload_structure(gateway_app: FastAPI) -> UUID:
     return uploaded.id
 
 
-def _connect_dispatcher(gateway_app: FastAPI, fake_task_server: FastAPI) -> None:
+def _connect_dispatcher(gateway_app: FastAPI, fake_task_server: FastAPI) -> TaskDispatcher:
     """Wire the already-built Gateway app to dispatch to the already-built fake Task
-    Server -- necessarily a second step, since each app's own construction needs to
-    reference the other's already-built ASGI app (see `JobService.attach_dispatcher`)."""
+    Server over the in-process HTTP boundary."""
 
     client = httpx.AsyncClient(transport=httpx.ASGITransport(app=fake_task_server))
-    gateway_app.state.job_service.attach_dispatcher(
-        TaskDispatcher(gateway_app.state.settings.task_servers, client)
+    return TaskDispatcher(gateway_app.state.settings.task_servers, client)
+
+
+class _Queue:
+    async def start(self) -> None:
+        pass
+
+    async def aclose(self) -> None:
+        pass
+
+    async def enqueue_claim(self, job_id: UUID) -> None:
+        del job_id
+
+    async def enqueue_dispatch(self, job_id: UUID) -> None:
+        del job_id
+
+
+class _Resources:
+    @asynccontextmanager
+    async def reserve(self, _resources: object) -> AsyncIterator[None]:
+        yield
+
+
+async def _submit_and_dispatch(
+    gateway_app: FastAPI,
+    dispatcher: TaskDispatcher,
+    structure_id: UUID,
+) -> object:
+    queue = gateway_app.state.job_queue
+    record = await gateway_app.state.job_service.submit_job(
+        "user-a", "fpocket", "detect_pockets", {"structure": str(structure_id)}
     )
+    worker = JobDispatchService(
+        repository=JobRepository(gateway_app.state.database),
+        queue=queue,
+        dispatcher=dispatcher,
+        resources=_Resources(),
+        manifests={"fpocket": {"detect_pockets": _manifest()}},
+    )
+    await worker.claim_job(record.id)
+    await worker.execute_dispatch(record.id)
+    return await gateway_app.state.job_service.get_job_for_dispatch(record.id)
 
 
 async def test_a_real_job_dispatches_materializes_and_completes(
@@ -237,12 +280,10 @@ async def test_a_real_job_dispatches_materializes_and_completes(
         run_asgi_lifespan(_LifespanStateApp(gateway_app)),
         fake_task_server.router.lifespan_context(fake_task_server),
     ):
-        _connect_dispatcher(gateway_app, fake_task_server)
+        dispatcher = _connect_dispatcher(gateway_app, fake_task_server)
         structure_id = await _upload_structure(gateway_app)
 
-        record = await gateway_app.state.job_service.submit_job_and_wait(
-            "user-a", "fpocket", "detect_pockets", {"structure": str(structure_id)}
-        )
+        record = await _submit_and_dispatch(gateway_app, dispatcher, structure_id)
 
     assert record.status is JobStatus.COMPLETED
     assert record.result == {
@@ -263,12 +304,10 @@ async def test_a_compute_failure_marks_the_job_failed(
         run_asgi_lifespan(_LifespanStateApp(gateway_app)),
         fake_task_server.router.lifespan_context(fake_task_server),
     ):
-        _connect_dispatcher(gateway_app, fake_task_server)
+        dispatcher = _connect_dispatcher(gateway_app, fake_task_server)
         structure_id = await _upload_structure(gateway_app)
 
-        record = await gateway_app.state.job_service.submit_job_and_wait(
-            "user-a", "fpocket", "detect_pockets", {"structure": str(structure_id)}
-        )
+        record = await _submit_and_dispatch(gateway_app, dispatcher, structure_id)
 
     assert record.status is JobStatus.FAILED
     assert record.error_detail is not None
@@ -291,6 +330,6 @@ async def test_job_input_file_ownership_is_enforced_before_dispatch(
         structure_id = await _upload_structure(gateway_app)
 
         with pytest.raises(Exception, match="not available"):
-            await gateway_app.state.job_service.submit_job_and_wait(
+            await gateway_app.state.job_service.submit_job(
                 "user-b", "fpocket", "detect_pockets", {"structure": str(structure_id)}
             )

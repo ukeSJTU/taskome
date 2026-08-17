@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.unit.fakes import FakeJobQueue
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -50,7 +52,8 @@ def test_lifespan_starts_and_closes_owned_resources_exactly_once(
 
     http_client = HTTPClient()
     mocker.patch("gateway.core.lifespan.httpx2.AsyncClient", return_value=http_client)
-    app = create_test_app()
+    queue = FakeJobQueue()
+    app = create_test_app(job_queue=queue)
     app.state.database = Database()
     app.state.storage = Storage()
     app.state.redis = Redis()
@@ -68,6 +71,8 @@ def test_lifespan_starts_and_closes_owned_resources_exactly_once(
         "storage.close",
         "database.dispose",
     ]
+    assert queue.started is True
+    assert queue.closed is True
 
 
 def test_lifespan_closes_resources_when_startup_fails(

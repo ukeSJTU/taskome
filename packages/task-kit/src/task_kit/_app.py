@@ -370,6 +370,11 @@ def build_task_server(
                 "description": item.description,
                 "params_schema": _schema(item.params_model),
                 "result_schema": _schema(item.result_model),
+                "resources": {
+                    "num_cpus": item.resources.num_cpus,
+                    "num_gpus": item.resources.num_gpus,
+                },
+                "max_duration_seconds": item.max_duration_seconds,
             }
             for item in definitions
         ],

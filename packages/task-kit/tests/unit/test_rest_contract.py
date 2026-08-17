@@ -14,6 +14,7 @@ from task_kit import (
     InputFileId,
     ProducedFile,
     TaskDefinition,
+    TaskResources,
     build_task_server,
 )
 from task_kit.runtime import SignedGatewayRequest, VerifiedGatewayRequest
@@ -178,6 +179,8 @@ def test_signed_rest_executes_a_flat_params_object() -> None:
                 params_model=EchoParams,
                 result_model=EchoResult,
                 adapter=EchoAdapter(),
+                resources=TaskResources(num_cpus=2, num_gpus=0),
+                max_duration_seconds=90,
             ),
         ),
         runtime=fake_runtime(),
@@ -385,6 +388,8 @@ def test_manifest_describes_the_flat_alias_schema() -> None:
                 params_model=EchoParams,
                 result_model=EchoResult,
                 adapter=EchoAdapter(),
+                resources=TaskResources(num_cpus=2, num_gpus=0),
+                max_duration_seconds=90,
             ),
         ),
         runtime=fake_runtime(),
@@ -402,6 +407,8 @@ def test_manifest_describes_the_flat_alias_schema() -> None:
     assert response.json()["tasks"][0]["params_schema"]["properties"] == {
         "text": {"title": "Text", "type": "string"}
     }
+    assert response.json()["tasks"][0]["resources"] == {"num_cpus": 2, "num_gpus": 0}
+    assert response.json()["tasks"][0]["max_duration_seconds"] == 90
 
 
 def test_rest_rejects_unknown_or_coerced_params() -> None:

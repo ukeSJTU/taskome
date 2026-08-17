@@ -50,8 +50,6 @@ Submitting a Job returns immediately once it's durably queued — not once it's 
 
 Retries only ever happen inside `execute_dispatch`, and only for a failure known not to have reached the Task Server (connection refused, DNS failure) — see [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md) for why a failure that might have reached the Task Server is treated as terminal instead of retried, and why `claim_job` and `execute_dispatch` are split into two tasks rather than one retried task. If the Worker process dies mid-`execute_dispatch` (after acking, before writing a terminal state), there's no automatic recovery — the heartbeat/ceiling staleness check surfaces this on the caller's next read, and the caller resubmits. This is the same accepted risk [ADR-0004](../adr/0004-gateway-owned-job-dispatch.md) names for the Gateway → Task Server leg, unchanged by this design.
 
-> **Status note (delete once built):** This diagram is target design from ADR-0008. What exists in code today: the Job data model, REST `POST /v1/jobs` (`202` + in-process `asyncio.create_task` dispatch, not a queue) and `GET /v1/jobs/{id}`, and an MCP surface that still dispatches synchronously (`submit_job_and_wait`) rather than the `submit`/`get_job`/`wait_job` split shown here. No taskiq usage, no Gateway Worker process, and nothing calls Ray yet — see `containers.md`'s Job execution section.
-
 ## Input File upload and download
 
 ```mermaid

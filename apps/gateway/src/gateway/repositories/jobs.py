@@ -30,6 +30,7 @@ class JobRecord:
     error_detail: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime
+    last_heartbeat_at: datetime | None
 
 
 def _record(job: Job) -> JobRecord:
@@ -45,6 +46,7 @@ def _record(job: Job) -> JobRecord:
         error_detail=job.error_detail,
         created_at=job.created_at,
         updated_at=job.updated_at,
+        last_heartbeat_at=job.last_heartbeat_at,
     )
 
 
@@ -126,7 +128,33 @@ class JobRepository:
     async def mark_running(self, job_id: UUID) -> JobRecord | None:
         """Transition a Job to `running` immediately before dispatch."""
 
-        return await self._transition(job_id, status=JobStatus.RUNNING)
+        async with self._database.transaction() as session:
+            job = (
+                await session.execute(select(Job).where(Job.id == job_id).with_for_update())
+            ).scalar_one_or_none()
+            if job is None or job.status is not JobStatus.QUEUED:
+                return None
+            now = datetime.now(UTC)
+            job.status = JobStatus.RUNNING
+            job.last_heartbeat_at = now
+            job.updated_at = now
+            await session.flush()
+            return _record(job)
+
+    async def touch_heartbeat(self, job_id: UUID) -> JobRecord | None:
+        """Record that the Gateway Worker still owns a running Job."""
+
+        async with self._database.transaction() as session:
+            job = (
+                await session.execute(select(Job).where(Job.id == job_id).with_for_update())
+            ).scalar_one_or_none()
+            if job is None or job.status is not JobStatus.RUNNING:
+                return None
+            now = datetime.now(UTC)
+            job.last_heartbeat_at = now
+            job.updated_at = now
+            await session.flush()
+            return _record(job)
 
     async def mark_completed(self, job_id: UUID, *, result: dict[str, Any]) -> JobRecord | None:
         """Transition a Job to `completed` and persist its result."""
@@ -138,6 +166,31 @@ class JobRepository:
 
         return await self._transition(job_id, status=JobStatus.FAILED, error_detail=error_detail)
 
+    async def mark_stale_failed(
+        self,
+        job_id: UUID,
+        *,
+        stale_before: datetime,
+        error_detail: dict[str, Any],
+    ) -> JobRecord | None:
+        """Fail only a Job that remains running with a stale heartbeat."""
+
+        async with self._database.transaction() as session:
+            job = (
+                await session.execute(select(Job).where(Job.id == job_id).with_for_update())
+            ).scalar_one_or_none()
+            if (
+                job is None
+                or job.status is not JobStatus.RUNNING
+                or (job.last_heartbeat_at is not None and job.last_heartbeat_at > stale_before)
+            ):
+                return None
+            job.status = JobStatus.FAILED
+            job.error_detail = error_detail
+            job.updated_at = datetime.now(UTC)
+            await session.flush()
+            return _record(job)
+
     async def _transition(
         self,
         job_id: UUID,
@@ -145,6 +198,7 @@ class JobRepository:
         status: JobStatus,
         result: dict[str, Any] | None = None,
         error_detail: dict[str, Any] | None = None,
+        last_heartbeat_at: datetime | None = None,
     ) -> JobRecord | None:
         async with self._database.transaction() as session:
             job = (
@@ -157,6 +211,8 @@ class JobRepository:
                 job.result = result
             if error_detail is not None:
                 job.error_detail = error_detail
+            if last_heartbeat_at is not None:
+                job.last_heartbeat_at = last_heartbeat_at
             job.updated_at = datetime.now(UTC)
             await session.flush()
             return _record(job)

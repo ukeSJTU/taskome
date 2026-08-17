@@ -52,6 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         resources.push_async_callback(database.dispose)
         resources.push_async_callback(app.state.personal_api_key_verifier.aclose)
         resources.push_async_callback(app.state.dispatch_http_client.aclose)
+        resources.push_async_callback(app.state.job_queue.aclose)
 
         try:
             if hasattr(database, "start"):
@@ -61,6 +62,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             app.state.owned_input_file_service.attach_storage(storage)
             resources.push_async_callback(asyncio.to_thread, storage.close)
             storage.start()
+            await app.state.job_queue.start()
             redis: Redis = app.state.redis or Redis.from_url(
                 settings.redis_url.get_secret_value(),
                 socket_connect_timeout=settings.redis_timeout_seconds,
@@ -81,8 +83,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 )
                 app.state.owned_job_service.attach_manifests(manifests)
                 register_task_tools(app.state.mcp, app.state.owned_job_service, manifests)
-            resources.push_async_callback(app.state.owned_job_service.wait_for_background_dispatch)
-
             if settings.app_environment is not Environment.TEST and (
                 not await database.is_available()
                 or (

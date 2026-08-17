@@ -12,6 +12,7 @@ from ._types import (
     InputFileId,
     ProducedFile,
     TaskDefinition,
+    TaskResources,
 )
 from .runtime import TaskServerRuntime
 
@@ -26,6 +27,7 @@ __all__ = [
     "InputFileId",
     "ProducedFile",
     "TaskDefinition",
+    "TaskResources",
     "TaskServerRuntime",
     "build_task_server",
 ]

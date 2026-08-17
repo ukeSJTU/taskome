@@ -1,6 +1,6 @@
 """ASGI app assembly for the fpocket Task Server."""
 
-from task_kit import TaskDefinition, build_task_server
+from task_kit import TaskDefinition, TaskResources, build_task_server
 from task_kit.runtime import TaskServerSettings, build_runtime
 
 from fpocket_server.adapter import DetectPocketsAdapter
@@ -18,6 +18,8 @@ app = build_task_server(
             params_model=DetectPocketsParams,
             result_model=DetectPocketsValue,
             adapter=DetectPocketsAdapter(),
+            resources=TaskResources(num_cpus=1, num_gpus=0),
+            max_duration_seconds=600,
         ),
     ),
     runtime=runtime,

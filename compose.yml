@@ -2,6 +2,7 @@ name: taskome
 
 include:
   - infra/redis.yml
+  - infra/ray.yml
   - infra/seaweedfs.yml
   - infra/otel-gui.yml
 
@@ -65,6 +66,36 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
+  gateway-worker:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
+      REDIS_URL: redis://redis-taskiq:6379/0
+      RAY_ADDRESS: ray://ray-head:10001
+      FPOCKET_INTERNAL_URL: http://task-fpocket:8000
+      FPOCKET_TASK_HMAC_SECRET: ${GATEWAY_TASK_HMAC_SECRET:-taskome-local-fpocket-gateway-hmac-secret}
+    command:
+      ["taskiq", "worker", "gateway.worker:broker", "--ack-type", "when_received", "--workers", "1"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-taskiq:
+        condition: service_healthy
+      ray-head:
+        condition: service_started
+      task-fpocket:
+        condition: service_healthy
     security_opt:
       - no-new-privileges:true
     cap_drop:

@@ -4,6 +4,7 @@ services:
     command: >
       ray start --head --block
       --port=6379
+      --ray-client-server-port=10001
       --dashboard-host=0.0.0.0
       --dashboard-port=8265
     ports:

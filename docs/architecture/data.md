@@ -21,9 +21,7 @@ Every foreign key here is intra-schema. Web owns all of it, and nothing outside 
 
 ## Gateway's schema (Alembic-managed, everything else)
 
-Today, that "everything else" is `input_files` (`id`, `owner_user_id`, `original_filename`, `created_at`, `deleted_at`) and `jobs` (`id`, `owner_user_id`, `task_server_name`, `task_name`, `params`, `params_schema_version`, `status`, `result`, `error_detail`, `created_at`, `updated_at`).
-
-> **Status note (delete once built):** [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md) adds a `last_heartbeat_at` column to `jobs`, touched every ~20s by the Gateway Worker while a dispatch call is in flight — the signal a `running` Job's staleness check reads to tell a dead worker from one still legitimately working. That column doesn't exist yet; today's `running` staleness check is a flat time-since-`updated_at` threshold, not a heartbeat.
+Today, that "everything else" is `input_files` (`id`, `owner_user_id`, `original_filename`, `created_at`, `deleted_at`) and `jobs` (`id`, `owner_user_id`, `task_server_name`, `task_name`, `params`, `params_schema_version`, `status`, `result`, `error_detail`, `created_at`, `updated_at`, `last_heartbeat_at`). The Gateway Worker updates `last_heartbeat_at` roughly every 20 seconds during dispatch; reads mark a `running` Job failed when its heartbeat is stale.
 
 `owner_user_id` stores the Web-issued user ID as a plain string — there's no foreign key to Web's `user` table, because a real cross-schema foreign key isn't possible here (separate schemas, separate migration tools). Ownership is enforced entirely at the application layer: every query on `input_files` filters by the caller's `owner_user_id`, resolved from their verified `Principal` (see [`security.md`](./security.md)), never from a database join.
 

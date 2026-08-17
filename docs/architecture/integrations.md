@@ -16,8 +16,6 @@ This is a deliberate, accepted trade-off, not an oversight: if Gateway's own wor
 
 Publishing a Task's output to SeaweedFS is a deliberately non-retrying operation. SeaweedFS doesn't enforce S3's conditional-PUT semantics, so retrying an upload whose result is ambiguous (did it actually land, or did the request just time out?) risks a duplicate or an overwrite — worse than failing outright. Instead, the publisher does a preflight existence check and refuses to overwrite, rather than retrying blindly. The same applies to a Task Server's calls back to Gateway to resolve an Input File: a failed call propagates as an error immediately, with no built-in backoff or retry.
 
-> **Status note (delete once built):** Gateway does dispatch to `task-fpocket` in production code today (in-process, over HMAC-signed HTTP), so the preflight-existence-check behavior above is exercised. What isn't built yet is the taskiq/Ray path this page's dispatch section and ADR-0008 describe — today's dispatch is a direct `asyncio.create_task` call, not a queued, retried `execute_dispatch` task.
-
 ## External systems
 
 | System    | What Taskome sends or receives                                                        | Failure handling                                                                                                                                  |

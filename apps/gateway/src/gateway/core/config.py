@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     docs_enabled: bool | None = None
     database_url: SecretStr
     redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
+    ray_address: str = "ray://localhost:10001"
     database_timeout_seconds: Annotated[float, Field(gt=0)] = 5
     redis_timeout_seconds: Annotated[float, Field(gt=0)] = 2
     seaweedfs_connect_timeout_seconds: Annotated[float, Field(gt=0)] = 3

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from task_kit import TaskResources
 from task_kit.runtime import sign_gateway_request
 
 if TYPE_CHECKING:
@@ -34,6 +35,8 @@ class TaskManifest:
     params_schema: dict[str, Any]
     result_schema: dict[str, Any]
     schema_version: int
+    resources: TaskResources
+    max_duration_seconds: int
 
 
 TaskManifestRegistry = dict[str, dict[str, TaskManifest]]
@@ -71,6 +74,8 @@ async def fetch_task_manifests(
                     params_schema=task["params_schema"],
                     result_schema=task["result_schema"],
                     schema_version=body["schema_version"],
+                    resources=TaskResources(**task["resources"]),
+                    max_duration_seconds=task["max_duration_seconds"],
                 )
                 for task in body["tasks"]
             }

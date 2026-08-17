@@ -23,6 +23,8 @@ from gateway.schemas.input_files import MAX_INPUT_FILE_BYTES
 from gateway.services.input_files import DownloadUrl, InputFileService, UploadUrl
 from mcp.shared.exceptions import MCPError
 
+from tests.unit.fakes import FakeInputFileService, FakeJobService
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -142,6 +144,8 @@ def test_mcp_accepts_oauth_token_and_rejects_session_token_through_protocol(
     assert [tool.name for tool in asyncio.run(list_tools(oauth_token))] == [
         "prepare_input_file_upload",
         "prepare_input_file_download",
+        "get_job",
+        "wait_job",
     ]
     with pytest.raises(MCPError):
         asyncio.run(list_tools(session_token))
@@ -250,6 +254,7 @@ def test_mcp_upload_tool_delegates_to_the_shared_service() -> None:
         server = create_mcp_server(
             Settings(app_environment=Environment.TEST),
             cast("InputFileService", FakeInputFileService()),
+            job_service=FakeJobService(),
             auth_provider=MCPPrincipalVerifier(
                 StaticTokenVerifier(
                     {
@@ -298,6 +303,7 @@ def test_mcp_upload_tool_rejects_invalid_boundary_values(arguments: dict[str, ob
         server = create_mcp_server(
             Settings(app_environment=Environment.TEST),
             cast("InputFileService", FakeInputFileService()),
+            job_service=FakeJobService(),
             auth_provider=MCPPrincipalVerifier(
                 StaticTokenVerifier(
                     {
@@ -347,6 +353,7 @@ def test_mcp_download_tool_delegates_to_the_shared_service() -> None:
         server = create_mcp_server(
             Settings(app_environment=Environment.TEST),
             cast("InputFileService", FakeInputFileService()),
+            job_service=FakeJobService(),
             auth_provider=MCPPrincipalVerifier(
                 StaticTokenVerifier(
                     {
@@ -376,3 +383,43 @@ def test_mcp_download_tool_delegates_to_the_shared_service() -> None:
 
     result = asyncio.run(call_tool())
     assert result["download_url"] == "http://seaweedfs/download"
+
+
+def test_mcp_job_tools_return_current_state_and_cap_wait_at_five_minutes() -> None:
+    job_service = FakeJobService()
+    job_id = uuid4()
+
+    async def call_tools() -> tuple[dict[str, object], dict[str, object]]:
+        server = create_mcp_server(
+            Settings(app_environment=Environment.TEST),
+            FakeInputFileService(),
+            job_service=job_service,
+            auth_provider=MCPPrincipalVerifier(
+                StaticTokenVerifier(
+                    {"test-token": {"client_id": "test-client", "scopes": [], "sub": "user-a"}}
+                )
+            ),
+        )
+        asgi_server = ASGIServer(
+            url="http://127.0.0.1/mcp",
+            app=server.http_app(path="/mcp"),
+            transport_type="streamable-http",
+        )
+        async with (
+            run_asgi_lifespan(asgi_server.app),
+            asgi_server.client(auth="test-token") as client,
+        ):
+            fetched = await client.call_tool("get_job", {"job_id": str(job_id)})
+            waited = await client.call_tool(
+                "wait_job", {"job_id": str(job_id), "timeout_seconds": 999}
+            )
+            return (
+                cast("dict[str, object]", fetched.structured_content),
+                cast("dict[str, object]", waited.structured_content),
+            )
+
+    fetched, waited = asyncio.run(call_tools())
+    assert fetched["status"] == "queued"
+    assert waited["status"] == "queued"
+    assert job_service.fetched_for == ("user-a", job_id)
+    assert job_service.waited_for == ("user-a", job_id, 300)

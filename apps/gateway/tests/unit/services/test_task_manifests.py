@@ -20,6 +20,8 @@ _MANIFEST_BODY = {
                 "type": "object",
                 "properties": {"pocket_count": {"type": "integer"}},
             },
+            "resources": {"num_cpus": 1, "num_gpus": 0},
+            "max_duration_seconds": 600,
         }
     ],
 }
@@ -56,6 +58,9 @@ async def test_fetch_task_manifests_signs_the_request_and_parses_tasks() -> None
     assert manifest.schema_version == 1
     assert manifest.params_schema == _MANIFEST_BODY["tasks"][0]["params_schema"]
     assert manifest.result_schema == _MANIFEST_BODY["tasks"][0]["result_schema"]
+    assert manifest.resources.num_cpus == 1
+    assert manifest.resources.num_gpus == 0
+    assert manifest.max_duration_seconds == 600
 
 
 async def test_fetch_task_manifests_omits_an_unreachable_server() -> None:

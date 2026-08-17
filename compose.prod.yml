@@ -2,9 +2,6 @@ name: taskome
 
 # Combined with compose.yml, defaults preserve the localhost production-shape rehearsal.
 # A real deployment supplies the public origins from .env.production.example.
-include:
-  - infra/ray.yml
-
 services:
   caddy:
     image: caddy:2.10.2-alpine
@@ -130,6 +127,7 @@ services:
       WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
       DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/taskome
       REDIS_URL: redis://redis-taskiq:6379/0
+      RAY_ADDRESS: ray://ray-head:10001
       FORWARDED_ALLOW_IPS: 172.30.0.2
       FPOCKET_INTERNAL_URL: http://task-fpocket:8000
       FPOCKET_TASK_HMAC_SECRET: ${GATEWAY_TASK_HMAC_SECRET:-taskome-local-fpocket-gateway-hmac-secret}
@@ -163,6 +161,14 @@ services:
     networks:
       - default
       - edge
+
+  gateway-worker:
+    environment:
+      APP_ENVIRONMENT: production
+      WEB_GATEWAY_HMAC_SECRET: ${WEB_GATEWAY_HMAC_SECRET:-taskome-local-web-gateway-hmac-secret}
+    depends_on:
+      gateway-migrate:
+        condition: service_completed_successfully
 
   gateway-migrate:
     build:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Protocol
 from uuid import UUID, uuid4
 
@@ -11,20 +11,18 @@ import jsonschema
 from task_kit import INPUT_FILE_ID_JSON_SCHEMA_MARKER
 
 from gateway.models.jobs import JobStatus
-from gateway.services.task_dispatch import DispatchSuccess
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from gateway.repositories.input_files import InputFileRecord
     from gateway.repositories.jobs import JobRecord
-    from gateway.services.task_dispatch import DispatchOutcome
     from gateway.services.task_manifests import TaskManifest, TaskManifestRegistry
 
-RUNNING_TIMEOUT_SECONDS = 150
-_JOB_TIMED_OUT_DETAIL = {
-    "error_type": "job_timed_out",
-    "detail": "The Task Server did not respond in time.",
+HEARTBEAT_STALE_SECONDS = 60
+_WORKER_HEARTBEAT_STALE_DETAIL = {
+    "error_type": "worker_heartbeat_stale",
+    "detail": "The Gateway Worker stopped reporting progress for this Job.",
 }
 
 
@@ -85,6 +83,11 @@ class JobRepositoryPort(Protocol):
         self, job_id: UUID, *, error_detail: dict[str, Any]
     ) -> JobRecord | None: ...
 
+    async def touch_heartbeat(self, job_id: UUID) -> JobRecord | None: ...
+    async def mark_stale_failed(
+        self, job_id: UUID, *, stale_before: datetime, error_detail: dict[str, Any]
+    ) -> JobRecord | None: ...
+
 
 class InputFileLookupPort(Protocol):
     """What `JobService` needs to validate an Input File reference in Params."""
@@ -94,53 +97,34 @@ class InputFileLookupPort(Protocol):
     ) -> InputFileRecord | None: ...
 
 
-class DispatcherPort(Protocol):
-    """What `JobService` needs to dispatch a Job to its Task Server."""
+class JobQueuePort(Protocol):
+    """Durable intake for Job IDs awaiting a Gateway Worker claim."""
 
-    async def dispatch(
-        self,
-        *,
-        task_server_name: str,
-        task_name: str,
-        job_id: UUID,
-        params: dict[str, Any],
-    ) -> DispatchOutcome: ...
+    async def enqueue_claim(self, job_id: UUID) -> None: ...
 
 
 class JobService:
-    """Validate, persist, and dispatch Jobs; reconcile stale `running` status on read."""
+    """Validate, persist, queue, and read Jobs."""
 
     def __init__(
         self,
         *,
         repository: JobRepositoryPort,
         input_files: InputFileLookupPort,
-        dispatcher: DispatcherPort,
+        queue: JobQueuePort,
         manifests: TaskManifestRegistry,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._repository = repository
         self._input_files = input_files
-        self._dispatcher = dispatcher
+        self._queue = queue
         self._manifests = manifests
         self._clock = clock
-        self._background_tasks: set[asyncio.Task[JobRecord]] = set()
 
     def attach_manifests(self, manifests: TaskManifestRegistry) -> None:
         """Replace the cached Task manifest registry, fetched once during lifespan startup."""
 
         self._manifests = manifests
-
-    def attach_dispatcher(self, dispatcher: DispatcherPort) -> None:
-        """Replace the dispatch port.
-
-        A construction-time seam: tests that connect Gateway to a Task Server purely
-        in-process (`httpx.ASGITransport`) need each side to reference the other's
-        already-built ASGI app, so the dispatcher can only be wired up after both
-        exist. Production always dispatches over real HTTP and never needs this.
-        """
-
-        self._dispatcher = dispatcher
 
     async def submit_job(
         self,
@@ -149,33 +133,11 @@ class JobService:
         task_name: str,
         params: dict[str, Any],
     ) -> JobRecord:
-        """Validate and durably queue a Job, then dispatch it in the background.
-
-        Returns as soon as the Job is committed `queued` -- the caller (REST) polls
-        for completion. See `submit_job_and_wait` for the blocking MCP counterpart.
-        """
+        """Validate, persist, and enqueue a Job without waiting for execution."""
 
         record = await self._validate_and_create(owner_user_id, task_server_name, task_name, params)
-        task = asyncio.create_task(self._run_dispatch(record))
-        self._background_tasks.add(task)
-        task.add_done_callback(self._background_tasks.discard)
+        await self._queue.enqueue_claim(record.id)
         return record
-
-    async def submit_job_and_wait(
-        self,
-        owner_user_id: str,
-        task_server_name: str,
-        task_name: str,
-        params: dict[str, Any],
-    ) -> JobRecord:
-        """Validate, queue, and dispatch a Job, returning only once it is terminal.
-
-        Used by the MCP `detect_pockets`-style tools, whose callers expect a single
-        blocking call to return the actual result.
-        """
-
-        record = await self._validate_and_create(owner_user_id, task_server_name, task_name, params)
-        return await self._run_dispatch(record)
 
     async def get_job_for_dispatch(self, job_id: UUID) -> JobRecord:
         """Look up a Job by id alone, for the Task-Server-to-Gateway callback boundary.
@@ -190,12 +152,25 @@ class JobService:
         return record
 
     async def get_job(self, owner_user_id: str, job_id: UUID) -> JobRecord:
-        """Return a caller-owned Job, reconciling a timed-out `running` status."""
+        """Return a caller-owned Job, reconciling an orphaned `running` status."""
 
         record = await self._repository.find_owned(owner_user_id, job_id)
         if record is None:
             raise JobNotFoundError
         return await self._reconcile(record)
+
+    async def wait_job(self, owner_user_id: str, job_id: UUID, timeout_seconds: int) -> JobRecord:
+        """Poll an owned Job until terminal or the caller's bounded wait expires."""
+
+        deadline = self._clock().timestamp() + timeout_seconds
+        while True:
+            record = await self.get_job(owner_user_id, job_id)
+            if record.status in (JobStatus.COMPLETED, JobStatus.FAILED):
+                return record
+            remaining = deadline - self._clock().timestamp()
+            if remaining <= 0:
+                return record
+            await asyncio.sleep(min(1, remaining))
 
     async def list_jobs(
         self,
@@ -206,21 +181,12 @@ class JobService:
         limit: int,
         offset: int,
     ) -> tuple[JobRecord, ...]:
-        """List a caller's own Jobs, newest first, reconciling any timed-out ones."""
+        """List a caller's own Jobs, newest first, reconciling stale heartbeats."""
 
         records = await self._repository.list_owned(
             owner_user_id, status=status, task_name=task_name, limit=limit, offset=offset
         )
         return tuple([await self._reconcile(record) for record in records])
-
-    async def wait_for_background_dispatch(self) -> None:
-        """Wait for every fire-and-forget dispatch scheduled by `submit_job`.
-
-        Used by lifespan shutdown and by tests that need dispatch to have settled.
-        """
-
-        if self._background_tasks:
-            await asyncio.gather(*self._background_tasks, return_exceptions=True)
 
     async def _validate_and_create(
         self,
@@ -262,30 +228,19 @@ class JobService:
             if found is None:
                 raise JobInputFileNotFoundError(field, input_file_id)
 
-    async def _run_dispatch(self, record: JobRecord) -> JobRecord:
-        await self._repository.mark_running(record.id)
-        outcome = await self._dispatcher.dispatch(
-            task_server_name=record.task_server_name,
-            task_name=record.task_name,
-            job_id=record.id,
-            params=record.params,
-        )
-        if isinstance(outcome, DispatchSuccess):
-            updated = await self._repository.mark_completed(record.id, result=outcome.result)
-        else:
-            updated = await self._repository.mark_failed(
-                record.id, error_detail=outcome.error_detail
-            )
-        return updated or record
-
     async def _reconcile(self, record: JobRecord) -> JobRecord:
         if record.status is not JobStatus.RUNNING:
             return record
-        elapsed = (self._clock() - record.updated_at).total_seconds()
-        if elapsed <= RUNNING_TIMEOUT_SECONDS:
+        if (
+            record.last_heartbeat_at is not None
+            and (self._clock() - record.last_heartbeat_at).total_seconds()
+            <= HEARTBEAT_STALE_SECONDS
+        ):
             return record
-        updated = await self._repository.mark_failed(
-            record.id, error_detail=dict(_JOB_TIMED_OUT_DETAIL)
+        updated = await self._repository.mark_stale_failed(
+            record.id,
+            stale_before=self._clock() - timedelta(seconds=HEARTBEAT_STALE_SECONDS),
+            error_detail=dict(_WORKER_HEARTBEAT_STALE_DETAIL),
         )
         return updated or record
 
