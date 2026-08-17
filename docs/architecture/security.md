@@ -6,19 +6,21 @@ This page covers Taskome's identity model — how a request from any of the four
 
 Every request, regardless of which Access Channel it came through, resolves to one internal `Principal` before Gateway does anything else with it. Three credential kinds map to that one `Principal`:
 
-| Credential kind        | Used by                        | Verified how                                                        |
-| ---------------------- | ------------------------------ | ------------------------------------------------------------------- |
-| Session JWT            | Web App (via its BFF)          | Gateway verifies against Web's JWKS endpoint                        |
-| MCP OAuth access token | MCP Agent                      | Gateway verifies against the same JWKS endpoint, different audience |
-| Personal API Key       | CLI, external scripts/services | Gateway calls Web's internal verification endpoint                  |
+| Credential kind    | Used by                                   | Verified how                                                           |
+| ------------------ | ----------------------------------------- | ---------------------------------------------------------------------- |
+| Session JWT        | Web App (via its BFF)                     | Gateway verifies against Web's JWKS endpoint                           |
+| OAuth access token | MCP Agent; interactive CLI                | Gateway verifies against Web's JWKS endpoint and the resource audience |
+| Personal API Key   | CLI automation; external scripts/services | Gateway calls Web's internal verification endpoint                     |
 
 This is Gateway's core job as the identity boundary (see [`overview.md`](./overview.md)'s Core principles) — nothing downstream of that resolution has to branch on how the caller connected.
 
 ### JWT verification
 
-Web signs both session JWTs and MCP OAuth access tokens using better-auth's `jwt` plugin (EdDSA). Gateway never holds a shared signing secret — it fetches Web's JWKS endpoint and verifies signatures against the public keys there. What separates a session JWT from an MCP OAuth token isn't the signing mechanism, it's the **audience**: session JWTs are scoped to Gateway's REST resource, MCP OAuth tokens are scoped to Gateway's MCP resource. Gateway's verifier checks audience as well as signature, so a token minted for one surface can't be replayed against the other.
+Web signs both session JWTs and OAuth access tokens using better-auth's `jwt` plugin (EdDSA). Gateway never holds a shared signing secret — it fetches Web's JWKS endpoint and verifies signatures against the public keys there. The **audience** separates each access token's resource: session JWTs and CLI OAuth tokens are scoped to Gateway's REST resource, while MCP OAuth tokens are scoped to Gateway's MCP resource. Gateway's verifier checks issuer and audience, so an MCP token cannot be replayed against REST, and a REST token cannot be replayed against MCP.
 
-The MCP OAuth flow itself supports only the `authorization_code` grant. Dynamic client registration is allowed, including from unauthenticated clients, rate-limited to 5 requests per 60 seconds.
+OAuth supports `authorization_code` with S256 PKCE for every public client. MCP Agents continue to use rate-limited dynamic registration; the official CLI is one server-seeded public client and uses a loopback callback. CLI login additionally requests `offline_access` and uses refresh-token rotation. Device Authorization Grant is deliberately deferred. See [ADR-0009](../adr/0009-cli-oauth-login-and-api-key-automation.md).
+
+> **Status note (delete once built):** CLI REST OAuth is the accepted target of ADR-0009, not a live credential path yet. Today Gateway REST accepts a Web session JWT or a Personal API Key; Gateway's OAuth verifier remains MCP-only.
 
 ### Personal API Key verification
 
@@ -39,5 +41,5 @@ Better-auth's global rate limiting covers its own routes (login, session, OAuth)
 - [`context.md`](./context.md) — the four Access Channels this identity model serves.
 - [`containers.md`](./containers.md) — which container does what.
 - [`overview.md`](./overview.md) — why identity resolution is centralized in Gateway.
-- [`docs/adr/0002-identity-and-access-channels.md`](../adr/0002-identity-and-access-channels.md) — the access-channels and JWT-auth decisions behind this model.
+- [`docs/adr/0009-cli-oauth-login-and-api-key-automation.md`](../adr/0009-cli-oauth-login-and-api-key-automation.md) — the CLI OAuth and API-key decisions behind this model.
 - [`docs/adr/0007-internal-service-hmac-signing.md`](../adr/0007-internal-service-hmac-signing.md) — the Personal API Key verification and internal-signing decision.

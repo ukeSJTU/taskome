@@ -50,6 +50,8 @@ transfer bytes directly to or from SeaweedFS. The REST equivalent is
 `/v1` resource; MCP accepts OAuth access tokens bound to the public `/mcp`
 resource. `GET /v1/me` reports the normalized Principal identity for REST calls.
 
+> **Status note (delete once built):** [ADR-0009](../../docs/adr/0009-cli-oauth-login-and-api-key-automation.md) adds OAuth access tokens bound to `/v1` for the interactive CLI. Until then, REST accepts session JWTs and Personal API Keys; OAuth remains MCP-only.
+
 MCP clients discover the protected resource at
 `/.well-known/oauth-protected-resource/mcp`; its metadata points to Web's public
 Better Auth issuer. Better Auth 1.6.26 cannot yet onboard clients through Client ID
@@ -90,6 +92,8 @@ Web and Gateway publish no host ports, so Caddy is their sole public entry point
 OpenTelemetry keeps its standard `OTEL_*` names; setting
 `OTEL_EXPORTER_OTLP_ENDPOINT` enables OTLP/HTTP traces and logs. See
 `.env.example` for the local template.
+
+ADR-0009 adds REST protected-resource metadata alongside the MCP metadata so the CLI can discover Web's OAuth authorization server from its configured Gateway URL.
 
 ## Development checks
 

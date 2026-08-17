@@ -12,7 +12,7 @@ Taskome's own services call each other for narrow, internal, non-user-facing pur
 
 ## Decision Drivers
 
-- These are service-to-service calls, not user identity assertions — reusing the external JWT/`Principal` model (ADR-0002) would conflate two different concepts: "which user is asking" versus "is this really Gateway/Web/a Task Server calling."
+- These are service-to-service calls, not user identity assertions — reusing the external JWT/`Principal` model (ADR-0009) would conflate two different concepts: "which user is asking" versus "is this really Gateway/Web/a Task Server calling."
 - Today's requirements and incremental delivery: avoid standing up PKI/certificate-lifecycle infrastructure for a single-machine, small-team v1 deployment.
 - Each internal relationship (Web↔Gateway, a given Task Server↔Gateway) should be independently revocable — a leaked secret in one pair shouldn't compromise another.
 - A captured request must not be replayable later — proof of possession of a shared secret alone isn't enough.
@@ -20,7 +20,7 @@ Taskome's own services call each other for narrow, internal, non-user-facing pur
 ## Considered Options
 
 - Mutual TLS (mTLS) between services
-- Reuse the external JWT/JWKS verification model (ADR-0002) for internal calls too
+- Reuse the external JWT/JWKS verification model (ADR-0009) for internal calls too
 - HMAC-signed requests, with a per-relationship shared secret and a timestamp
 
 ## Decision Outcome

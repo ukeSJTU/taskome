@@ -27,7 +27,7 @@ Web and Gateway are two independently deployed services that both need to persis
 
 Chosen option: "Schema-per-service, one shared Postgres instance, cross-service access only through APIs", because it gives each service a real ownership boundary without the operational cost of running and backing up two separate database instances for a single-machine v1 deployment.
 
-Web's schema is Drizzle-managed and holds only auth data. Gateway's schema is Alembic-managed and holds everything else. Neither service queries the other's tables directly or shares a migration history; the one sanctioned path between them is Web's server-side BFF calling Gateway's REST API with a session JWT (see ADR-0002 for how that call is authenticated).
+Web's schema is Drizzle-managed and holds only auth data. Gateway's schema is Alembic-managed and holds everything else. Neither service queries the other's tables directly or shares a migration history; the one sanctioned path between them is Web's server-side BFF calling Gateway's REST API with a session JWT (see ADR-0009 for the current access-channel authentication decision).
 
 ### Consequences
 

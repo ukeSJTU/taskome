@@ -48,4 +48,4 @@ Postgres, Redis, SeaweedFS, and Ray aren't shown here because they're not _exter
 - [`containers.md`](./containers.md) — what's inside the Taskome box.
 - [`docs/product/vision.md`](../product/vision.md) — who Taskome is for and what the access channels are for.
 - [`docs/engineering/observability.md`](../engineering/observability.md) — what Taskome sends to Axiom and why.
-- [`docs/adr/0002-identity-and-access-channels.md`](../adr/0002-identity-and-access-channels.md) — the access-channel decision behind this diagram.
+- [`docs/adr/0009-cli-oauth-login-and-api-key-automation.md`](../adr/0009-cli-oauth-login-and-api-key-automation.md) — the current access-channel and CLI-auth decision behind this diagram.

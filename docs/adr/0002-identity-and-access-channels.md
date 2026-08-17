@@ -1,10 +1,17 @@
 ---
-status: accepted
+status: superseded by ADR-0009
 date: 2026-08-15
 decision-makers: Taskome maintainers
 ---
 
 # Channel-specific credentials, normalized into one identity model at Gateway
+
+> **Superseded by [ADR-0009](./0009-cli-oauth-login-and-api-key-automation.md).**
+> This ADR established the durable principle that Gateway resolves every incoming
+> credential to one `Principal`. ADR-0009 keeps that principle but replaces this
+> ADR's CLI-specific conclusion: the CLI now defaults to interactive OAuth for
+> Gateway's REST resource, while Personal API Keys remain its explicit
+> non-interactive automation path.
 
 ## Context and Problem Statement
 

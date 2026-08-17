@@ -12,7 +12,7 @@ Milestones 1-3 are Taskome's shared foundation; they don't depend on each other 
 
 1. **Web + Gateway app skeletons, identity, and observability — Done.** `apps/web` (Next.js) and `apps/gateway` (FastAPI) exist as independent deployables, each owning its own Postgres schema — Web holds auth data, Gateway holds everything else.
     - [x] Data ownership split by schema, one Postgres instance shared by both services — [ADR-0001](../adr/0001-schema-per-service-data-ownership.md)
-    - [x] Four Access Channels' distinct credentials (session JWT, MCP OAuth token, Personal API Key) normalize into one `Principal` at Gateway's boundary — [ADR-0002](../adr/0002-identity-and-access-channels.md)
+    - [x] Access-channel credentials normalize into one `Principal` at Gateway's boundary; CLI REST OAuth plus the Personal API Key automation path are decided — [ADR-0009](../adr/0009-cli-oauth-login-and-api-key-automation.md)
     - [x] Structured observability (OpenTelemetry → Axiom) wired into both services
     - [x] Frontend deployable and shared-package boundaries (`@taskome/config`, `@taskome/ui`) settled — [ADR-0006](../adr/0006-frontend-deployable-and-package-boundaries.md)
     - [x] Internal service-to-service calls (Gateway↔Web, Gateway↔Task Server) are HMAC-signed and independently revocable per relationship — [ADR-0007](../adr/0007-internal-service-hmac-signing.md)
@@ -31,8 +31,8 @@ Milestones 1-3 are Taskome's shared foundation; they don't depend on each other 
 5. **Web App channel — Not started.** Reuses milestone 4's dispatch path; no new Gateway-side work.
     - [ ] Web's BFF can submit a `task-fpocket` Job through Gateway
     - [ ] Web's BFF can surface a Job's status
-6. **CLI channel — Not started.** Reuses the same REST-plus-Personal-API-Key path a Direct API Client already uses; no new Gateway-side work, just a new client.
-    - [ ] A CLI tool authenticates through that existing path — [ADR-0002](../adr/0002-identity-and-access-channels.md)
+6. **CLI channel — Not started.** Uses interactive OAuth for the REST resource and retains Personal API Keys for automation; Gateway must accept the new REST OAuth credential path — [ADR-0009](../adr/0009-cli-oauth-login-and-api-key-automation.md).
+    - [ ] A CLI tool authenticates through OAuth login or an explicit Personal API Key path
     - [ ] The CLI covers Job submission and status lookup
 
 Once milestone 6 lands, `task-fpocket` is reachable from all four Access Channels — the Now bar.

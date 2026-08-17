@@ -27,11 +27,11 @@ Two independent surfaces sharing one app:
 
 ## Operating Context
 
-- **Access Channels** (ADR-0002): Web App uses REST through `apps/web`'s own BFF API routes; MCP Agents use MCP directly against `apps/gateway`; Direct API Clients use REST directly against `apps/gateway`. Browser code never bypasses the BFF. A CLI is a planned fourth channel (not yet built) that reuses the Direct API Client's REST + Personal API Key path — see `docs/product/roadmap.md` milestone 3.
+- **Access Channels** (ADR-0009): Web App uses REST through `apps/web`'s own BFF API routes; MCP Agents use MCP directly against `apps/gateway`; Direct API Clients use REST directly against `apps/gateway` with Personal API Keys. Browser code never bypasses the BFF. The planned CLI is a fourth channel: its interactive login uses REST OAuth, while Personal API Keys remain its automation path.
 - **Domain terms** (root `CONTEXT.md`): Task, Job, Task Server, Gateway, Principal, Personal API Key, Input File. "taskome" = Task + -ome.
 - **Data ownership** (ADR-0001): `apps/web` owns the auth Postgres schema; `apps/gateway` owns jobs and input files. Cross-service access goes through gateway's REST API, never direct SQL.
 - **Task Servers**: each tool ships as its own `apps/task-<name>` uv project built on `packages/task-kit` (ADR-0003), which generates matching REST + MCP wiring from one `ComputeAdapter` per Task. `apps/task-fpocket` (binding pocket detection, wrapping `fpocket`) is the first Task Server — currently a skeleton, not yet calling `build_task_server()` (see `docs/product/roadmap.md`).
-- **Auth**: better-auth (`packages/auth`), consumed via `apps/web/src/lib/auth-client.ts`. Plugins: personal API keys (named, revocable), JWT (short-lived session tokens for BFF→Gateway calls), two-factor auth (issuer "taskome"). Also handles OAuth consent and an OAuth authorization server `.well-known` endpoint for MCP Agent auth.
+- **Auth**: better-auth (`packages/auth`), consumed via `apps/web/src/lib/auth-client.ts`. Plugins: personal API keys (named, revocable), JWT (short-lived session tokens for BFF→Gateway calls), two-factor auth (issuer "taskome"). It also handles OAuth consent and the authorization-server metadata used by MCP Agents and the interactive CLI.
 - **Routes**: `(localized)/[locale]` contains the public site, login/signup, OAuth consent, and two-factor flows; `(application)` contains the English-only authenticated dashboard, account/API keys, and API reference.
 
 ## Capabilities and Constraints

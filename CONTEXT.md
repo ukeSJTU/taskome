@@ -24,7 +24,7 @@ The front door service. Authenticates callers, routes/aggregates requests to Tas
 The immutable, transport-neutral identity produced after Gateway authenticates a credential. Contains the canonical User id, the credential kind, and an optional non-secret credential id. REST dependencies, MCP tools, ownership checks, and structured logs consume the Principal rather than parsing credentials or claims independently.
 
 **Access Channel**:
-One of the four user journeys into the platform: the Web App, an MCP Agent, a Direct API Client, or the CLI. An Access Channel is not an interface, and not a credential kind: the Web App and Direct API Client both ultimately use REST, while the MCP Agent uses MCP, and the CLI shares Direct API Client's Personal API Key relationship rather than getting a distinct credential kind of its own (see [ADR-0002](docs/adr/0002-identity-and-access-channels.md)). What makes the CLI its own channel despite reusing that credential and interface is who builds and ships the client — Taskome does, the same as the Web App — not which wire protocol or credential it uses.
+One of the four user journeys into the platform: the Web App, an MCP Agent, a Direct API Client, or the CLI. An Access Channel is not an interface, and not a credential kind: the Web App, Direct API Client, and CLI ultimately use REST, while the MCP Agent uses MCP. The CLI defaults to an interactive OAuth relationship for Gateway's REST resource and retains Personal API Keys as its explicit automation fallback; Direct API Clients use Personal API Keys. What makes the CLI its own channel is who builds and ships the client — Taskome does, the same as the Web App — not which wire protocol it uses (see [ADR-0009](docs/adr/0009-cli-oauth-login-and-api-key-automation.md)).
 _Avoid_: Interface (reserved here for REST or MCP), Authentication Method (a channel may involve more than one credential across its hops), collapsing "credential kind" and "Access Channel" onto the same axis — there are four channels but only three credential kinds.
 
 **Direct API Client**:
@@ -32,7 +32,7 @@ A user-controlled program, such as a script or `curl`, that calls the platform's
 _Avoid_: Agent, Script Client, API User
 
 **CLI**:
-Taskome's own command-line entry point, built and shipped by Taskome, unlike a Direct API Client which a user brings on their own. It authenticates through the same Personal API Key relationship a Direct API Client already uses, so it needed no new Gateway-side identity or dispatch work — just a new client (see [ADR-0002](docs/adr/0002-identity-and-access-channels.md)).
+Taskome's own command-line entry point, built and shipped by Taskome, unlike a Direct API Client which a user brings on their own. Its interactive `login` uses OAuth authorization code + PKCE for Gateway's REST resource; an explicit Personal API Key path remains available for automation (see [ADR-0009](docs/adr/0009-cli-oauth-login-and-api-key-automation.md)).
 _Avoid_: treating the CLI as a subset of Direct API Client — they're distinct Access Channels distinguished by who builds and ships the client, not by which credential or interface it uses.
 
 **Personal API Key**:

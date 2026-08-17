@@ -11,7 +11,7 @@
 
 ## Contract and persistence changes
 
-- Before changing public REST, MCP, authentication, data ownership, or Web-facing data flows, read the applicable ADR in `../../docs/adr/`, especially [ADR-0001](../../docs/adr/0001-schema-per-service-data-ownership.md) and [ADR-0002](../../docs/adr/0002-identity-and-access-channels.md).
+- Before changing public REST, MCP, authentication, data ownership, or Web-facing data flows, read the applicable ADR in `../../docs/adr/`, especially [ADR-0001](../../docs/adr/0001-schema-per-service-data-ownership.md) and [ADR-0009](../../docs/adr/0009-cli-oauth-login-and-api-key-automation.md).
 - A `/v1` contract change requires running root `mise run openapi:generate`, which updates the checked-in OpenAPI input and regenerates both TypeScript and Go clients; do not preserve stale client behavior with a hand-written compatibility layer.
 - Model changes require a reviewed Alembic revision. Schema construction goes through the migration path described in `README.md`; tests build the schema by running that same migration path, not `metadata.create_all` — see [`docs/engineering/testing.md`](../../docs/engineering/testing.md) for why.
 

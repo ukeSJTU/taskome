@@ -6,16 +6,17 @@ Every ADR here follows the [MADR](https://adr.github.io/madr/) template (`./temp
 
 ## Index
 
-| ADR                                                          | Title                                                                                                | Status   |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | -------- |
-| [0001](./0001-schema-per-service-data-ownership.md)          | Schema-per-service data ownership in one shared Postgres instance                                    | Accepted |
-| [0002](./0002-identity-and-access-channels.md)               | Channel-specific credentials, normalized into one identity model at Gateway                          | Accepted |
-| [0003](./0003-task-kit-task-server-framework.md)             | task-kit as a shared library, with compute logic and infrastructure split into separate ports        | Accepted |
-| [0004](./0004-gateway-owned-job-dispatch.md)                 | Gateway durably queues Jobs, brokers Ray resources, then dispatches synchronously to the Task Server | Accepted |
-| [0005](./0005-seaweedfs-storage-and-presigned-urls.md)       | Self-hosted SeaweedFS for object storage, with direct client access via presigned URLs               | Accepted |
-| [0006](./0006-frontend-deployable-and-package-boundaries.md) | apps/web hosts the public site and the product together; apps/docs is the one deliberate exception   | Accepted |
-| [0007](./0007-internal-service-hmac-signing.md)              | HMAC-signed internal requests, not mTLS, for service-to-service calls                                | Accepted |
-| [0008](./0008-taskiq-ray-async-job-dispatch.md)              | Two-phase taskiq dispatch, Ray admission control, and async MCP job tools                            | Accepted |
+| ADR                                                          | Title                                                                                                | Status                 |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ---------------------- |
+| [0001](./0001-schema-per-service-data-ownership.md)          | Schema-per-service data ownership in one shared Postgres instance                                    | Accepted               |
+| [0002](./0002-identity-and-access-channels.md)               | Channel-specific credentials, normalized into one identity model at Gateway                          | Superseded by ADR-0009 |
+| [0003](./0003-task-kit-task-server-framework.md)             | task-kit as a shared library, with compute logic and infrastructure split into separate ports        | Accepted               |
+| [0004](./0004-gateway-owned-job-dispatch.md)                 | Gateway durably queues Jobs, brokers Ray resources, then dispatches synchronously to the Task Server | Accepted               |
+| [0005](./0005-seaweedfs-storage-and-presigned-urls.md)       | Self-hosted SeaweedFS for object storage, with direct client access via presigned URLs               | Accepted               |
+| [0006](./0006-frontend-deployable-and-package-boundaries.md) | apps/web hosts the public site and the product together; apps/docs is the one deliberate exception   | Accepted               |
+| [0007](./0007-internal-service-hmac-signing.md)              | HMAC-signed internal requests, not mTLS, for service-to-service calls                                | Accepted               |
+| [0008](./0008-taskiq-ray-async-job-dispatch.md)              | Two-phase taskiq dispatch, Ray admission control, and async MCP job tools                            | Accepted               |
+| [0009](./0009-cli-oauth-login-and-api-key-automation.md)     | CLI OAuth login with Personal API Key automation fallback                                            | Accepted               |
 
 ## Numbering and status lifecycle
 

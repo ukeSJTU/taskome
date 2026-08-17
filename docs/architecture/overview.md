@@ -39,7 +39,7 @@ See [`docs/architecture/containers.md`](./containers.md) for where each Task Ser
 
 ### Gateway: the aggregation and identity boundary
 
-Gateway is the single place a Web App, an MCP Agent, or a Direct API Client connects to. It normalizes three different credential kinds — a Web session JWT, an MCP OAuth access token, a Personal API Key — into one internal `Principal`, so nothing downstream has to branch on how the caller connected. This part is fully built today.
+Gateway is the single place a Web App, an MCP Agent, a Direct API Client, or the CLI connects to. It normalizes three different credential kinds — a Web session JWT, an audience-bound OAuth access token, and a Personal API Key — into one internal `Principal`, so nothing downstream has to branch on how the caller connected. CLI REST OAuth is the accepted target in [ADR-0009](../adr/0009-cli-oauth-login-and-api-key-automation.md); until it is implemented, the live REST surface still accepts session JWTs and Personal API Keys.
 
 Gateway is also meant to aggregate every Task Server behind one MCP endpoint and one REST surface, and to own dispatching a Job to the right Task Server — through a separate Gateway Worker process that consumes a durable taskiq queue and brokers Ray resources (see [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md)), not by calling out directly from the request-handling process.
 
