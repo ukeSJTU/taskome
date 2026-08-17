@@ -15,6 +15,7 @@ Every ADR here follows the [MADR](https://adr.github.io/madr/) template (`./temp
 | [0005](./0005-seaweedfs-storage-and-presigned-urls.md)       | Self-hosted SeaweedFS for object storage, with direct client access via presigned URLs               | Accepted |
 | [0006](./0006-frontend-deployable-and-package-boundaries.md) | apps/web hosts the public site and the product together; apps/docs is the one deliberate exception   | Accepted |
 | [0007](./0007-internal-service-hmac-signing.md)              | HMAC-signed internal requests, not mTLS, for service-to-service calls                                | Accepted |
+| [0008](./0008-taskiq-ray-async-job-dispatch.md)              | Two-phase taskiq dispatch, Ray admission control, and async MCP job tools                            | Accepted |
 
 ## Numbering and status lifecycle
 

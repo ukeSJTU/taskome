@@ -15,13 +15,14 @@ flowchart TB
     caddy["<b>Caddy</b>\nReverse proxy, production only"]
 
     web["<b>Web</b>\napps/web — Next.js\nBrowser BFF + auth"]
-    gateway["<b>Gateway</b>\napps/gateway — FastAPI\nIdentity, REST/MCP aggregation,\njob queue + dispatch"]
+    gateway["<b>Gateway</b>\napps/gateway — FastAPI\nIdentity, REST/MCP aggregation,\nJob submission + read"]
+    gatewayWorker["<b>Gateway Worker</b>\napps/gateway — same image,\nworker entrypoint\ntaskiq consumer + Ray brokering"]
     docs["<b>Docs</b>\napps/docs — static site"]
     taskfpocket["<b>task-fpocket</b>\nTask Server, built on task-kit"]
 
     postgres[("Postgres\nschema-per-owner")]
-    redis[("Redis\ntaskiq broker")]
-    ray[("Ray\nGPU/CPU execution")]
+    redis[("Redis\ntaskiq broker\nRedisStreamBroker")]
+    ray[("Ray\nCPU/GPU admission control")]
     seaweedfs[("SeaweedFS\nfile storage")]
 
     apiClient -- "Calls [REST]" --> caddy
@@ -35,10 +36,12 @@ flowchart TB
     web -- "REST, session JWT" --> gateway
     web -- "auth schema, Drizzle" --> postgres
     gateway -- "everything else, Alembic" --> postgres
-    gateway -- "enqueues Jobs, taskiq" --> redis
-    gateway -- "requests resources" --> ray
-    gateway -- "dispatches, REST/MCP" --> taskfpocket
+    gateway -- "enqueues job_id, taskiq" --> redis
     gateway -- "mints presigned URLs" --> seaweedfs
+    redis -- "claim_job, execute_dispatch" --> gatewayWorker
+    gatewayWorker -- "reads/writes Job rows" --> postgres
+    gatewayWorker -- "reserves CPU/GPU\n.options(num_cpus, num_gpus)" --> ray
+    gatewayWorker -- "dispatches, REST/MCP" --> taskfpocket
     taskfpocket -- "resolves in / publishes out" --> seaweedfs
     user -- "uploads/downloads directly" --> seaweedfs
 
@@ -50,7 +53,7 @@ flowchart TB
 
     class user person
     class mcpAgent,apiClient external
-    class web,gateway,docs,taskfpocket container
+    class web,gateway,gatewayWorker,docs,taskfpocket container
     class postgres,redis,ray,seaweedfs infra
     class caddy edge
 ```
@@ -59,25 +62,30 @@ flowchart TB
 
 ## What each container is
 
-| Container    | What it is                                                                                             | Owns                                                |
-| ------------ | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| Caddy        | Reverse proxy, the single public edge. Production only — dev exposes each service's own port directly. | Routing only, no data                               |
-| Web          | `apps/web` (Next.js) — the browser's BFF, plus Better Auth's authentication surface                    | Auth data (Drizzle-managed schema)                  |
-| Gateway      | `apps/gateway` (FastAPI) — the identity boundary, REST/MCP aggregation, Job queueing and dispatch      | Everything else (Alembic-managed schema)            |
-| Docs         | `apps/docs` — Taskome's own static documentation site; no Gateway access                               | Nothing (static content only)                       |
-| task-fpocket | A Task Server, built on `packages/task-kit`                                                            | Nothing directly — reads/writes files via SeaweedFS |
-| Postgres     | One shared instance, split by schema per owner                                                         | —                                                   |
-| Redis        | taskiq's broker, for durable Job intake                                                                | —                                                   |
-| Ray          | GPU/CPU-aware execution for compute Jobs                                                               | —                                                   |
-| SeaweedFS    | S3-compatible object storage for Input Files and Job outputs                                           | —                                                   |
+| Container      | What it is                                                                                                                                                                                                                                                                                     | Owns                                                 |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Caddy          | Reverse proxy, the single public edge. Production only — dev exposes each service's own port directly.                                                                                                                                                                                         | Routing only, no data                                |
+| Web            | `apps/web` (Next.js) — the browser's BFF, plus Better Auth's authentication surface                                                                                                                                                                                                            | Auth data (Drizzle-managed schema)                   |
+| Gateway        | `apps/gateway` (FastAPI) — the identity boundary, REST/MCP aggregation, Job submission and reads                                                                                                                                                                                               | Everything else (Alembic-managed schema)             |
+| Gateway Worker | `apps/gateway`, same codebase and image as Gateway — a separate entrypoint that consumes the taskiq queue, brokers Ray resources, and dispatches to Task Servers. One deployable with Gateway per [ADR-0004](../adr/0004-gateway-owned-job-dispatch.md), two processes. Single replica for v1. | Nothing of its own — writes through Gateway's schema |
+| Docs           | `apps/docs` — Taskome's own static documentation site; no Gateway access                                                                                                                                                                                                                       | Nothing (static content only)                        |
+| task-fpocket   | A Task Server, built on `packages/task-kit`                                                                                                                                                                                                                                                    | Nothing directly — reads/writes files via SeaweedFS  |
+| Postgres       | One shared instance, split by schema per owner                                                                                                                                                                                                                                                 | —                                                    |
+| Redis          | taskiq's broker (`RedisStreamBroker`), for durable Job intake                                                                                                                                                                                                                                  | —                                                    |
+| Ray            | CPU/GPU admission control for compute Jobs — reserves capacity per dispatch, doesn't manage Task Server processes                                                                                                                                                                              | —                                                    |
+| SeaweedFS      | S3-compatible object storage for Input Files and Job outputs                                                                                                                                                                                                                                   | —                                                    |
 
 ## Job execution: from request to compute
 
-Gateway is the one place a Job gets queued and dispatched. When it receives a Job request — through its own REST/MCP surface, or relayed from Web's BFF — it enqueues that request durably, through taskiq backed by Redis, before anything runs. That queue is what gives Taskome the guarantees a compute platform needs: a Job isn't lost if Gateway restarts, isn't run twice, and multiple submitters get a fair share of capacity instead of first-come-first-served chaos. Gateway then consumes that queue itself, asks Ray for GPU/CPU resources, and dispatches the ready Job to the right Task Server over REST or MCP — the same dual interface every Task exposes outward (see [`overview.md`](./overview.md)'s Core principles).
+Gateway's API process is where a Job gets submitted and read back — a REST `POST /v1/jobs` or an MCP `submit_<task>` call creates a `queued` Job row and enqueues its `job_id`, durably, through taskiq backed by Redis, before anything runs. Every access channel shares the same lifecycle: submit, get a Job ID back immediately, then poll (`GET /v1/jobs/{id}`, or MCP's `get_job`/`wait_job`) rather than hold a connection open.
 
-Gateway does both jobs today — serving API requests and consuming the queue — in one deployable. That's a deliberate v1 simplification, not an oversight: vision.md's Future direction already anticipates splitting queue consumption and Ray brokering into an independent scheduler once single-machine scheduling stops being enough (deeper allocation strategies, queue fairness, multi-machine deployment). Now isn't that point yet.
+The **Gateway Worker** — a separate process built from the same codebase as Gateway's API (see the container table above) — is what actually moves a Job forward. It consumes the queue as a **two-phase taskiq task chain**: a `claim_job` task does a row-locked `queued → running` transition and hands off to an `execute_dispatch` task, which asks Ray for CPU/GPU capacity (admission control only — Ray doesn't manage Task Server processes, it just makes the cluster's physical capacity a real constraint across every Task Server at once), then makes a direct, blocking REST or MCP call to the Task Server — the same dual interface every Task exposes outward (see [`overview.md`](./overview.md)'s Core principles). That call's response is the completion signal; the worker writes the terminal Job state straight to Postgres.
 
-> **Status note (delete once built):** None of this queue-to-dispatch path exists in code yet — Gateway has no Job/Task data model, no taskiq usage, and nothing calls Ray. `task-fpocket` itself does call `build_task_server()` and is independently reachable over REST/MCP (see [`apps/task-fpocket`'s own docs](../../apps/task-fpocket/README.md)), but nothing dispatches to it — this whole queue-to-dispatch path is still the gap.
+A stuck Job is detected two ways, deliberately not by a single fixed timeout: a heartbeat (is the worker process that owns this Job still alive, checked independent of how long the Task itself should take) and a per-Task worst-case execution ceiling declared on that Task's manifest (is the Task Server itself hung). See [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md) for the full reasoning behind this split, why message acknowledgment happens early rather than after completion, and why only a narrow class of dispatch failures gets retried automatically.
+
+Gateway's API and Worker processes are one deployable, two processes — a deliberate v1 simplification, not an oversight: `vision.md`'s Future direction already anticipates splitting queue consumption and Ray brokering into an independent scheduler once single-machine scheduling stops being enough (deeper allocation strategies, queue fairness, multi-machine deployment). Now isn't that point yet.
+
+> **Status note (delete once built):** Gateway's API process today already has a real Job data model, REST `POST /v1/jobs` (`202` + background dispatch) and `GET /v1/jobs/{id}`, and an MCP surface — but MCP still dispatches synchronously (`submit_job_and_wait`, one call blocks until terminal), unlike REST's async shape. The queue-to-dispatch path this section describes doesn't exist in code yet: dispatch today is an in-process `asyncio.create_task` fire-and-forget, not a taskiq-backed Gateway Worker; nothing calls Ray; Redis is connected but only used for a startup health check. This whole section — the Gateway Worker container, the claim/execute task chain, Ray brokering, and MCP's `submit`/`get_job`/`wait_job` split — is target design from ADR-0008, not yet built.
 
 ## File storage
 

@@ -8,8 +8,10 @@ This page doesn't repeat [`containers.md`](./containers.md)'s topology diagram �
 
 Two Docker Compose files, layered:
 
-- **`compose.yml`** — the dev-support base. Backing services only: Postgres, the taskiq Redis broker, SeaweedFS, and a disposable local OpenTelemetry viewer. Web, Gateway, and Docs are expected to run natively against these (see [`docs/engineering/local-development.md`](../engineering/local-development.md) for the actual commands) — this file alone is not a full running Taskome.
-- **`compose.prod.yml`** — layered on top of `compose.yml` (`docker compose -f compose.yml -f compose.prod.yml up`), adding Caddy, Web, Docs, Gateway, a one-shot `gateway-migrate` job, and Ray's head node. This is the full, production-shaped stack — it's also what `mise run prod:up` runs locally for a production rehearsal.
+- **`compose.yml`** — the dev-support base. Backing services only: Postgres, the taskiq Redis broker, SeaweedFS, a disposable local OpenTelemetry viewer, and (per [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md)) Ray's head node plus the Gateway Worker — the full queue-to-dispatch path needs to be exercisable locally, not just in production, and admission-control-only Ray doesn't need real GPUs to validate its logic. Web, Gateway, and Docs are expected to run natively against these (see [`docs/engineering/local-development.md`](../engineering/local-development.md) for the actual commands) — this file alone is not a full running Taskome.
+- **`compose.prod.yml`** — layered on top of `compose.yml` (`docker compose -f compose.yml -f compose.prod.yml up`), adding Caddy, Web, Docs, Gateway, and a one-shot `gateway-migrate` job. This is the full, production-shaped stack — it's also what `mise run prod:up` runs locally for a production rehearsal.
+
+> **Status note (delete once built):** Ray and the Gateway Worker are still only in `compose.prod.yml` today, with no consumer wired up — moving Ray into the dev base and adding a Gateway Worker service is part of ADR-0008's target design, not yet done.
 
 Startup order is enforced through Compose health checks, not assumed: `gateway-migrate` waits for Postgres, runs the Alembic migration, and exits; Gateway waits for `gateway-migrate` to finish successfully and for Redis to be healthy; Caddy waits for Web, Docs, and Gateway to all report healthy before accepting traffic.
 
@@ -29,7 +31,7 @@ Every Task Server (today, `task-fpocket`) starts with `--workers 1`, and must ru
 - Output publication's non-overwrite check relies on the same single-process assumption, because SeaweedFS doesn't enforce S3's conditional-PUT semantics — a second replica racing the first could silently duplicate or clobber an output.
 - A forced shutdown can interrupt a Job mid-run and leave an orphaned output behind. There's no automatic retry — a caller has to submit a new Job.
 
-This is a deliberate, temporary shape: it's meant to be replaced, not extended, once Gateway's queue-and-dispatch design (see `containers.md`'s Job execution section) actually exists. Gateway itself has no equivalent constraint — it runs multiple worker processes by default today, backed by Postgres and Redis rather than in-memory state.
+This is a deliberate, temporary shape: it's meant to be replaced, not extended, once Gateway's queue-and-dispatch design (see `containers.md`'s Job execution section) actually exists. The Gateway Worker that design introduces (see [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md)) is single-replica for v1 too, but for a different reason — it's stateless (everything lives in Postgres and Redis), so it's a scale-out choice deferred as unneeded for now, not a load-bearing constraint like the one above.
 
 ## Related docs
 
@@ -37,3 +39,4 @@ This is a deliberate, temporary shape: it's meant to be replaced, not extended, 
 - [`security.md`](./security.md) — the secrets this page's config differences reference.
 - [`docs/engineering/local-development.md`](../engineering/local-development.md) — the day-to-day commands for running this locally.
 - [`docs/engineering/ci-cd.md`](../engineering/ci-cd.md) — what CI does and doesn't do around deployment.
+- [`docs/adr/0008-taskiq-ray-async-job-dispatch.md`](../adr/0008-taskiq-ray-async-job-dispatch.md) — the Gateway Worker and Ray admission-control design behind the dev-compose change above.

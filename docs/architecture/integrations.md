@@ -8,19 +8,23 @@ When Gateway dispatches a Job to a Task Server (see [`containers.md`](./containe
 
 This is a deliberate, accepted trade-off, not an oversight: if Gateway's own worker process dies while it's waiting on that call — a crash, a restart, a redeploy — the result is lost even if the Task Server finished successfully, because the only channel carrying the result back is that one connection. taskiq's durability guarantee covers getting a Job _to_ a Task Server, not getting the result _back_. There's no automatic recovery from this today; a caller has to resubmit. This is accepted for v1 given the small, trusted user base and `overview.md`'s deliberately low availability priority — it's the kind of thing that would need revisiting (likely by routing the Task Server → Gateway leg through a queue too, not just Gateway → Task Server) if the user base outgrows that assumption.
 
+### Why a dispatch failure usually can't just be retried
+
+`packages/task-kit`'s `TaskServerRuntime` deduplicates by `job_id` in memory (`claim_job`/`completed_jobs`) — but it does **not** cache a completed job's result. A second call to `POST /internal/tasks/{name}` for a `job_id` that's still running, or that already finished, gets the same `409 duplicate_job` either way, with no way to tell which happened or recover the original outcome if it succeeded. That's why [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md) only retries a dispatch failure when the request is known not to have reached the Task Server at all (connection refused, DNS failure) — anything where the request may have arrived is a terminal failure, not a retry, because retrying it risks reading a real success back as an unrecoverable duplicate rejection. Widening this safely needs `task-kit` itself to start caching and replaying results, which is tracked as future work, not designed yet (see ADR-0008's More Information).
+
 ## Output publication doesn't retry
 
 Publishing a Task's output to SeaweedFS is a deliberately non-retrying operation. SeaweedFS doesn't enforce S3's conditional-PUT semantics, so retrying an upload whose result is ambiguous (did it actually land, or did the request just time out?) risks a duplicate or an overwrite — worse than failing outright. Instead, the publisher does a preflight existence check and refuses to overwrite, rather than retrying blindly. The same applies to a Task Server's calls back to Gateway to resolve an Input File: a failed call propagates as an error immediately, with no built-in backoff or retry.
 
-> **Status note (delete once built):** Because Gateway has no dispatch code yet (see `containers.md`), none of this failure handling has been exercised end-to-end in production — it's only covered by `packages/task-kit`'s own tests today.
+> **Status note (delete once built):** Gateway does dispatch to `task-fpocket` in production code today (in-process, over HMAC-signed HTTP), so the preflight-existence-check behavior above is exercised. What isn't built yet is the taskiq/Ray path this page's dispatch section and ADR-0008 describe — today's dispatch is a direct `asyncio.create_task` call, not a queued, retried `execute_dispatch` task.
 
 ## External systems
 
-| System    | What Taskome sends or receives                                               | Failure handling                                                                                                                                  |
-| --------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Axiom     | Traces and logs over OpenTelemetry, production only                          | Export failures don't block a request — observability is best-effort. See [`docs/engineering/observability.md`](../engineering/observability.md). |
-| SeaweedFS | Input Files and Job outputs, via presigned URLs and direct S3-protocol calls | No retry on ambiguous writes (above). See [`data.md`](./data.md).                                                                                 |
-| Ray       | GPU/CPU resource requests for Job execution                                  | Undesigned — no code calls Ray yet. See `containers.md`.                                                                                          |
+| System    | What Taskome sends or receives                                                        | Failure handling                                                                                                                                  |
+| --------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Axiom     | Traces and logs over OpenTelemetry, production only                                   | Export failures don't block a request — observability is best-effort. See [`docs/engineering/observability.md`](../engineering/observability.md). |
+| SeaweedFS | Input Files and Job outputs, via presigned URLs and direct S3-protocol calls          | No retry on ambiguous writes (above). See [`data.md`](./data.md).                                                                                 |
+| Ray       | CPU/GPU admission-control reservations, one per Job dispatch (not process management) | Target design in [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md) — no code calls Ray yet. See `containers.md`.                           |
 
 ## Outbound email (planned)
 
@@ -43,3 +47,4 @@ No outbound email is implemented yet (no SMTP/email-provider configuration anywh
 - [`data.md`](./data.md) — Input File storage and retention.
 - [`docs/engineering/observability.md`](../engineering/observability.md) — what gets sent to Axiom.
 - [`docs/adr/0004-gateway-owned-job-dispatch.md`](../adr/0004-gateway-owned-job-dispatch.md) — the job-dispatch decision behind this.
+- [`docs/adr/0008-taskiq-ray-async-job-dispatch.md`](../adr/0008-taskiq-ray-async-job-dispatch.md) — why dispatch retries are scoped so narrowly, and the Ray admission-control design.

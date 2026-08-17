@@ -41,9 +41,9 @@ See [`docs/architecture/containers.md`](./containers.md) for where each Task Ser
 
 Gateway is the single place a Web App, an MCP Agent, or a Direct API Client connects to. It normalizes three different credential kinds — a Web session JWT, an MCP OAuth access token, a Personal API Key — into one internal `Principal`, so nothing downstream has to branch on how the caller connected. This part is fully built today.
 
-Gateway is also meant to aggregate every Task Server behind one MCP endpoint and one REST surface, and to own dispatching a Job to the right Task Server.
+Gateway is also meant to aggregate every Task Server behind one MCP endpoint and one REST surface, and to own dispatching a Job to the right Task Server — through a separate Gateway Worker process that consumes a durable taskiq queue and brokers Ray resources (see [ADR-0008](../adr/0008-taskiq-ray-async-job-dispatch.md)), not by calling out directly from the request-handling process.
 
-> **Status note (delete once built):** Gateway currently has no Job/Task data model and no dispatch code — a Task Server's REST/MCP surface works and is independently testable, but nothing in Gateway calls it yet. This note should disappear once that integration exists.
+> **Status note (delete once built):** Gateway already has a real Job data model and dispatches to `task-fpocket` today — a Task Server's REST/MCP surface works and Gateway does call it. What's still missing is the queued, durable path: dispatch today is in-process (`asyncio.create_task`), not a taskiq-backed Gateway Worker, and MCP still blocks on submission instead of returning a Job ID immediately the way REST does. This note should disappear once ADR-0008's design is built.
 
 See [`docs/architecture/security.md`](./security.md) for the identity model in detail, and [`docs/architecture/runtime.md`](./runtime.md) for how a request is meant to flow once dispatch exists.
 
