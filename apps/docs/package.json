@@ -4,7 +4,9 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev --port 3001",
+    "generate:api": "node scripts/generate-openapi.mjs",
     "start": "next start --port 3001",
+    "test": "node scripts/verify-openapi-docs.mjs",
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
@@ -12,6 +14,7 @@
     "cnfast": "^0.1.0",
     "fumadocs-core": "16.14.3",
     "fumadocs-mdx": "15.2.3",
+    "fumadocs-openapi": "11.2.4",
     "fumadocs-ui": "npm:@fumadocs/base-ui@16.14.3",
     "lucide-react": "^1.28.0",
     "next": "16.3.0",

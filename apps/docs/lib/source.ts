@@ -3,6 +3,7 @@ import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { docsContentRoute, docsImageRoute, docsRoute } from "./shared";
 import { defineDocs } from "fumadocs-mdx/macro";
 import { metaSchema, pageSchema } from "fumadocs-core/source/schema";
+import { openapi } from "./openapi";
 
 const docs = defineDocs({
   dir: "content/docs",
@@ -18,11 +19,16 @@ const docs = defineDocs({
 });
 
 // See https://fumadocs.dev/docs/headless/source-api for more info
-export const source = loader({
-  baseUrl: docsRoute,
-  source: docs.toFumadocsSource(),
-  plugins: [lucideIconsPlugin()],
-});
+export const source = loader(
+  {
+    docs: docs.toFumadocsSource(),
+    openapi: await openapi.staticSource({ baseDir: "api", per: "tag" }),
+  },
+  {
+    baseUrl: docsRoute,
+    plugins: [lucideIconsPlugin(), openapi.loaderPlugin()],
+  },
+);
 
 export function getPageImageUrl(page: (typeof source)["$inferPage"]) {
   const segments = [...page.slugs, "image.png"];
@@ -43,6 +49,10 @@ export function getPageMarkdownUrl(page: (typeof source)["$inferPage"]) {
 }
 
 export async function getLLMText(page: (typeof source)["$inferPage"]) {
+  if (page.type === "openapi") {
+    return `# ${page.data.title} (${page.url})\n\nThis page is generated from Taskome's public OpenAPI contract.`;
+  }
+
   const processed = await page.data.getText("processed");
 
   return `# ${page.data.title} (${page.url})

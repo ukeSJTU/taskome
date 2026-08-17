@@ -1,0 +1,4 @@
+{
+  "title": "Developer Docs",
+  "pages": ["quickstart", "authentication", "input-files", "jobs", "errors-and-limits", "mcp"]
+}

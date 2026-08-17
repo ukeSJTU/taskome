@@ -27,11 +27,10 @@ enables HSTS headers, and disables Scalar and OpenAPI unless `DOCS_ENABLED=true`
 is set explicitly. TLS termination stays at Caddy. Swagger UI and ReDoc are
 disabled in every environment.
 
-The always-on `/internal/openapi.json` endpoint serves the cached Public OpenAPI
-projection consumed by Web's authenticated API reference. It includes only the
-Direct API Client operations beneath `/v1`, publishes the configured public `/v1`
-server, and documents only `X-API-Key` authentication. The full `/openapi.json`
-schema remains the development and Orval source when docs are enabled.
+The full `/openapi.json` schema remains the development and first-party generated
+client source when docs are enabled. The separately generated public Direct API
+contract is checked into `apps/docs/openapi.public.json` and published by the
+static Docs deployment.
 
 ## Interfaces
 

@@ -33,7 +33,7 @@ describe("AppSidebar", () => {
     expect(screen.getByRole("link", { name: "All Tools" })).toHaveAttribute("href", "/tools");
     expect(screen.getByRole("link", { name: "My Results" })).toHaveAttribute("href", "/results");
     expect(screen.getByRole("link", { name: "Files" })).toHaveAttribute("href", "/files");
-    expect(screen.getByRole("link", { name: "Docs" })).toHaveAttribute("href", "/api-docs");
+    expect(screen.queryByRole("link", { name: "Docs" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Projects" })).toHaveAttribute(
       "aria-disabled",
       "true",

@@ -95,12 +95,17 @@ description = "Report available dependency and tool updates without changing loc
 run = "bash scripts/deps-outdated.sh"
 
 [tasks."openapi:generate"]
-description = "Export Gateway OpenAPI and regenerate the TypeScript and Go clients"
-depends = ["//packages/api-client:generate", "//apps/cli:api-client:generate"]
+description = "Export Gateway OpenAPI contracts and regenerate Docs and generated clients"
+depends = [
+  "//packages/api-client:generate",
+  "//apps/cli:api-client:generate",
+  "//apps/docs:openapi:generate",
+]
+run = "pnpm exec oxfmt --write packages/api-client/openapi.json apps/docs/openapi.public.json apps/docs/public/openapi.json apps/docs/generated/api"
 output = "prefix"
 
 [tasks."openapi:verify"]
-description = "Regenerate Gateway clients and require all checked-in generated files to be current"
+description = "Regenerate Gateway contracts, Docs pages, and clients and require them to be current"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -109,6 +114,9 @@ mise run --force //:openapi:generate
 
 generated_status="$(git status --porcelain --untracked-files=all -- \
   packages/api-client/openapi.json \
+  apps/docs/openapi.public.json \
+  apps/docs/public/openapi.json \
+  apps/docs/generated/api \
   packages/api-client/src/generated \
   apps/cli/internal/gateway/generated)"
 

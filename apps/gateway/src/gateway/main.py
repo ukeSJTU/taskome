@@ -36,7 +36,6 @@ from gateway.core.middleware import (
 )
 from gateway.core.observability import DeferredTelemetryMiddleware
 from gateway.core.personal_api_keys import PersonalApiKeyVerifier, WebPersonalApiKeyVerifier
-from gateway.core.public_openapi import public_openapi_schema
 from gateway.db.database import Database
 from gateway.repositories.input_files import InputFileRepository
 from gateway.repositories.jobs import JobRepository
@@ -185,10 +184,6 @@ def create_app(  # noqa: PLR0913, PLR0915
     application.include_router(internal_router)
     application.router.routes.extend(rest_auth_provider.get_routes("/v1"))
     application.router.routes.extend(mcp_auth_provider.get_routes("/mcp"))
-
-    @application.get("/internal/openapi.json", include_in_schema=False)
-    async def public_openapi() -> dict[str, Any]:
-        return public_openapi_schema(application)
 
     application.mount("/mcp", mcp_app)
     if app_settings.expose_docs:
