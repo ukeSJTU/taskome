@@ -1,0 +1,13 @@
+---
+title: Errors and limits
+description: Handle unsuccessful REST responses and platform constraints predictably.
+---
+
+Taskome reports API failures as Problem Details (`application/problem+json`). Each response includes a stable `type`, human-readable `title` and `detail`, HTTP `status`, request `instance`, and `request_id`. Request-validation responses also include field-level `errors`.
+
+- `401 Unauthorized` means the Personal API Key is missing, invalid, or unavailable for verification.
+- `404 Not Found` means a requested Task, Job, or Input File is not available to the caller.
+- `422 Unprocessable Content` means the request shape or Task parameters are invalid.
+- `503 Service Unavailable` means a required platform dependency is temporarily unavailable; retry with backoff.
+
+The current Input File limit is 50 MiB. No REST rate-limit response contract is currently published. Client code should still bound retries and retain the `request_id` when reporting a problem to Taskome support.

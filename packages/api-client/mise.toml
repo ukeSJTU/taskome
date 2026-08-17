@@ -1,5 +1,5 @@
 [tasks.generate]
-description = "Generate the TypeScript Gateway client from OpenAPI"
+description = "Generate the TypeScript Gateway client from the public OpenAPI contract"
 depends = ["//apps/gateway:openapi:export"]
 run = "pnpm run generate"
 

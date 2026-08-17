@@ -7,7 +7,7 @@ export default defineConfig({
         mode: "exclude",
         tags: ["health"],
       },
-      target: "./openapi.json",
+      target: "./openapi.public.json",
     },
     output: {
       clean: true,

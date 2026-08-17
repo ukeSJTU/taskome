@@ -8,7 +8,6 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeftIcon,
   BotIcon,
-  BookOpenIcon,
   DnaIcon,
   FilesIcon,
   FolderIcon,
@@ -50,7 +49,6 @@ const toolNavigation: SidebarNavItemData[] = [
 
 const secondaryNavigation: SidebarNavItemData[] = [
   { title: "Settings", href: "/settings", icon: <Settings2Icon /> },
-  { title: "Docs", href: "/api-docs", icon: <BookOpenIcon /> },
 ];
 
 const settingsNavigation: SidebarNavItemData[] = [

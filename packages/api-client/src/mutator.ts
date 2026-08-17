@@ -91,7 +91,7 @@ export async function gatewayFetch<T>(url: string, init: RequestInit = {}): Prom
 
   let response: Response;
   try {
-    response = await fetch(new URL(url, env.GATEWAY_INTERNAL_URL), {
+    response = await fetch(new URL(`/v1${url}`, env.GATEWAY_INTERNAL_URL), {
       ...init,
       cache: "no-store",
       headers: requestHeaders,

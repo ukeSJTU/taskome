@@ -9,7 +9,7 @@ import type { Identity } from "../models";
 import { gatewayFetch } from "../../../mutator";
 
 export const getGetCurrentIdentityUrl = () => {
-  return `/v1/me`;
+  return `/me`;
 };
 
 /**

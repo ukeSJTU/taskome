@@ -1,0 +1,14 @@
+---
+title: Authentication
+description: Authenticate a Direct API Client with a named Personal API Key.
+---
+
+Direct API Clients authenticate only with a named Personal API Key. Send it in the `X-API-Key` header on every request to the versioned REST API.
+
+```http
+X-API-Key: taskome_example_key
+```
+
+Do not put a key in a browser, query string, source file, or public documentation. The Docs site is read-only and never accepts, stores, or proxies a Personal API Key.
+
+`GET /v1/me` returns the normalized identity for the caller, including the credential kind. Use it to verify a new key before an upload or Job workflow.

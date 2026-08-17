@@ -1,0 +1,54 @@
+---
+title: Developer quickstart
+description: Create a Personal API Key, upload an Input File, and submit your first Job.
+---
+
+## Before you begin
+
+Create a Taskome account, then create a named Personal API Key from the product's account settings. Store it outside source control. A Direct API Client uses this key in the `X-API-Key` request header and acts as the User who created it.
+
+All example identifiers, URLs, file names, and key values below are synthetic.
+
+## 1. Check the key
+
+```bash
+curl https://api.example.com/v1/me \
+  --header 'X-API-Key: taskome_example_key'
+```
+
+## 2. Allocate and upload an Input File
+
+Ask Taskome for an immutable Input File and its constrained upload URL:
+
+```bash
+curl --request POST https://api.example.com/v1/input-files \
+  --header 'Content-Type: application/json' \
+  --header 'X-API-Key: taskome_example_key' \
+  --data '{"original_filename":"example-structure.pdb","size_bytes":2048}'
+```
+
+The response contains a synthetic-looking Input File `id` and `upload_url`. Upload the bytes to that URL with the exact `Content-Length` you declared and `If-None-Match: *`.
+
+## 3. Create a Job
+
+Pass the returned Input File id in the Task's `params`. This example uses the registered `fpocket` `detect_pockets` Task, whose `structure` parameter accepts an Input File id.
+
+```bash
+curl --request POST https://api.example.com/v1/jobs \
+  --header 'Content-Type: application/json' \
+  --header 'X-API-Key: taskome_example_key' \
+  --data '{"task_server_name":"fpocket","task_name":"detect_pockets","params":{"structure":"00000000-0000-4000-8000-000000000001"}}'
+```
+
+Taskome accepts a valid Job with `202 Accepted` and records it as `queued` before dispatching it asynchronously.
+
+## 4. Observe the outcome
+
+Use the Job id returned at creation to retrieve its current state until `status` is `completed` or `failed`.
+
+```bash
+curl https://api.example.com/v1/jobs/00000000-0000-4000-8000-000000000002 \
+  --header 'X-API-Key: taskome_example_key'
+```
+
+Continue with the [Input Files guide](/docs/developer/input-files), [Jobs guide](/docs/developer/jobs), or the generated [REST API reference](/docs/api).

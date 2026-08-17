@@ -19,7 +19,7 @@ func NewClient(baseURL, personalAPIKey string, httpClient *http.Client) (*genera
 	}
 
 	return generated.NewClientWithResponses(
-		baseURL,
+		directAPIBaseURL(baseURL),
 		generated.WithHTTPClient(httpClient),
 		generated.WithRequestEditorFn(func(_ context.Context, request *http.Request) error {
 			request.Header.Set("X-API-Key", personalAPIKey)
@@ -38,11 +38,15 @@ func NewOAuthClient(baseURL, accessToken string, httpClient *http.Client) (*gene
 	}
 
 	return generated.NewClientWithResponses(
-		baseURL,
+		directAPIBaseURL(baseURL),
 		generated.WithHTTPClient(httpClient),
 		generated.WithRequestEditorFn(func(_ context.Context, request *http.Request) error {
 			request.Header.Set("Authorization", "Bearer "+accessToken)
 			return nil
 		}),
 	)
+}
+
+func directAPIBaseURL(gatewayURL string) string {
+	return strings.TrimRight(gatewayURL, "/") + "/v1/"
 }

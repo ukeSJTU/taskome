@@ -9,16 +9,21 @@ os.environ.setdefault(
     "WEB_GATEWAY_HMAC_SECRET",
     "openapi-export-secret-not-for-production",
 )
+os.environ.setdefault("GATEWAY_PUBLIC_URL", "https://api.example.com")
 
+from gateway.core.public_openapi import public_openapi_schema
 from gateway.main import app
 
 
 def main() -> None:
-    output_path = Path(__file__).resolve().parents[3] / "packages/api-client/openapi.json"
-    output_path.write_text(
-        f"{json.dumps(app.openapi(), indent=2, sort_keys=True)}\n",
-        encoding="utf-8",
-    )
+    repository_root = Path(__file__).resolve().parents[3]
+    schema = f"{json.dumps(public_openapi_schema(app), indent=2, sort_keys=True)}\n"
+    for output_path in (
+        repository_root / "packages/api-client/openapi.public.json",
+        repository_root / "apps/docs/public/openapi.json",
+    ):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(schema, encoding="utf-8")
 
 
 if __name__ == "__main__":

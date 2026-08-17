@@ -6,6 +6,6 @@
  */
 
 /**
- * Credential channels normalized into a principal.
+ * Credential used by the Direct API Client.
  */
-export type CredentialKind = "session_jwt" | "oauth_access_token" | "personal_api_key";
+export type CredentialKind = "personal_api_key";

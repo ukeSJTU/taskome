@@ -25,7 +25,7 @@ export const getListJobsUrl = (params?: ListJobsParams) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/jobs?${stringifiedParams}` : `/v1/jobs`;
+  return stringifiedParams.length > 0 ? `/jobs?${stringifiedParams}` : `/jobs`;
 };
 
 /**
@@ -43,7 +43,7 @@ export const listJobs = async (
 };
 
 export const getCreateJobUrl = () => {
-  return `/v1/jobs`;
+  return `/jobs`;
 };
 
 /**
@@ -63,7 +63,7 @@ export const createJob = async (
 };
 
 export const getGetJobUrl = ({ jobId }: GetJobPathParameters) => {
-  return `/v1/jobs/${encodeURIComponent(String(jobId))}`;
+  return `/jobs/${encodeURIComponent(String(jobId))}`;
 };
 
 /**

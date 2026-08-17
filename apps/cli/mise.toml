@@ -42,4 +42,4 @@ run = "govulncheck ./..."
 [tasks."api-client:generate"]
 description = "Generate the Taskome CLI Gateway client from OpenAPI"
 depends = ["//apps/gateway:openapi:export"]
-run = "go tool oapi-codegen --config oapi-codegen.yaml ../../packages/api-client/openapi.json"
+run = "go tool oapi-codegen --config oapi-codegen.yaml ../../packages/api-client/openapi.public.json"

@@ -17,10 +17,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "original_filename",
-          "size_bytes"
-        ],
+        "required": ["original_filename", "size_bytes"],
         "title": "CreateInputFileRequest",
         "type": "object"
       },
@@ -45,21 +42,13 @@
             "type": "string"
           }
         },
-        "required": [
-          "task_server_name",
-          "task_name",
-          "params"
-        ],
+        "required": ["task_server_name", "task_name", "params"],
         "title": "CreateJobRequest",
         "type": "object"
       },
       "CredentialKind": {
-        "description": "Credential channels normalized into a principal.",
-        "enum": [
-          "session_jwt",
-          "oauth_access_token",
-          "personal_api_key"
-        ],
+        "description": "Credential used by the Direct API Client.",
+        "enum": ["personal_api_key"],
         "title": "CredentialKind",
         "type": "string"
       },
@@ -76,35 +65,8 @@
             "type": "string"
           }
         },
-        "required": [
-          "download_url",
-          "expires_at"
-        ],
+        "required": ["download_url", "expires_at"],
         "title": "DownloadUrlResponse",
-        "type": "object"
-      },
-      "HealthResponse": {
-        "properties": {
-          "status": {
-            "enum": [
-              "alive",
-              "ready",
-              "not_ready"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "timestamp": {
-            "format": "date-time",
-            "title": "Timestamp",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status",
-          "timestamp"
-        ],
-        "title": "HealthResponse",
         "type": "object"
       },
       "Identity": {
@@ -129,11 +91,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "user_id",
-          "credential_kind",
-          "credential_id"
-        ],
+        "required": ["user_id", "credential_kind", "credential_id"],
         "title": "Identity",
         "type": "object"
       },
@@ -148,9 +106,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "jobs"
-        ],
+        "required": ["jobs"],
         "title": "JobListResponse",
         "type": "object"
       },
@@ -234,12 +190,7 @@
       },
       "JobStatus": {
         "description": "A Job's lifecycle state (CONTEXT.md's Job definition).",
-        "enum": [
-          "queued",
-          "running",
-          "completed",
-          "failed"
-        ],
+        "enum": ["queued", "running", "completed", "failed"],
         "title": "JobStatus",
         "type": "string"
       },
@@ -285,50 +236,8 @@
             "type": "string"
           }
         },
-        "required": [
-          "type",
-          "title",
-          "status",
-          "detail",
-          "instance",
-          "request_id"
-        ],
+        "required": ["type", "title", "status", "detail", "instance", "request_id"],
         "title": "ProblemDetails",
-        "type": "object"
-      },
-      "ReadinessResponse": {
-        "properties": {
-          "checks": {
-            "additionalProperties": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            "title": "Checks",
-            "type": "object"
-          },
-          "status": {
-            "enum": [
-              "alive",
-              "ready",
-              "not_ready"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "timestamp": {
-            "format": "date-time",
-            "title": "Timestamp",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status",
-          "timestamp",
-          "checks"
-        ],
-        "title": "ReadinessResponse",
         "type": "object"
       },
       "UploadUrlResponse": {
@@ -350,11 +259,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "upload_url",
-          "expires_at"
-        ],
+        "required": ["id", "upload_url", "expires_at"],
         "title": "UploadUrlResponse",
         "type": "object"
       },
@@ -383,11 +288,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "location",
-          "message",
-          "code"
-        ],
+        "required": ["location", "message", "code"],
         "title": "ValidationIssue",
         "type": "object"
       }
@@ -397,10 +298,6 @@
         "in": "header",
         "name": "X-API-Key",
         "type": "apiKey"
-      },
-      "HTTPBearer": {
-        "scheme": "bearer",
-        "type": "http"
       }
     }
   },
@@ -410,51 +307,7 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/health/live": {
-      "get": {
-        "description": "Report that the worker event loop is serving requests.",
-        "operationId": "getLiveness",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Liveness",
-        "tags": [
-          "health"
-        ]
-      }
-    },
-    "/health/ready": {
-      "get": {
-        "description": "Report whether the initialized Gateway can reach DB and Redis concurrently.",
-        "operationId": "getReadiness",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReadinessResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Readiness",
-        "tags": [
-          "health"
-        ]
-      }
-    },
-    "/v1/input-files": {
+    "/input-files": {
       "post": {
         "description": "Allocate an Input File and return its constrained upload URL.",
         "operationId": "createInputFile",
@@ -532,19 +385,14 @@
         },
         "security": [
           {
-            "HTTPBearer": []
-          },
-          {
             "APIKeyHeader": []
           }
         ],
         "summary": "Create Input File",
-        "tags": [
-          "input-files"
-        ]
+        "tags": ["input-files"]
       }
     },
-    "/v1/input-files/{input_file_id}": {
+    "/input-files/{input_file_id}": {
       "delete": {
         "description": "Soft-delete an Input File and remove its object.",
         "operationId": "deleteInputFile",
@@ -627,19 +475,14 @@
         },
         "security": [
           {
-            "HTTPBearer": []
-          },
-          {
             "APIKeyHeader": []
           }
         ],
         "summary": "Delete Input File",
-        "tags": [
-          "input-files"
-        ]
+        "tags": ["input-files"]
       }
     },
-    "/v1/input-files/{input_file_id}/download-url": {
+    "/input-files/{input_file_id}/download-url": {
       "get": {
         "description": "Return a download URL for a caller-owned Input File.",
         "operationId": "getInputFileDownloadUrl",
@@ -729,19 +572,14 @@
         },
         "security": [
           {
-            "HTTPBearer": []
-          },
-          {
             "APIKeyHeader": []
           }
         ],
         "summary": "Download Input File Url",
-        "tags": [
-          "input-files"
-        ]
+        "tags": ["input-files"]
       }
     },
-    "/v1/jobs": {
+    "/jobs": {
       "get": {
         "description": "List the caller's own Jobs, newest first.",
         "operationId": "listJobs",
@@ -866,16 +704,11 @@
         },
         "security": [
           {
-            "HTTPBearer": []
-          },
-          {
             "APIKeyHeader": []
           }
         ],
         "summary": "List Jobs",
-        "tags": [
-          "jobs"
-        ]
+        "tags": ["jobs"]
       },
       "post": {
         "description": "Validate and durably queue a Job, dispatching it in the background.",
@@ -964,19 +797,14 @@
         },
         "security": [
           {
-            "HTTPBearer": []
-          },
-          {
             "APIKeyHeader": []
           }
         ],
         "summary": "Create Job",
-        "tags": [
-          "jobs"
-        ]
+        "tags": ["jobs"]
       }
     },
-    "/v1/jobs/{job_id}": {
+    "/jobs/{job_id}": {
       "get": {
         "description": "Return a caller-owned Job's current status and result.",
         "operationId": "getJob",
@@ -1066,19 +894,14 @@
         },
         "security": [
           {
-            "HTTPBearer": []
-          },
-          {
             "APIKeyHeader": []
           }
         ],
         "summary": "Get Job",
-        "tags": [
-          "jobs"
-        ]
+        "tags": ["jobs"]
       }
     },
-    "/v1/me": {
+    "/me": {
       "get": {
         "description": "Return the authenticated caller's normalized identity.",
         "operationId": "getCurrentIdentity",
@@ -1136,17 +959,34 @@
         },
         "security": [
           {
-            "HTTPBearer": []
-          },
-          {
             "APIKeyHeader": []
           }
         ],
         "summary": "Current Identity",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     }
-  }
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/v1"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Identify the User represented by the Personal API Key.",
+      "name": "auth",
+      "x-displayName": "Identity"
+    },
+    {
+      "description": "Create, download, and delete caller-owned Input Files.",
+      "name": "input-files",
+      "x-displayName": "Input Files"
+    },
+    {
+      "description": "Create and observe caller-owned Jobs.",
+      "name": "jobs",
+      "x-displayName": "Jobs"
+    }
+  ]
 }

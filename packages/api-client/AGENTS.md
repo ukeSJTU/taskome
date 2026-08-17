@@ -4,13 +4,13 @@
 
 ## Invariants
 
-- Treat `openapi.json`, `orval.config.ts`, and the Gateway contract as the source of truth for generated client code. Do not hand-edit `src/generated/gateway`.
+- Treat `openapi.public.json`, `orval.config.ts`, and the Gateway contract as the source of truth for generated client code. Do not hand-edit `src/generated/gateway`.
 - Browser code does not call this package directly; Web uses it from its server-side BFF boundary.
 - Keep the mutator's authentication and error semantics consistent across generated operations.
 
 ## Contract changes
 
-- After changing Gateway's public REST contract, run root `mise run openapi:generate` to update `openapi.json` and regenerate both the TypeScript and Go clients from the same export.
+- After changing Gateway's public REST contract, run root `mise run openapi:generate` to update `openapi.public.json` and regenerate both the TypeScript and Go clients from the same export.
 - Resolve an inconvenient generated shape by changing the API contract or generation configuration, not by patching a generated file.
 
 ## Completion

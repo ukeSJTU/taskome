@@ -13,3 +13,8 @@ run = "pnpm run start"
 [tasks."check-types"]
 description = "Type-check docs"
 run = "pnpm run check-types"
+
+[tasks."openapi:generate"]
+description = "Generate Docs API reference pages from the public OpenAPI contract"
+depends = ["//apps/gateway:openapi:export"]
+run = "pnpm run generate:api"

@@ -9,7 +9,6 @@ import httpx
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastmcp.utilities.lifespan import combine_lifespans
-from scalar_fastapi import get_scalar_api_reference
 
 from gateway.api.health import router as health_router
 from gateway.api.internal import router as internal_router
@@ -36,7 +35,6 @@ from gateway.core.middleware import (
 )
 from gateway.core.observability import DeferredTelemetryMiddleware
 from gateway.core.personal_api_keys import PersonalApiKeyVerifier, WebPersonalApiKeyVerifier
-from gateway.core.public_openapi import public_openapi_schema
 from gateway.db.database import Database
 from gateway.repositories.input_files import InputFileRepository
 from gateway.repositories.jobs import JobRepository
@@ -47,14 +45,13 @@ from gateway.services.jobs import JobQueuePort, JobService
 from gateway.services.storage import SeaweedFSStorage
 
 if TYPE_CHECKING:
-    from fastapi.responses import HTMLResponse
     from fastmcp.server.auth import TokenVerifier
     from opentelemetry.sdk._logs.export import LogRecordExporter
     from opentelemetry.sdk.trace.export import SpanExporter
     from redis.asyncio import Redis
 
 
-def create_app(  # noqa: PLR0913, PLR0915
+def create_app(  # noqa: PLR0913
     settings: Settings | None = None,
     *,
     database: Database | None = None,
@@ -87,7 +84,6 @@ def create_app(  # noqa: PLR0913, PLR0915
     """
 
     app_settings = settings or Settings()
-    openapi_url = "/openapi.json" if app_settings.expose_docs else None
     app_database = database or Database(
         app_settings.database_url.get_secret_value(),
         timeout_seconds=app_settings.database_timeout_seconds,
@@ -149,7 +145,7 @@ def create_app(  # noqa: PLR0913, PLR0915
         version=app_settings.app_version,
         docs_url=None,
         redoc_url=None,
-        openapi_url=openapi_url,
+        openapi_url=None,
         lifespan=combine_lifespans(lifespan, mcp_protocol_app.lifespan),
     )
     application.state.settings = app_settings
@@ -186,13 +182,7 @@ def create_app(  # noqa: PLR0913, PLR0915
     application.router.routes.extend(rest_auth_provider.get_routes("/v1"))
     application.router.routes.extend(mcp_auth_provider.get_routes("/mcp"))
 
-    @application.get("/internal/openapi.json", include_in_schema=False)
-    async def public_openapi() -> dict[str, Any]:
-        return public_openapi_schema(application)
-
     application.mount("/mcp", mcp_app)
-    if app_settings.expose_docs:
-        _add_scalar_api_reference(application)
     application.add_middleware(
         RequestBodyLimitMiddleware,
         max_body_size=app_settings.request_body_max_bytes,
@@ -209,16 +199,6 @@ def create_app(  # noqa: PLR0913, PLR0915
     )
     _configure_openapi(application)
     return application
-
-
-def _add_scalar_api_reference(application: FastAPI) -> None:
-    @application.get("/scalar", include_in_schema=False)
-    async def scalar_api_reference() -> HTMLResponse:
-        return get_scalar_api_reference(
-            openapi_url=application.openapi_url,
-            title=f"{application.title} API Reference",
-            telemetry=False,
-        )
 
 
 def _configure_openapi(application: FastAPI) -> None:

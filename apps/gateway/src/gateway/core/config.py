@@ -59,7 +59,6 @@ class Settings(BaseSettings):
     app_version: Annotated[str, Field(default_factory=distribution_version)]
     app_environment: Environment = Environment.DEVELOPMENT
     log_level: LogLevel = LogLevel.INFO
-    docs_enabled: bool | None = None
     database_url: SecretStr
     redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
     ray_address: str = "ray://localhost:10001"
@@ -119,14 +118,6 @@ class Settings(BaseSettings):
                 hmac_secret=self.fpocket_task_hmac_secret.get_secret_value(),
             ),
         }
-
-    @property
-    def expose_docs(self) -> bool:
-        """Expose developer reference pages outside production unless overridden."""
-
-        if self.docs_enabled is not None:
-            return self.docs_enabled
-        return self.app_environment is not Environment.PRODUCTION
 
     @property
     def resolved_seaweedfs_public_endpoint(self) -> str:

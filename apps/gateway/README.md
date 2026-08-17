@@ -15,23 +15,19 @@ uv sync
 mise run //apps/gateway:dev
 ```
 
-The gateway listens on `http://127.0.0.1:8000`. In development, the Scalar API
-reference is at `/scalar` and its OpenAPI schema is at `/openapi.json`; the MCP
-Streamable HTTP transport is mounted at `/mcp`.
+The gateway listens on `http://127.0.0.1:8000`. The MCP Streamable HTTP transport
+is mounted at `/mcp`; the public REST reference is published from `apps/docs`.
 
 For a production-style process, use `mise run //apps/gateway:start`. Gunicorn
 manages four Uvicorn workers by default, gives in-flight requests 30 seconds to
 finish on shutdown, and recycles workers after a jittered request budget; all
-four values are environment-overridable. Production mode emits JSON logs,
-enables HSTS headers, and disables Scalar and OpenAPI unless `DOCS_ENABLED=true`
-is set explicitly. TLS termination stays at Caddy. Swagger UI and ReDoc are
-disabled in every environment.
+four values are environment-overridable. Production mode emits JSON logs and
+enables HSTS headers. TLS termination stays at Caddy. Gateway never serves an
+interactive API reference or a live OpenAPI document.
 
-The always-on `/internal/openapi.json` endpoint serves the cached Public OpenAPI
-projection consumed by Web's authenticated API reference. It includes only the
-Direct API Client operations beneath `/v1`, publishes the configured public `/v1`
-server, and documents only `X-API-Key` authentication. The full `/openapi.json`
-schema remains the development and Orval source when docs are enabled.
+Run `mise run openapi:generate` after changing the versioned REST contract. It
+writes the checked-in public projection used by the Direct API Client SDK and the
+static Docs deployment, which publishes it at `/openapi.json`.
 
 ## Interfaces
 
@@ -70,7 +66,7 @@ cannot be overwritten after its first successful upload.
 
 ## Configuration
 
-Application-local settings use `APP_ENVIRONMENT`, `LOG_LEVEL`, and `DOCS_ENABLED`.
+Application-local settings use `APP_ENVIRONMENT` and `LOG_LEVEL`.
 `DATABASE_URL` is required and uses the explicit `postgresql+psycopg` dialect.
 SeaweedFS uses `SEAWEEDFS_INTERNAL_ENDPOINT` for gateway calls and
 `SEAWEEDFS_PUBLIC_ENDPOINT` for caller-facing presigned URLs; the public endpoint

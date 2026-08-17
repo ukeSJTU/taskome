@@ -15,7 +15,7 @@ import type {
 import { gatewayFetch } from "../../../mutator";
 
 export const getCreateInputFileUrl = () => {
-  return `/v1/input-files`;
+  return `/input-files`;
 };
 
 /**
@@ -35,7 +35,7 @@ export const createInputFile = async (
 };
 
 export const getDeleteInputFileUrl = ({ inputFileId }: DeleteInputFilePathParameters) => {
-  return `/v1/input-files/${encodeURIComponent(String(inputFileId))}`;
+  return `/input-files/${encodeURIComponent(String(inputFileId))}`;
 };
 
 /**
@@ -55,7 +55,7 @@ export const deleteInputFile = async (
 export const getGetInputFileDownloadUrlUrl = ({
   inputFileId,
 }: GetInputFileDownloadUrlPathParameters) => {
-  return `/v1/input-files/${encodeURIComponent(String(inputFileId))}/download-url`;
+  return `/input-files/${encodeURIComponent(String(inputFileId))}/download-url`;
 };
 
 /**

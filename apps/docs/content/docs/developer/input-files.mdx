@@ -1,0 +1,10 @@
+---
+title: Input Files
+description: Allocate immutable Input Files and transfer their bytes through constrained upload URLs.
+---
+
+An Input File is an immutable, caller-owned file that can be referenced by one or more Jobs. Create it first with `POST /v1/input-files`, then upload to the returned URL.
+
+The `size_bytes` declaration must be from 1 byte through 50 MiB. The subsequent PUT must include the matching `Content-Length` and `If-None-Match: *`; both are signed into the upload URL. A corrected file is a new Input File, not a re-upload to an existing id.
+
+Download URLs and deletion apply only to your own Input Files. Taskome returns a not-found response when an Input File is unavailable, including when it belongs to another User.

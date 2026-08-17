@@ -20,40 +20,13 @@ import (
 
 // Defines values for CredentialKind.
 const (
-	OauthAccessToken CredentialKind = "oauth_access_token"
-	PersonalApiKey   CredentialKind = "personal_api_key"
-	SessionJwt       CredentialKind = "session_jwt"
+	PersonalApiKey CredentialKind = "personal_api_key"
 )
 
 // Valid indicates whether the value is a known member of the CredentialKind enum.
 func (e CredentialKind) Valid() bool {
 	switch e {
-	case OauthAccessToken:
-		return true
 	case PersonalApiKey:
-		return true
-	case SessionJwt:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for HealthResponseStatus.
-const (
-	HealthResponseStatusAlive    HealthResponseStatus = "alive"
-	HealthResponseStatusNotReady HealthResponseStatus = "not_ready"
-	HealthResponseStatusReady    HealthResponseStatus = "ready"
-)
-
-// Valid indicates whether the value is a known member of the HealthResponseStatus enum.
-func (e HealthResponseStatus) Valid() bool {
-	switch e {
-	case HealthResponseStatusAlive:
-		return true
-	case HealthResponseStatusNotReady:
-		return true
-	case HealthResponseStatusReady:
 		return true
 	default:
 		return false
@@ -84,27 +57,6 @@ func (e JobStatus) Valid() bool {
 	}
 }
 
-// Defines values for ReadinessResponseStatus.
-const (
-	ReadinessResponseStatusAlive    ReadinessResponseStatus = "alive"
-	ReadinessResponseStatusNotReady ReadinessResponseStatus = "not_ready"
-	ReadinessResponseStatusReady    ReadinessResponseStatus = "ready"
-)
-
-// Valid indicates whether the value is a known member of the ReadinessResponseStatus enum.
-func (e ReadinessResponseStatus) Valid() bool {
-	switch e {
-	case ReadinessResponseStatusAlive:
-		return true
-	case ReadinessResponseStatusNotReady:
-		return true
-	case ReadinessResponseStatusReady:
-		return true
-	default:
-		return false
-	}
-}
-
 // CreateInputFileRequest Validated REST input for creating an immutable Input File.
 type CreateInputFileRequest struct {
 	OriginalFilename string `json:"original_filename"`
@@ -118,7 +70,7 @@ type CreateJobRequest struct {
 	TaskServerName string                 `json:"task_server_name"`
 }
 
-// CredentialKind Credential channels normalized into a principal.
+// CredentialKind Credential used by the Direct API Client.
 type CredentialKind string
 
 // DownloadUrlResponse Caller-visible signed download URL and expiry.
@@ -127,20 +79,11 @@ type DownloadUrlResponse struct {
 	ExpiresAt   time.Time `json:"expires_at"`
 }
 
-// HealthResponse defines model for HealthResponse.
-type HealthResponse struct {
-	Status    HealthResponseStatus `json:"status"`
-	Timestamp time.Time            `json:"timestamp"`
-}
-
-// HealthResponseStatus defines model for HealthResponse.Status.
-type HealthResponseStatus string
-
 // Identity Normalized identity returned by the REST authentication endpoint.
 type Identity struct {
 	CredentialId *string `json:"credential_id"`
 
-	// CredentialKind Credential channels normalized into a principal.
+	// CredentialKind Credential used by the Direct API Client.
 	CredentialKind CredentialKind `json:"credential_kind"`
 	UserId         string         `json:"user_id"`
 }
@@ -179,16 +122,6 @@ type ProblemDetails struct {
 	Title     string             `json:"title"`
 	Type      string             `json:"type"`
 }
-
-// ReadinessResponse defines model for ReadinessResponse.
-type ReadinessResponse struct {
-	Checks    map[string]map[string]string `json:"checks"`
-	Status    ReadinessResponseStatus      `json:"status"`
-	Timestamp time.Time                    `json:"timestamp"`
-}
-
-// ReadinessResponseStatus defines model for ReadinessResponse.Status.
-type ReadinessResponseStatus string
 
 // UploadUrlResponse Caller-visible upload id, signed URL, and expiry.
 type UploadUrlResponse struct {
@@ -367,27 +300,13 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 
-	// GetLiveness Liveness
-	//
-	// Report that the worker event loop is serving requests.
-	//
-	// Corresponds with GET /health/live (the `GetLiveness` operationId).
-	GetLiveness(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetReadiness Readiness
-	//
-	// Report whether the initialized Gateway can reach DB and Redis concurrently.
-	//
-	// Corresponds with GET /health/ready (the `GetReadiness` operationId).
-	GetReadiness(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// CreateInputFileWithBody Create Input File
 	//
 	// Allocate an Input File and return its constrained upload URL.
 	//
 	// Takes any type of body and a specified content type.
 	//
-	// Corresponds with POST /v1/input-files (the `CreateInputFile` operationId).
+	// Corresponds with POST /input-files (the `CreateInputFile` operationId).
 	CreateInputFileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateInputFile Create Input File
@@ -396,28 +315,28 @@ type ClientInterface interface {
 	//
 	// Takes a body of the `application/json` content type.
 	//
-	// Corresponds with POST /v1/input-files (the `CreateInputFile` operationId).
+	// Corresponds with POST /input-files (the `CreateInputFile` operationId).
 	CreateInputFile(ctx context.Context, body CreateInputFileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteInputFile Delete Input File
 	//
 	// Soft-delete an Input File and remove its object.
 	//
-	// Corresponds with DELETE /v1/input-files/{input_file_id} (the `DeleteInputFile` operationId).
+	// Corresponds with DELETE /input-files/{input_file_id} (the `DeleteInputFile` operationId).
 	DeleteInputFile(ctx context.Context, inputFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetInputFileDownloadUrl Download Input File Url
 	//
 	// Return a download URL for a caller-owned Input File.
 	//
-	// Corresponds with GET /v1/input-files/{input_file_id}/download-url (the `GetInputFileDownloadUrl` operationId).
+	// Corresponds with GET /input-files/{input_file_id}/download-url (the `GetInputFileDownloadUrl` operationId).
 	GetInputFileDownloadUrl(ctx context.Context, inputFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListJobs List Jobs
 	//
 	// List the caller's own Jobs, newest first.
 	//
-	// Corresponds with GET /v1/jobs (the `ListJobs` operationId).
+	// Corresponds with GET /jobs (the `ListJobs` operationId).
 	ListJobs(ctx context.Context, params *ListJobsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateJobWithBody Create Job
@@ -426,7 +345,7 @@ type ClientInterface interface {
 	//
 	// Takes any type of body and a specified content type.
 	//
-	// Corresponds with POST /v1/jobs (the `CreateJob` operationId).
+	// Corresponds with POST /jobs (the `CreateJob` operationId).
 	CreateJobWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateJob Create Job
@@ -435,56 +354,22 @@ type ClientInterface interface {
 	//
 	// Takes a body of the `application/json` content type.
 	//
-	// Corresponds with POST /v1/jobs (the `CreateJob` operationId).
+	// Corresponds with POST /jobs (the `CreateJob` operationId).
 	CreateJob(ctx context.Context, body CreateJobJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetJob Get Job
 	//
 	// Return a caller-owned Job's current status and result.
 	//
-	// Corresponds with GET /v1/jobs/{job_id} (the `GetJob` operationId).
+	// Corresponds with GET /jobs/{job_id} (the `GetJob` operationId).
 	GetJob(ctx context.Context, jobId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetCurrentIdentity Current Identity
 	//
 	// Return the authenticated caller's normalized identity.
 	//
-	// Corresponds with GET /v1/me (the `GetCurrentIdentity` operationId).
+	// Corresponds with GET /me (the `GetCurrentIdentity` operationId).
 	GetCurrentIdentity(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-}
-
-// GetLiveness Liveness
-//
-// Report that the worker event loop is serving requests.
-//
-// Corresponds with GET /health/live (the `GetLiveness` operationId).
-func (c *Client) GetLiveness(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetLivenessRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// GetReadiness Readiness
-//
-// Report whether the initialized Gateway can reach DB and Redis concurrently.
-//
-// Corresponds with GET /health/ready (the `GetReadiness` operationId).
-func (c *Client) GetReadiness(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetReadinessRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
 }
 
 // CreateInputFileWithBody Create Input File
@@ -493,7 +378,7 @@ func (c *Client) GetReadiness(ctx context.Context, reqEditors ...RequestEditorFn
 //
 // Takes any type of body and a specified content type.
 //
-// Corresponds with POST /v1/input-files (the `CreateInputFile` operationId).
+// Corresponds with POST /input-files (the `CreateInputFile` operationId).
 func (c *Client) CreateInputFileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateInputFileRequestWithBody(c.Server, contentType, body)
 	if err != nil {
@@ -512,7 +397,7 @@ func (c *Client) CreateInputFileWithBody(ctx context.Context, contentType string
 //
 // Takes a body of the `application/json` content type.
 //
-// Corresponds with POST /v1/input-files (the `CreateInputFile` operationId).
+// Corresponds with POST /input-files (the `CreateInputFile` operationId).
 func (c *Client) CreateInputFile(ctx context.Context, body CreateInputFileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateInputFileRequest(c.Server, body)
 	if err != nil {
@@ -529,7 +414,7 @@ func (c *Client) CreateInputFile(ctx context.Context, body CreateInputFileJSONRe
 //
 // Soft-delete an Input File and remove its object.
 //
-// Corresponds with DELETE /v1/input-files/{input_file_id} (the `DeleteInputFile` operationId).
+// Corresponds with DELETE /input-files/{input_file_id} (the `DeleteInputFile` operationId).
 func (c *Client) DeleteInputFile(ctx context.Context, inputFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteInputFileRequest(c.Server, inputFileId)
 	if err != nil {
@@ -546,7 +431,7 @@ func (c *Client) DeleteInputFile(ctx context.Context, inputFileId openapi_types.
 //
 // Return a download URL for a caller-owned Input File.
 //
-// Corresponds with GET /v1/input-files/{input_file_id}/download-url (the `GetInputFileDownloadUrl` operationId).
+// Corresponds with GET /input-files/{input_file_id}/download-url (the `GetInputFileDownloadUrl` operationId).
 func (c *Client) GetInputFileDownloadUrl(ctx context.Context, inputFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetInputFileDownloadUrlRequest(c.Server, inputFileId)
 	if err != nil {
@@ -563,7 +448,7 @@ func (c *Client) GetInputFileDownloadUrl(ctx context.Context, inputFileId openap
 //
 // List the caller's own Jobs, newest first.
 //
-// Corresponds with GET /v1/jobs (the `ListJobs` operationId).
+// Corresponds with GET /jobs (the `ListJobs` operationId).
 func (c *Client) ListJobs(ctx context.Context, params *ListJobsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListJobsRequest(c.Server, params)
 	if err != nil {
@@ -582,7 +467,7 @@ func (c *Client) ListJobs(ctx context.Context, params *ListJobsParams, reqEditor
 //
 // Takes any type of body and a specified content type.
 //
-// Corresponds with POST /v1/jobs (the `CreateJob` operationId).
+// Corresponds with POST /jobs (the `CreateJob` operationId).
 func (c *Client) CreateJobWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateJobRequestWithBody(c.Server, contentType, body)
 	if err != nil {
@@ -601,7 +486,7 @@ func (c *Client) CreateJobWithBody(ctx context.Context, contentType string, body
 //
 // Takes a body of the `application/json` content type.
 //
-// Corresponds with POST /v1/jobs (the `CreateJob` operationId).
+// Corresponds with POST /jobs (the `CreateJob` operationId).
 func (c *Client) CreateJob(ctx context.Context, body CreateJobJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateJobRequest(c.Server, body)
 	if err != nil {
@@ -618,7 +503,7 @@ func (c *Client) CreateJob(ctx context.Context, body CreateJobJSONRequestBody, r
 //
 // Return a caller-owned Job's current status and result.
 //
-// Corresponds with GET /v1/jobs/{job_id} (the `GetJob` operationId).
+// Corresponds with GET /jobs/{job_id} (the `GetJob` operationId).
 func (c *Client) GetJob(ctx context.Context, jobId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetJobRequest(c.Server, jobId)
 	if err != nil {
@@ -635,7 +520,7 @@ func (c *Client) GetJob(ctx context.Context, jobId openapi_types.UUID, reqEditor
 //
 // Return the authenticated caller's normalized identity.
 //
-// Corresponds with GET /v1/me (the `GetCurrentIdentity` operationId).
+// Corresponds with GET /me (the `GetCurrentIdentity` operationId).
 func (c *Client) GetCurrentIdentity(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetCurrentIdentityRequest(c.Server)
 	if err != nil {
@@ -646,60 +531,6 @@ func (c *Client) GetCurrentIdentity(ctx context.Context, reqEditors ...RequestEd
 		return nil, err
 	}
 	return c.Client.Do(req)
-}
-
-// NewGetLivenessRequest constructs an http.Request for the GetLiveness method
-func NewGetLivenessRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/health/live")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetReadinessRequest constructs an http.Request for the GetReadiness method
-func NewGetReadinessRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/health/ready")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
 }
 
 // NewCreateInputFileRequest calls the generic CreateInputFile builder with application/json body
@@ -722,7 +553,7 @@ func NewCreateInputFileRequestWithBody(server string, contentType string, body i
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/input-files")
+	operationPath := fmt.Sprintf("/input-files")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -758,7 +589,7 @@ func NewDeleteInputFileRequest(server string, inputFileId openapi_types.UUID) (*
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/input-files/%s", pathParam0)
+	operationPath := fmt.Sprintf("/input-files/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -792,7 +623,7 @@ func NewGetInputFileDownloadUrlRequest(server string, inputFileId openapi_types.
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/input-files/%s/download-url", pathParam0)
+	operationPath := fmt.Sprintf("/input-files/%s/download-url", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -819,7 +650,7 @@ func NewListJobsRequest(server string, params *ListJobsParams) (*http.Request, e
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/jobs")
+	operationPath := fmt.Sprintf("/jobs")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -920,7 +751,7 @@ func NewCreateJobRequestWithBody(server string, contentType string, body io.Read
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/jobs")
+	operationPath := fmt.Sprintf("/jobs")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -956,7 +787,7 @@ func NewGetJobRequest(server string, jobId openapi_types.UUID) (*http.Request, e
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/jobs/%s", pathParam0)
+	operationPath := fmt.Sprintf("/jobs/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -983,7 +814,7 @@ func NewGetCurrentIdentityRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/me")
+	operationPath := fmt.Sprintf("/me")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1045,31 +876,13 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
-	// GetLivenessWithResponse Liveness
-	//
-	// Report that the worker event loop is serving requests.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /health/live (the `GetLiveness` operationId).
-	GetLivenessWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLivenessResponse, error)
-
-	// GetReadinessWithResponse Readiness
-	//
-	// Report whether the initialized Gateway can reach DB and Redis concurrently.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /health/ready (the `GetReadiness` operationId).
-	GetReadinessWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetReadinessResponse, error)
-
 	// CreateInputFileWithBodyWithResponse Create Input File
 	//
 	// Allocate an Input File and return its constrained upload URL.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with POST /v1/input-files (the `CreateInputFile` operationId).
+	// Corresponds with POST /input-files (the `CreateInputFile` operationId).
 	CreateInputFileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateInputFileResponse, error)
 
 	// CreateInputFileWithResponse Create Input File
@@ -1078,7 +891,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with POST /v1/input-files (the `CreateInputFile` operationId).
+	// Corresponds with POST /input-files (the `CreateInputFile` operationId).
 	CreateInputFileWithResponse(ctx context.Context, body CreateInputFileJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateInputFileResponse, error)
 
 	// DeleteInputFileWithResponse Delete Input File
@@ -1087,7 +900,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with DELETE /v1/input-files/{input_file_id} (the `DeleteInputFile` operationId).
+	// Corresponds with DELETE /input-files/{input_file_id} (the `DeleteInputFile` operationId).
 	DeleteInputFileWithResponse(ctx context.Context, inputFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteInputFileResponse, error)
 
 	// GetInputFileDownloadUrlWithResponse Download Input File Url
@@ -1096,7 +909,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with GET /v1/input-files/{input_file_id}/download-url (the `GetInputFileDownloadUrl` operationId).
+	// Corresponds with GET /input-files/{input_file_id}/download-url (the `GetInputFileDownloadUrl` operationId).
 	GetInputFileDownloadUrlWithResponse(ctx context.Context, inputFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetInputFileDownloadUrlResponse, error)
 
 	// ListJobsWithResponse List Jobs
@@ -1105,7 +918,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with GET /v1/jobs (the `ListJobs` operationId).
+	// Corresponds with GET /jobs (the `ListJobs` operationId).
 	ListJobsWithResponse(ctx context.Context, params *ListJobsParams, reqEditors ...RequestEditorFn) (*ListJobsResponse, error)
 
 	// CreateJobWithBodyWithResponse Create Job
@@ -1114,7 +927,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with POST /v1/jobs (the `CreateJob` operationId).
+	// Corresponds with POST /jobs (the `CreateJob` operationId).
 	CreateJobWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateJobResponse, error)
 
 	// CreateJobWithResponse Create Job
@@ -1123,7 +936,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with POST /v1/jobs (the `CreateJob` operationId).
+	// Corresponds with POST /jobs (the `CreateJob` operationId).
 	CreateJobWithResponse(ctx context.Context, body CreateJobJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateJobResponse, error)
 
 	// GetJobWithResponse Get Job
@@ -1132,7 +945,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with GET /v1/jobs/{job_id} (the `GetJob` operationId).
+	// Corresponds with GET /jobs/{job_id} (the `GetJob` operationId).
 	GetJobWithResponse(ctx context.Context, jobId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetJobResponse, error)
 
 	// GetCurrentIdentityWithResponse Current Identity
@@ -1141,90 +954,8 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with GET /v1/me (the `GetCurrentIdentity` operationId).
+	// Corresponds with GET /me (the `GetCurrentIdentity` operationId).
 	GetCurrentIdentityWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentIdentityResponse, error)
-}
-
-type GetLivenessResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *HealthResponse
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetLivenessResponse) GetJSON200() *HealthResponse {
-	return r.JSON200
-}
-
-// GetBody returns the raw response body bytes
-func (r GetLivenessResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetLivenessResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetLivenessResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetLivenessResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetReadinessResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ReadinessResponse
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetReadinessResponse) GetJSON200() *ReadinessResponse {
-	return r.JSON200
-}
-
-// GetBody returns the raw response body bytes
-func (r GetReadinessResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetReadinessResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetReadinessResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetReadinessResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
 }
 
 type CreateInputFileResponse struct {
@@ -1773,43 +1504,13 @@ func (r GetCurrentIdentityResponse) ContentType() string {
 	return ""
 }
 
-// GetLivenessWithResponse Liveness
-//
-// Report that the worker event loop is serving requests.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /health/live (the `GetLiveness` operationId).
-func (c *ClientWithResponses) GetLivenessWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLivenessResponse, error) {
-	rsp, err := c.GetLiveness(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetLivenessResponse(rsp)
-}
-
-// GetReadinessWithResponse Readiness
-//
-// Report whether the initialized Gateway can reach DB and Redis concurrently.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /health/ready (the `GetReadiness` operationId).
-func (c *ClientWithResponses) GetReadinessWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetReadinessResponse, error) {
-	rsp, err := c.GetReadiness(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetReadinessResponse(rsp)
-}
-
 // CreateInputFileWithBodyWithResponse Create Input File
 //
 // Allocate an Input File and return its constrained upload URL.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
-// Corresponds with POST /v1/input-files (the `CreateInputFile` operationId).
+// Corresponds with POST /input-files (the `CreateInputFile` operationId).
 func (c *ClientWithResponses) CreateInputFileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateInputFileResponse, error) {
 	rsp, err := c.CreateInputFileWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
@@ -1824,7 +1525,7 @@ func (c *ClientWithResponses) CreateInputFileWithBodyWithResponse(ctx context.Co
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
-// Corresponds with POST /v1/input-files (the `CreateInputFile` operationId).
+// Corresponds with POST /input-files (the `CreateInputFile` operationId).
 func (c *ClientWithResponses) CreateInputFileWithResponse(ctx context.Context, body CreateInputFileJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateInputFileResponse, error) {
 	rsp, err := c.CreateInputFile(ctx, body, reqEditors...)
 	if err != nil {
@@ -1839,7 +1540,7 @@ func (c *ClientWithResponses) CreateInputFileWithResponse(ctx context.Context, b
 //
 // Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with DELETE /v1/input-files/{input_file_id} (the `DeleteInputFile` operationId).
+// Corresponds with DELETE /input-files/{input_file_id} (the `DeleteInputFile` operationId).
 func (c *ClientWithResponses) DeleteInputFileWithResponse(ctx context.Context, inputFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteInputFileResponse, error) {
 	rsp, err := c.DeleteInputFile(ctx, inputFileId, reqEditors...)
 	if err != nil {
@@ -1854,7 +1555,7 @@ func (c *ClientWithResponses) DeleteInputFileWithResponse(ctx context.Context, i
 //
 // Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with GET /v1/input-files/{input_file_id}/download-url (the `GetInputFileDownloadUrl` operationId).
+// Corresponds with GET /input-files/{input_file_id}/download-url (the `GetInputFileDownloadUrl` operationId).
 func (c *ClientWithResponses) GetInputFileDownloadUrlWithResponse(ctx context.Context, inputFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetInputFileDownloadUrlResponse, error) {
 	rsp, err := c.GetInputFileDownloadUrl(ctx, inputFileId, reqEditors...)
 	if err != nil {
@@ -1869,7 +1570,7 @@ func (c *ClientWithResponses) GetInputFileDownloadUrlWithResponse(ctx context.Co
 //
 // Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with GET /v1/jobs (the `ListJobs` operationId).
+// Corresponds with GET /jobs (the `ListJobs` operationId).
 func (c *ClientWithResponses) ListJobsWithResponse(ctx context.Context, params *ListJobsParams, reqEditors ...RequestEditorFn) (*ListJobsResponse, error) {
 	rsp, err := c.ListJobs(ctx, params, reqEditors...)
 	if err != nil {
@@ -1884,7 +1585,7 @@ func (c *ClientWithResponses) ListJobsWithResponse(ctx context.Context, params *
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
-// Corresponds with POST /v1/jobs (the `CreateJob` operationId).
+// Corresponds with POST /jobs (the `CreateJob` operationId).
 func (c *ClientWithResponses) CreateJobWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateJobResponse, error) {
 	rsp, err := c.CreateJobWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
@@ -1899,7 +1600,7 @@ func (c *ClientWithResponses) CreateJobWithBodyWithResponse(ctx context.Context,
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
-// Corresponds with POST /v1/jobs (the `CreateJob` operationId).
+// Corresponds with POST /jobs (the `CreateJob` operationId).
 func (c *ClientWithResponses) CreateJobWithResponse(ctx context.Context, body CreateJobJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateJobResponse, error) {
 	rsp, err := c.CreateJob(ctx, body, reqEditors...)
 	if err != nil {
@@ -1914,7 +1615,7 @@ func (c *ClientWithResponses) CreateJobWithResponse(ctx context.Context, body Cr
 //
 // Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with GET /v1/jobs/{job_id} (the `GetJob` operationId).
+// Corresponds with GET /jobs/{job_id} (the `GetJob` operationId).
 func (c *ClientWithResponses) GetJobWithResponse(ctx context.Context, jobId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetJobResponse, error) {
 	rsp, err := c.GetJob(ctx, jobId, reqEditors...)
 	if err != nil {
@@ -1929,65 +1630,13 @@ func (c *ClientWithResponses) GetJobWithResponse(ctx context.Context, jobId open
 //
 // Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with GET /v1/me (the `GetCurrentIdentity` operationId).
+// Corresponds with GET /me (the `GetCurrentIdentity` operationId).
 func (c *ClientWithResponses) GetCurrentIdentityWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentIdentityResponse, error) {
 	rsp, err := c.GetCurrentIdentity(ctx, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseGetCurrentIdentityResponse(rsp)
-}
-
-// ParseGetLivenessResponse parses an HTTP response from a GetLivenessWithResponse call
-func ParseGetLivenessResponse(rsp *http.Response) (*GetLivenessResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetLivenessResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest HealthResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetReadinessResponse parses an HTTP response from a GetReadinessWithResponse call
-func ParseGetReadinessResponse(rsp *http.Response) (*GetReadinessResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetReadinessResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ReadinessResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
 }
 
 // ParseCreateInputFileResponse parses an HTTP response from a CreateInputFileWithResponse call

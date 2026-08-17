@@ -12,28 +12,16 @@ def test_settings_use_application_local_environment_names(
 ) -> None:
     monkeypatch.setenv("APP_ENVIRONMENT", "test")
     monkeypatch.setenv("LOG_LEVEL", "WARNING")
-    monkeypatch.setenv("DOCS_ENABLED", "false")
 
     settings = Settings(_env_file=None)
 
     assert settings.app_environment is Environment.TEST
     assert settings.log_level == "WARNING"
-    assert settings.expose_docs is False
 
 
 def test_invalid_log_level_is_rejected() -> None:
     with pytest.raises(ValidationError):
         Settings(log_level="verbose", _env_file=None)
-
-
-def test_docs_default_to_disabled_only_in_production() -> None:
-    assert Settings(app_environment=Environment.DEVELOPMENT, _env_file=None).expose_docs
-    assert not Settings(app_environment=Environment.PRODUCTION, _env_file=None).expose_docs
-    assert Settings(
-        app_environment=Environment.PRODUCTION,
-        docs_enabled=True,
-        _env_file=None,
-    ).expose_docs
 
 
 def test_seaweedfs_public_endpoint_defaults_to_internal_endpoint() -> None:
