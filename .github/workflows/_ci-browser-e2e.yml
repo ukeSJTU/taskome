@@ -27,14 +27,46 @@ jobs:
         with:
           path: ~/.cache/uv
           key: uv-root-${{ runner.os }}-${{ hashFiles('uv.lock', 'mise.lock') }}
+      - name: Restore Chromium cache
+        id: chromium-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Resolve Next.js cache generation
+        id: next-cache-generation
+        run: printf 'value=%s\n' "$(date -u +%G-%V)" >>"$GITHUB_OUTPUT"
+      - name: Restore Web Next.js cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/web/.next/cache
+          key: next-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ steps.next-cache-generation.outputs.value }}
+          restore-keys: |
+            next-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            next-web-${{ runner.os }}-
+      - name: Restore Docs Next.js cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/docs/.next/cache
+          key: next-docs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ steps.next-cache-generation.outputs.value }}
+          restore-keys: |
+            next-docs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            next-docs-${{ runner.os }}-
       - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile
           uv sync --locked
-      - name: Install Chromium
-        run: pnpm --dir apps/web exec playwright install --with-deps chromium
       - name: Run Browser E2E
-        run: E2E_PRODUCTION=1 mise run test:browser-e2e
+        env:
+          E2E_INSTALL_CHROMIUM: "1"
+          E2E_PRODUCTION: "1"
+        run: mise run test:browser-e2e
+      - name: Save Chromium cache
+        if: ${{ github.ref == 'refs/heads/main' && steps.chromium-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.chromium-cache.outputs.cache-primary-key }}
       - name: Upload Browser E2E diagnostics
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

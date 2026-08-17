@@ -95,12 +95,18 @@ jobs:
         with:
           path: ~/.local/share/pnpm/store
           key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Resolve Next.js cache generation
+        id: next-cache-generation
+        run: printf 'value=%s\n' "$(date -u +%G-%V)" >>"$GITHUB_OUTPUT"
       - name: Restore Web Next.js cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: next-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/web/.next/cache
-          key: next-web-${{ runner.os }}-${{ github.sha }}
-          restore-keys: next-web-${{ runner.os }}-
+          key: next-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ steps.next-cache-generation.outputs.value }}
+          restore-keys: |
+            next-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            next-web-${{ runner.os }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build Web
@@ -112,6 +118,12 @@ jobs:
           GATEWAY_PUBLIC_URL: http://localhost:8000
           WEB_GATEWAY_HMAC_SECRET: ci-only-web-gateway-secret-123456789
         run: mise run //apps/web:build
+      - name: Save Web Next.js cache
+        if: ${{ github.ref == 'refs/heads/main' && steps.next-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/web/.next/cache
+          key: ${{ steps.next-cache.outputs.cache-primary-key }}
 
   build-docs:
     name: Build Docs
@@ -129,13 +141,25 @@ jobs:
         with:
           path: ~/.local/share/pnpm/store
           key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Resolve Next.js cache generation
+        id: next-cache-generation
+        run: printf 'value=%s\n' "$(date -u +%G-%V)" >>"$GITHUB_OUTPUT"
       - name: Restore Docs Next.js cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: next-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/docs/.next/cache
-          key: next-docs-${{ runner.os }}-${{ github.sha }}
-          restore-keys: next-docs-${{ runner.os }}-
+          key: next-docs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ steps.next-cache-generation.outputs.value }}
+          restore-keys: |
+            next-docs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            next-docs-${{ runner.os }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build Docs
         run: mise run //apps/docs:build
+      - name: Save Docs Next.js cache
+        if: ${{ github.ref == 'refs/heads/main' && steps.next-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/docs/.next/cache
+          key: ${{ steps.next-cache.outputs.cache-primary-key }}

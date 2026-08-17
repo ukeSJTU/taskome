@@ -8,6 +8,7 @@ const webPort = new URL(webURL).port;
 const gatewayPort = new URL(gatewayURL).port;
 const docsPort = new URL(docsURL).port;
 const production = process.env.E2E_PRODUCTION === "1";
+const prebuilt = process.env.E2E_PREBUILT === "1";
 const docsEnvironment = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
 );
@@ -29,7 +30,7 @@ export default defineConfig({
   webServer: [
     {
       command: production
-        ? `pnpm build && mkdir -p .next/standalone/apps/web/.next .next/standalone/apps/web/public && cp -R .next/static .next/standalone/apps/web/.next/static && cd .next/standalone && HOSTNAME=localhost PORT=${webPort} node apps/web/server.js`
+        ? `${prebuilt ? "" : "pnpm build && "}mkdir -p .next/standalone/apps/web/.next .next/standalone/apps/web/public && cp -R .next/static .next/standalone/apps/web/.next/static && cd .next/standalone && HOSTNAME=localhost PORT=${webPort} node apps/web/server.js`
         : `pnpm dev --port ${webPort}`,
       cwd: ".",
       env: { ...process.env, DATABASE_URL: process.env.E2E_WEB_DATABASE_URL! },
@@ -46,7 +47,7 @@ export default defineConfig({
     },
     {
       command: production
-        ? `pnpm build && pnpm start --port ${docsPort}`
+        ? `${prebuilt ? "" : "pnpm build && "}pnpm start --port ${docsPort}`
         : `pnpm dev --port ${docsPort}`,
       cwd: "../docs",
       env: docsEnvironment,
