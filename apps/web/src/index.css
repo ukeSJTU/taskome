@@ -172,15 +172,39 @@
 
 .xdenovo-app,
 .xdenovo-app * {
-  transition:
-    background-color 220ms ease,
-    color 220ms ease,
-    border-color 220ms ease;
+  transition-property: background-color, color, border-color;
+  transition-duration: 220ms;
+  transition-timing-function: ease;
+}
+
+/* Keep theme color fading isolated from the sidebar's layout motion. */
+.xdenovo-app [data-slot="sidebar-gap"] {
+  transition-property: width;
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+}
+
+.xdenovo-app [data-slot="sidebar-container"] {
+  transition-property: left, right, width;
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+}
+
+.xdenovo-app [data-sidebar-header-motion] {
+  transition-property: opacity, width;
+  transition-duration: 120ms;
+  transition-timing-function: ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .xdenovo-app,
   .xdenovo-app * {
+    transition: none;
+  }
+
+  .xdenovo-app [data-slot="sidebar-gap"],
+  .xdenovo-app [data-slot="sidebar-container"],
+  .xdenovo-app [data-sidebar-header-motion] {
     transition: none;
   }
 }
