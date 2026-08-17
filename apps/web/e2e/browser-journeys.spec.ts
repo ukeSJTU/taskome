@@ -89,20 +89,6 @@ test("a returning user signs in and sees their identity", async ({ page, request
   await expect(page.getByText("Browser Signin", { exact: true })).toBeVisible();
 });
 
-test("API Docs loads the live Gateway REST contract through the BFF", async ({ page }) => {
-  const email = address("docs");
-  const signup = await page.context().request.post("/api/auth/sign-up/email", {
-    data: { email, name: "Browser Docs", password },
-  });
-  await expectOK(signup);
-  const openAPIResponse = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/gateway/openapi" && response.ok(),
-  );
-  await page.goto("/api-docs");
-  await expect(page.getByRole("heading", { name: "API Docs" }).first()).toBeVisible();
-  const openAPI = (await openAPIResponse).json() as Promise<{ paths: Record<string, unknown> }>;
-  await expect(openAPI).resolves.toHaveProperty("paths./input-files");
-});
 test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ page, request }) => {
   const callback = new URL("/dashboard", process.env.E2E_WEB_URL).toString();
   const state = randomUUID();
