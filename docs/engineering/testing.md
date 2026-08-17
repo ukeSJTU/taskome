@@ -101,7 +101,15 @@ mise run test:browser-e2e:ui      # interactive Playwright UI
 mise run test:browser-e2e:debug   # headed, with the Inspector
 ```
 
-Each run starts a uniquely named, disposable Docker Compose project (its own Postgres, Redis, and SeaweedFS volumes, unique ports), migrates both application schemas, then starts native Web and Gateway processes against it. The runner tears everything down on success, failure, or interruption, and writes service logs next to the Playwright results when a run fails.
+Each run starts a uniquely named, disposable Docker Compose project with Postgres and Redis on unique ports, migrates both application schemas, then starts native Web and Gateway processes against it. The runner tears everything down on success, failure, or interruption, and writes service logs next to the Playwright results when a run fails.
+
+SeaweedFS is available through the Compose `storage` profile for browser scenarios that exercise object storage:
+
+```bash
+COMPOSE_PROFILES=storage mise run test:browser-e2e
+```
+
+The current Browser E2E scenarios do not upload or download objects, so the default run leaves this profile disabled. Gateway integration tests retain the real SeaweedFS storage boundary coverage.
 
 ## What CI runs
 

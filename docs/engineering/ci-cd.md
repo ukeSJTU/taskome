@@ -34,14 +34,17 @@ Browser E2E is intentionally outside `CI required`. A failing selected Browser E
 
 ## Caches and artifacts
 
-CI caches dependency downloads and framework compilation caches, never installed environments or generated deliverables:
+CI caches dependency downloads, immutable tool payloads, and framework compilation caches, never installed package environments or generated deliverables:
 
 - pnpm store, not `node_modules`;
 - root and fpocket uv caches with separate lock-derived keys, not `.venv`;
 - Go module and build caches resolved from the active mise toolchain, not `apps/cli/bin`;
-- separate `apps/web/.next/cache` and `apps/docs/.next/cache` entries.
+- separate `apps/web/.next/cache` and `apps/docs/.next/cache` entries;
+- Playwright's Chromium bundle, not system packages installed by `playwright install --with-deps`.
 
-Only Browser E2E uploads artifacts. It retains `playwright-report` and `test-results` for 14 days and uploads them even when the test fails. Generated API clients and Playwright browser binaries are not cached.
+`main` is the canonical writer for the Next.js and Chromium caches. Pull requests restore those caches but do not save new entries. Next.js uses one lockfile-derived generation per ISO week so cache growth stays bounded while each new generation can build on the previous one.
+
+Only Browser E2E uploads artifacts. It retains `playwright-report` and `test-results` for 14 days and uploads them even when the test fails. Generated API clients are not cached.
 
 ## Security boundary
 
