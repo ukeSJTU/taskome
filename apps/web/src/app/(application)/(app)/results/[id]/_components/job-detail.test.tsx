@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { JobDetail } from "../job-detail";
+import { JobDetail } from "./job-detail";
 
 const job = {
   created_at: "2026-08-17T00:00:00Z",
@@ -48,10 +48,13 @@ describe("JobDetail", () => {
           status: 200,
         }),
       );
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { configurable: true, value: { assign } });
     render(<JobDetail jobId="job-1" />);
     fireEvent.click(await screen.findByRole("button", { name: /download pockets.pdb/i }));
     expect(fetch).toHaveBeenLastCalledWith(
       "/api/gateway/jobs/job-1/outputs/annotated_structure/download-url",
     );
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledWith("https://storage.test/file"));
   });
 });
