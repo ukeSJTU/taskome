@@ -89,6 +89,38 @@ test("a returning user signs in and sees their identity", async ({ page, request
   await expect(page.getByText("Browser Signin", { exact: true })).toBeVisible();
 });
 
+test("an authenticated user opens a local PDB in the Structure Viewer", async ({ page }) => {
+  await signUp(page, "Structure Viewer", address("structure-viewer"));
+  const publicStructureRequest = page
+    .waitForRequest((request) => /rcsb|pdbe|alphafold|modelarchive|emdb/i.test(request.url()), {
+      timeout: 1_000,
+    })
+    .catch(() => undefined);
+
+  await page.goto("/viewers/structure");
+  await page.locator('input[type="file"]').setInputFiles("e2e/fixtures/alanine.pdb");
+  await expect(page.getByRole("status")).toHaveText("Structure ready", { timeout: 30_000 });
+  await expect(page.locator("canvas").first()).toBeVisible();
+  await page.getByLabel("Representation").selectOption("cartoon");
+  await page.getByLabel("Coloring").selectOption("element");
+  await page.getByRole("button", { name: "Reset camera" }).click();
+  await expect(publicStructureRequest).resolves.toBeUndefined();
+});
+
+test("API Docs loads the live Gateway REST contract through the BFF", async ({ page }) => {
+  const email = address("docs");
+  const signup = await page.context().request.post("/api/auth/sign-up/email", {
+    data: { email, name: "Browser Docs", password },
+  });
+  await expectOK(signup);
+  const openAPIResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/gateway/openapi" && response.ok(),
+  );
+  await page.goto("/api-docs");
+  await expect(page.getByRole("heading", { name: "API Docs" }).first()).toBeVisible();
+  const openAPI = (await openAPIResponse).json() as Promise<{ paths: Record<string, unknown> }>;
+  await expect(openAPI).resolves.toHaveProperty("paths./input-files");
+});
 test("MCP Agent completes PKCE onboarding and lists Gateway tools", async ({ page, request }) => {
   const callback = new URL("/dashboard", process.env.E2E_WEB_URL).toString();
   const state = randomUUID();

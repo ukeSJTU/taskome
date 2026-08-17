@@ -47,9 +47,9 @@ describe("AppSidebar", () => {
 
     await user.click(screen.getByRole("button", { name: "Viewers" }));
 
-    expect(screen.getByRole("link", { name: "PDB Viewer" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Structure Viewer" })).toHaveAttribute(
       "href",
-      "/viewers/pdb",
+      "/viewers/structure",
     );
     expect(screen.getByRole("link", { name: "MSA Viewer" })).toHaveAttribute(
       "href",
@@ -68,9 +68,9 @@ describe("AppSidebar", () => {
 
     await user.hover(screen.getByRole("button", { name: "Viewers" }));
 
-    expect(await screen.findByRole("menuitem", { name: "PDB Viewer" })).toHaveAttribute(
+    expect(await screen.findByRole("menuitem", { name: "Structure Viewer" })).toHaveAttribute(
       "href",
-      "/viewers/pdb",
+      "/viewers/structure",
     );
   });
 
