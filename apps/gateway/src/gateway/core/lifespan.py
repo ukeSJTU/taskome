@@ -60,6 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             storage = app.state.storage or app.state.storage_factory()
             app.state.storage = storage
             app.state.owned_input_file_service.attach_storage(storage)
+            app.state.owned_job_output_service.attach_storage(storage)
             resources.push_async_callback(asyncio.to_thread, storage.close)
             storage.start()
             await app.state.job_queue.start()

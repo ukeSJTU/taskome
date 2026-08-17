@@ -445,6 +445,13 @@ type ClientInterface interface {
 	// Corresponds with GET /v1/jobs/{job_id} (the `GetJob` operationId).
 	GetJob(ctx context.Context, jobId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetJobOutputDownloadUrl Download Job Output
+	//
+	// Return a download URL for a caller-owned completed Job Output.
+	//
+	// Corresponds with GET /v1/jobs/{job_id}/outputs/{output_name}/download-url (the `GetJobOutputDownloadUrl` operationId).
+	GetJobOutputDownloadUrl(ctx context.Context, jobId openapi_types.UUID, outputName string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetCurrentIdentity Current Identity
 	//
 	// Return the authenticated caller's normalized identity.
@@ -621,6 +628,23 @@ func (c *Client) CreateJob(ctx context.Context, body CreateJobJSONRequestBody, r
 // Corresponds with GET /v1/jobs/{job_id} (the `GetJob` operationId).
 func (c *Client) GetJob(ctx context.Context, jobId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetJobRequest(c.Server, jobId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetJobOutputDownloadUrl Download Job Output
+//
+// Return a download URL for a caller-owned completed Job Output.
+//
+// Corresponds with GET /v1/jobs/{job_id}/outputs/{output_name}/download-url (the `GetJobOutputDownloadUrl` operationId).
+func (c *Client) GetJobOutputDownloadUrl(ctx context.Context, jobId openapi_types.UUID, outputName string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetJobOutputDownloadUrlRequest(c.Server, jobId, outputName)
 	if err != nil {
 		return nil, err
 	}
@@ -974,6 +998,47 @@ func NewGetJobRequest(server string, jobId openapi_types.UUID) (*http.Request, e
 	return req, nil
 }
 
+// NewGetJobOutputDownloadUrlRequest constructs an http.Request for the GetJobOutputDownloadUrl method
+func NewGetJobOutputDownloadUrlRequest(server string, jobId openapi_types.UUID, outputName string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "job_id", jobId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "output_name", outputName, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/jobs/%s/outputs/%s/download-url", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetCurrentIdentityRequest constructs an http.Request for the GetCurrentIdentity method
 func NewGetCurrentIdentityRequest(server string) (*http.Request, error) {
 	var err error
@@ -1134,6 +1199,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v1/jobs/{job_id} (the `GetJob` operationId).
 	GetJobWithResponse(ctx context.Context, jobId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetJobResponse, error)
+
+	// GetJobOutputDownloadUrlWithResponse Download Job Output
+	//
+	// Return a download URL for a caller-owned completed Job Output.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/jobs/{job_id}/outputs/{output_name}/download-url (the `GetJobOutputDownloadUrl` operationId).
+	GetJobOutputDownloadUrlWithResponse(ctx context.Context, jobId openapi_types.UUID, outputName string, reqEditors ...RequestEditorFn) (*GetJobOutputDownloadUrlResponse, error)
 
 	// GetCurrentIdentityWithResponse Current Identity
 	//
@@ -1704,6 +1778,89 @@ func (r GetJobResponse) ContentType() string {
 	return ""
 }
 
+type GetJobOutputDownloadUrlResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DownloadUrlResponse
+	// ApplicationproblemJSON400 the response for an HTTP 400 `application/problem+json` response
+	ApplicationproblemJSON400 *ProblemDetails
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *ProblemDetails
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+	// ApplicationproblemJSON422 the response for an HTTP 422 `application/problem+json` response
+	ApplicationproblemJSON422 *ProblemDetails
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ProblemDetails
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetJobOutputDownloadUrlResponse) GetJSON200() *DownloadUrlResponse {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON400 returns the response for an HTTP 400 `application/problem+json` response
+func (r GetJobOutputDownloadUrlResponse) GetApplicationproblemJSON400() *ProblemDetails {
+	return r.ApplicationproblemJSON400
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r GetJobOutputDownloadUrlResponse) GetApplicationproblemJSON401() *ProblemDetails {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r GetJobOutputDownloadUrlResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON422 returns the response for an HTTP 422 `application/problem+json` response
+func (r GetJobOutputDownloadUrlResponse) GetApplicationproblemJSON422() *ProblemDetails {
+	return r.ApplicationproblemJSON422
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r GetJobOutputDownloadUrlResponse) GetApplicationproblemJSON503() *ProblemDetails {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r GetJobOutputDownloadUrlResponse) GetApplicationproblemJSONDefault() *ProblemDetails {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r GetJobOutputDownloadUrlResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetJobOutputDownloadUrlResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetJobOutputDownloadUrlResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetJobOutputDownloadUrlResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetCurrentIdentityResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1921,6 +2078,21 @@ func (c *ClientWithResponses) GetJobWithResponse(ctx context.Context, jobId open
 		return nil, err
 	}
 	return ParseGetJobResponse(rsp)
+}
+
+// GetJobOutputDownloadUrlWithResponse Download Job Output
+//
+// Return a download URL for a caller-owned completed Job Output.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/jobs/{job_id}/outputs/{output_name}/download-url (the `GetJobOutputDownloadUrl` operationId).
+func (c *ClientWithResponses) GetJobOutputDownloadUrlWithResponse(ctx context.Context, jobId openapi_types.UUID, outputName string, reqEditors ...RequestEditorFn) (*GetJobOutputDownloadUrlResponse, error) {
+	rsp, err := c.GetJobOutputDownloadUrl(ctx, jobId, outputName, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetJobOutputDownloadUrlResponse(rsp)
 }
 
 // GetCurrentIdentityWithResponse Current Identity
@@ -2328,6 +2500,74 @@ func ParseGetJobResponse(rsp *http.Response) (*GetJobResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest JobResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetJobOutputDownloadUrlResponse parses an HTTP response from a GetJobOutputDownloadUrlWithResponse call
+func ParseGetJobOutputDownloadUrlResponse(rsp *http.Response) (*GetJobOutputDownloadUrlResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetJobOutputDownloadUrlResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DownloadUrlResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

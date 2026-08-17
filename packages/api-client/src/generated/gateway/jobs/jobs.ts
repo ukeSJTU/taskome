@@ -6,6 +6,8 @@
  */
 import type {
   CreateJobRequest,
+  DownloadUrlResponse,
+  GetJobOutputDownloadUrlPathParameters,
   GetJobPathParameters,
   JobListResponse,
   JobResponse,
@@ -75,6 +77,27 @@ export const getJob = async (
   options?: Parameters<typeof gatewayFetch>[1],
 ): Promise<JobResponse> => {
   return gatewayFetch<JobResponse>(getGetJobUrl({ jobId }), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetJobOutputDownloadUrlUrl = ({
+  jobId,
+  outputName,
+}: GetJobOutputDownloadUrlPathParameters) => {
+  return `/v1/jobs/${encodeURIComponent(String(jobId))}/outputs/${encodeURIComponent(String(outputName))}/download-url`;
+};
+
+/**
+ * Return a download URL for a caller-owned completed Job Output.
+ * @summary Download Job Output
+ */
+export const getJobOutputDownloadUrl = async (
+  { jobId, outputName }: GetJobOutputDownloadUrlPathParameters,
+  options?: Parameters<typeof gatewayFetch>[1],
+): Promise<DownloadUrlResponse> => {
+  return gatewayFetch<DownloadUrlResponse>(getGetJobOutputDownloadUrlUrl({ jobId, outputName }), {
     ...options,
     method: "GET",
   });
