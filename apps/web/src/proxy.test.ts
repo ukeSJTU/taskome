@@ -24,7 +24,6 @@ const localizedPaths = [
 
 const applicationAndInfrastructurePaths = [
   "/dashboard",
-  "/account/api-keys",
   "/api-docs",
   "/api/auth/sign-in/email",
   "/.well-known/oauth-authorization-server",
