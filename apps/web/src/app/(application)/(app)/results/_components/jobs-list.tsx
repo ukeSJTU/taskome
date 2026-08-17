@@ -1,6 +1,7 @@
 "use client";
 
 import { RefreshCwIcon } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@taskome/ui/components/button";
@@ -90,7 +91,10 @@ export function JobsList() {
     );
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button size="sm" render={<Link href="/results/new" />}>
+          New Job
+        </Button>
         <Button variant="outline" size="sm" onClick={() => void load(0, false)}>
           <RefreshCwIcon data-icon="inline-start" />
           Refresh
