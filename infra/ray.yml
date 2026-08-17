@@ -1,6 +1,6 @@
 services:
   ray-head:
-    image: rayproject/ray:latest-gpu
+    image: rayproject/ray:2.57.0-py314-gpu
     command: >
       ray start --head --block
       --port=6379
