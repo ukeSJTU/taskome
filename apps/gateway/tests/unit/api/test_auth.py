@@ -92,10 +92,17 @@ def test_rest_accepts_session_jwt_as_principal(
     )
     app = create_test_app(
         Settings(app_environment=Environment.TEST),
-        rest_token_verifier=_verifier(
-            jwks=jwks,
-            issuer="http://localhost:3000",
-            audience="http://localhost:8000/v1",
+        rest_token_verifier=RESTPrincipalVerifier(
+            session_verifier=_verifier(
+                jwks=jwks,
+                issuer="http://localhost:3000",
+                audience="http://localhost:8000/v1",
+            ),
+            oauth_verifier=_verifier(
+                jwks=jwks,
+                issuer="http://localhost:3000/api/auth",
+                audience="http://localhost:8000/v1",
+            ),
         ),
     )
 
