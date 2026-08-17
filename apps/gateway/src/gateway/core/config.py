@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     mcp_message_max_bytes: Annotated[int, Field(gt=0)] = 1024 * 1024
     seaweedfs_internal_endpoint: str = "http://localhost:8333"
     seaweedfs_public_endpoint: str | None = None
+    seaweedfs_task_endpoint: str | None = None
     seaweedfs_access_key: str = "taskome-dev"
     # Local credentials belong in .env; this placeholder must not authenticate
     # against the checked-in SeaweedFS development identity.
@@ -133,6 +134,12 @@ class Settings(BaseSettings):
         """Return the caller-visible storage endpoint."""
 
         return self.seaweedfs_public_endpoint or self.seaweedfs_internal_endpoint
+
+    @property
+    def resolved_seaweedfs_task_endpoint(self) -> str:
+        """Return the Task Server-visible storage endpoint."""
+
+        return self.seaweedfs_task_endpoint or self.seaweedfs_internal_endpoint
 
     @property
     def auth_jwks_url(self) -> str:

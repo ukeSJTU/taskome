@@ -81,6 +81,7 @@ class FakeStorage:
         self.uploaded_keys: list[str] = []
         self.uploaded_sizes: list[int] = []
         self.downloaded_keys: list[str] = []
+        self.task_downloaded_keys: list[str] = []
         self.deleted_keys: list[str] = []
         self._events = events
 
@@ -106,6 +107,12 @@ class FakeStorage:
     def mint_download_url(self, key: str, expires_in: int) -> tuple[str, datetime]:
         self.downloaded_keys.append(key)
         return f"http://fake-storage/download/{key}", datetime.now(UTC) + timedelta(
+            seconds=expires_in
+        )
+
+    def mint_task_download_url(self, key: str, expires_in: int) -> tuple[str, datetime]:
+        self.task_downloaded_keys.append(key)
+        return f"http://fake-task-storage/download/{key}", datetime.now(UTC) + timedelta(
             seconds=expires_in
         )
 

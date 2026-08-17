@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Protocol
 
 import boto3
 from botocore.client import Config
+
+
+class _PresigningClient(Protocol):
+    def generate_presigned_url(
+        self,
+        client_method: str,
+        **kwargs: object,
+    ) -> str: ...
 
 
 class SeaweedFSStorage:
@@ -20,6 +28,7 @@ class SeaweedFSStorage:
         access_key: str,
         secret_key: str,
         bucket: str,
+        task_endpoint: str | None = None,
         connect_timeout: float = 3,
         io_timeout: float = 10,
         defer_start: bool = False,
@@ -32,6 +41,7 @@ class SeaweedFSStorage:
             access_key: Gateway's scoped S3 access key.
             secret_key: Gateway's scoped S3 secret key.
             bucket: Gateway-owned Input File bucket.
+            task_endpoint: Task Server-visible endpoint embedded in dispatch URLs.
             connect_timeout: TCP connection budget in seconds.
             io_timeout: Read/write budget in seconds.
             defer_start: Delay boto3 allocation until lifespan startup.
@@ -39,6 +49,7 @@ class SeaweedFSStorage:
 
         self._internal_endpoint = internal_endpoint
         self._public_endpoint = public_endpoint
+        self._task_endpoint = task_endpoint or internal_endpoint
         self._access_key = access_key
         self._secret_key = secret_key
         self._client_config = Config(
@@ -50,6 +61,7 @@ class SeaweedFSStorage:
         )
         self._internal: Any = None
         self._public: Any = None
+        self._task: Any = None
         self._bucket = bucket
         if not defer_start:
             self.start()
@@ -75,16 +87,36 @@ class SeaweedFSStorage:
             region_name="us-east-1",
             config=self._client_config,
         )
+        if self._task_endpoint == self._internal_endpoint:
+            self._task = self._internal
+        elif self._task_endpoint == self._public_endpoint:
+            self._task = self._public
+        else:
+            self._task = boto3.client(
+                "s3",
+                endpoint_url=self._task_endpoint,
+                aws_access_key_id=self._access_key,
+                aws_secret_access_key=self._secret_key,
+                region_name="us-east-1",
+                config=self._client_config,
+            )
 
     def close(self) -> None:
-        """Close both internal and public boto3 connection pools."""
+        """Close the owned boto3 connection pools."""
 
+        if (
+            self._task is not None
+            and self._task is not self._internal
+            and self._task is not self._public
+        ):
+            self._task.close()
         if self._public is not None:
             self._public.close()
         if self._internal is not None:
             self._internal.close()
         self._public = None
         self._internal = None
+        self._task = None
 
     def ensure_bucket(self) -> None:
         """Create the configured bucket when it does not exist.
@@ -118,6 +150,7 @@ class SeaweedFSStorage:
         """
 
         return self._presign(
+            self._public,
             "put_object",
             key,
             expires_in,
@@ -135,7 +168,12 @@ class SeaweedFSStorage:
             The presigned URL and its absolute expiry.
         """
 
-        return self._presign("get_object", key, expires_in)
+        return self._presign(self._public, "get_object", key, expires_in)
+
+    def mint_task_download_url(self, key: str, expires_in: int) -> tuple[str, datetime]:
+        """Mint a short-lived GET URL reachable by a Task Server."""
+
+        return self._presign(self._task, "get_object", key, expires_in)
 
     def delete(self, key: str) -> None:
         """Delete one object by its server-controlled key.
@@ -148,6 +186,7 @@ class SeaweedFSStorage:
 
     def _presign(
         self,
+        client: _PresigningClient,
         operation: str,
         key: str,
         expires_in: int,
@@ -157,7 +196,7 @@ class SeaweedFSStorage:
         request_params = {"Bucket": self._bucket, "Key": key}
         if params is not None:
             request_params.update(params)
-        url = self._public.generate_presigned_url(
+        url = client.generate_presigned_url(
             operation,
             Params=request_params,
             ExpiresIn=expires_in,

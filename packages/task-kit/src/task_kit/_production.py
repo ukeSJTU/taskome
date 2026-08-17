@@ -49,7 +49,6 @@ def _signature(
     method: str,
     target: str,
     job_id: str,
-    traceparent: str,
     body: bytes,
 ) -> str:
     canonical = "\n".join(
@@ -59,7 +58,6 @@ def _signature(
             method.upper(),
             target,
             job_id,
-            traceparent,
             hashlib.sha256(body).hexdigest(),
         )
     )
@@ -86,14 +84,12 @@ def sign_gateway_request(
     if job_id is not None:
         headers["X-Taskome-Job-Id"] = str(job_id)
     propagate.inject(headers)
-    traceparent = headers.get("traceparent", "")
     headers["X-Taskome-Signature"] = _signature(
         secret,
         timestamp=timestamp,
         method=method,
         target=target,
         job_id=str(job_id) if job_id is not None else "",
-        traceparent=traceparent,
         body=body,
     )
     return headers
@@ -120,7 +116,6 @@ class GatewayHMACVerifier:
                 request.method.upper(),
                 request.target,
                 request.job_id or "",
-                request.traceparent or "",
                 hashlib.sha256(request.body).hexdigest(),
             )
         )

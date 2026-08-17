@@ -16,6 +16,8 @@ from uuid import UUID
 
 import httpx
 import pytest
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
 from task_kit import InputFileId
 from task_kit.runtime import GatewayInputFileResolver
 
@@ -72,7 +74,6 @@ class FakeGatewayHandler(BaseHTTPRequestHandler):
     def _valid_signature(self, body: bytes) -> bool:
         timestamp = self.headers.get("x-taskome-timestamp", "")
         job_id = self.headers.get("x-taskome-job-id", "")
-        traceparent = self.headers.get("traceparent", "")
         try:
             fresh = abs(time.time() - int(timestamp)) <= 5
         except ValueError:
@@ -84,7 +85,6 @@ class FakeGatewayHandler(BaseHTTPRequestHandler):
                 "POST",
                 self.path,
                 job_id,
-                traceparent,
                 hashlib.sha256(body).hexdigest(),
             )
         )
@@ -132,6 +132,29 @@ async def test_resolver_streams_exact_gateway_bytes_to_controlled_uuid_paths(
     assert FakeGatewayHandler.verified_requests == 1
     assert paths[InputFileId(_INPUT_ID)].read_bytes() == b"hello"
     assert not list(tmp_path.glob("*.part"))
+
+
+@pytest.mark.asyncio
+async def test_resolver_signature_survives_client_trace_context_injection(
+    tmp_path: Path,
+) -> None:
+    instrumentor = HTTPXClientInstrumentor()
+    client = httpx.AsyncClient()
+    instrumentor.instrument_client(client, tracer_provider=TracerProvider())
+    try:
+        with fake_gateway(payload=b"hello", declared_size=5) as gateway_url:
+            resolver = GatewayInputFileResolver(gateway_url, _SECRET, client)
+            paths = await resolver.materialize(
+                _JOB_ID,
+                [InputFileId(_INPUT_ID)],
+                tmp_path,
+            )
+    finally:
+        instrumentor.uninstrument_client(client)
+        await client.aclose()
+
+    assert FakeGatewayHandler.verified_requests == 1
+    assert paths[InputFileId(_INPUT_ID)].read_bytes() == b"hello"
 
 
 @pytest.mark.parametrize(

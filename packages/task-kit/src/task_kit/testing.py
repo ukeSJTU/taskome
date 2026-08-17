@@ -37,7 +37,6 @@ def signed_request_headers(
             method.upper(),
             target,
             job,
-            "",
             hashlib.sha256(body).hexdigest(),
         )
     )

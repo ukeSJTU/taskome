@@ -29,6 +29,13 @@ Chosen option: "HMAC-signed requests, with a per-relationship shared secret and 
 
 Each internal relationship gets its own secret, never reused across relationships: `WEB_GATEWAY_HMAC_SECRET` for Gateway↔Web, and a distinct `GATEWAY_TASK_HMAC_SECRET` per Task Server for Gateway↔Task Server calls. Every signed request carries a timestamp; the receiving side rejects anything older than a fixed max age (300 seconds for the Web↔Gateway path) using a constant-time comparison, closing the replay window a bare shared secret alone would leave open.
 
+Gateway↔Task Server signatures bind the protocol version, timestamp, HTTP method,
+request target, Job id, and body digest. Distributed trace headers are propagated
+but deliberately excluded from the canonical value: HTTP client instrumentation
+creates a child span and updates `traceparent` immediately before sending, after the
+application has constructed the signed request. Trace context carries no authority,
+so allowing that standards-compliant update does not weaken request authentication.
+
 This decision does **not** claim confidentiality for these calls. HMAC signing authenticates the sender and detects tampering — it doesn't encrypt the payload. These calls travel in cleartext over the Docker Compose network today, so this security model rests on an assumption that the compose network itself is a sufficiently trusted boundary (not reachable from outside the host, only from containers already on it). That assumption is a real, disclosed constraint, not a settled guarantee — see `risks.md`.
 
 ### Consequences

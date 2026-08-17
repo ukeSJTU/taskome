@@ -99,6 +99,9 @@ class _UnclosableStorage:
     def mint_download_url(self, key: str, expires_in: int) -> tuple[str, object]:
         return self._storage.mint_download_url(key, expires_in)
 
+    def mint_task_download_url(self, key: str, expires_in: int) -> tuple[str, object]:
+        return self._storage.mint_task_download_url(key, expires_in)
+
     def delete(self, key: str) -> None:
         self._storage.delete(key)
 

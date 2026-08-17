@@ -111,7 +111,7 @@ async def test_delete_of_a_file_the_caller_does_not_own_leaves_storage_untouched
     assert storage.deleted_keys == []
 
 
-async def test_resolve_for_dispatch_returns_a_url_and_size_per_requested_file(
+async def test_resolve_for_dispatch_returns_an_internal_url_and_size_per_requested_file(
     service: tuple[InputFileService, FakeInputFileRepository, FakeStorage],
 ) -> None:
     input_file_service, _repository, storage = service
@@ -122,8 +122,9 @@ async def test_resolve_for_dispatch_returns_a_url_and_size_per_requested_file(
     assert len(resolved) == 1
     assert resolved[0].id == uploaded.id
     assert resolved[0].size_bytes == 2048
-    assert resolved[0].download_url == f"http://fake-storage/download/uploads/{uploaded.id}"
-    assert storage.downloaded_keys == [f"uploads/{uploaded.id}"]
+    assert resolved[0].download_url == (f"http://fake-task-storage/download/uploads/{uploaded.id}")
+    assert storage.task_downloaded_keys == [f"uploads/{uploaded.id}"]
+    assert storage.downloaded_keys == []
 
 
 async def test_resolve_for_dispatch_rejects_a_file_not_owned_by_the_jobs_owner(

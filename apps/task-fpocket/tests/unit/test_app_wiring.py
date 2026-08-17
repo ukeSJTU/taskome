@@ -29,7 +29,7 @@ def _production_signature(
 ) -> str:
     """Reproduce task-kit's production HMAC scheme (ADR-0007), by design not private-imported."""
     canonical = "\n".join(
-        ("taskome-v1", timestamp, method.upper(), target, "", "", hashlib.sha256(body).hexdigest())
+        ("taskome-v1", timestamp, method.upper(), target, "", hashlib.sha256(body).hexdigest())
     )
     return hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).hexdigest()
 

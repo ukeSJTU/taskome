@@ -110,6 +110,7 @@ def create_app(  # noqa: PLR0913, PLR0915
         SeaweedFSStorage,
         internal_endpoint=app_settings.seaweedfs_internal_endpoint,
         public_endpoint=app_settings.resolved_seaweedfs_public_endpoint,
+        task_endpoint=app_settings.resolved_seaweedfs_task_endpoint,
         access_key=app_settings.seaweedfs_access_key,
         secret_key=app_settings.seaweedfs_secret_key.get_secret_value(),
         bucket=app_settings.seaweedfs_bucket,

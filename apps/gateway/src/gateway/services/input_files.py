@@ -83,6 +83,7 @@ class StoragePort(Protocol):
         size_bytes: int,
     ) -> tuple[str, datetime]: ...
     def mint_download_url(self, key: str, expires_in: int) -> tuple[str, datetime]: ...
+    def mint_task_download_url(self, key: str, expires_in: int) -> tuple[str, datetime]: ...
     def delete(self, key: str) -> None: ...
 
 
@@ -201,7 +202,7 @@ class InputFileService:
                 raise InputFileNotFoundError
             await asyncio.to_thread(storage.ensure_bucket)
             download_url, _expires_at = await asyncio.to_thread(
-                storage.mint_download_url,
+                storage.mint_task_download_url,
                 self._storage_key(input_file.id),
                 self._url_ttl_seconds,
             )

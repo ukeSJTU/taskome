@@ -9,7 +9,7 @@ from task_kit.runtime import GatewayHMACVerifier, SignedGatewayRequest, sign_gat
 def test_gateway_hmac_matches_the_fixed_protocol_example() -> None:
     request = SignedGatewayRequest(
         timestamp="1700000000",
-        signature="f5482a73857803e307539f97f691e69b0487ae32a3316588dd53030ca00ad7ef",
+        signature="315c84a60a0da18898a1d2b7ab40aa6261dce7ff0c26d3465548520b50a1f963",
         method="POST",
         target="/internal/tasks/echo",
         body=b'{"text":"hello"}',
@@ -27,7 +27,7 @@ def test_gateway_hmac_matches_the_fixed_protocol_example() -> None:
 def test_gateway_hmac_rejects_a_rebound_job_id() -> None:
     request = SignedGatewayRequest(
         timestamp="1700000000",
-        signature="f5482a73857803e307539f97f691e69b0487ae32a3316588dd53030ca00ad7ef",
+        signature="315c84a60a0da18898a1d2b7ab40aa6261dce7ff0c26d3465548520b50a1f963",
         method="POST",
         target="/internal/tasks/echo",
         body=b'{"text":"hello"}',

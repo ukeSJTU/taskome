@@ -71,10 +71,11 @@ cannot be overwritten after its first successful upload.
 
 Application-local settings use `APP_ENVIRONMENT`, `LOG_LEVEL`, and `DOCS_ENABLED`.
 `DATABASE_URL` is required and uses the explicit `postgresql+psycopg` dialect.
-SeaweedFS uses `SEAWEEDFS_INTERNAL_ENDPOINT` for gateway calls and
-`SEAWEEDFS_PUBLIC_ENDPOINT` for caller-facing presigned URLs; the public endpoint
-defaults to the internal endpoint. See `.env.example` for the full storage and
-authentication settings. Gateway derives the session issuer and OAuth issuer from
+SeaweedFS uses `SEAWEEDFS_INTERNAL_ENDPOINT` for gateway calls,
+`SEAWEEDFS_PUBLIC_ENDPOINT` for caller-facing presigned URLs, and
+`SEAWEEDFS_TASK_ENDPOINT` for Task Server input downloads. The public and Task
+Server endpoints default to the internal endpoint. See `.env.example` for the full
+storage and authentication settings. Gateway derives the session issuer and OAuth issuer from
 `BETTER_AUTH_URL`, its internal JWKS URL from `WEB_INTERNAL_URL`, and the REST and
 MCP resources from `GATEWAY_PUBLIC_URL`.
 Personal API Key verification calls Web on its internal origin for every request.
