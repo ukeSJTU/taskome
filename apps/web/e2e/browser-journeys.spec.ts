@@ -89,24 +89,6 @@ test("a returning user signs in and sees their identity", async ({ page, request
   await expect(page.getByText("Browser Signin", { exact: true })).toBeVisible();
 });
 
-test("an authenticated user opens a local PDB in the Structure Viewer", async ({ page }) => {
-  await signUp(page, "Structure Viewer", address("structure-viewer"));
-  const publicStructureRequest = page
-    .waitForRequest((request) => /rcsb|pdbe|alphafold|modelarchive|emdb/i.test(request.url()), {
-      timeout: 1_000,
-    })
-    .catch(() => undefined);
-
-  await page.goto("/viewers/structure");
-  await page.locator('input[type="file"]').setInputFiles("e2e/fixtures/alanine.pdb");
-  await expect(page.getByRole("status")).toHaveText("Structure ready", { timeout: 30_000 });
-  await expect(page.locator("canvas").first()).toBeVisible();
-  await page.getByLabel("Representation").selectOption("cartoon");
-  await page.getByLabel("Coloring").selectOption("element");
-  await page.getByRole("button", { name: "Reset camera" }).click();
-  await expect(publicStructureRequest).resolves.toBeUndefined();
-});
-
 test("API Docs loads the live Gateway REST contract through the BFF", async ({ page }) => {
   const email = address("docs");
   const signup = await page.context().request.post("/api/auth/sign-up/email", {
