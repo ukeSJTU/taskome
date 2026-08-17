@@ -12,6 +12,10 @@ _Avoid_: Model (reserve "model" strictly for the ML model weights a Task may use
 Exactly one invocation of one Task with one complete Params object — analogous to an instance of the Task class. A Params object may contain multiple files when they jointly form one logical input, and a Job may produce multiple outputs; processing independent inputs is multiple Jobs, never one platform-level batch invocation. Gateway creates a Job durably with status `queued`, returns `202 Accepted` and its id, then dispatches it asynchronously; callers query the Job until it reaches `completed` or `failed`.
 _Avoid_: Run, Submission (use Job consistently).
 
+**Job Output**:
+An immutable file produced by a completed Job. It is identified within its Job by its output name; callers may see its descriptive metadata and obtain time-limited download access through Gateway, but never its object-storage key.
+_Avoid_: Result File, Output File, Artifact (all too ambiguous without the owning Job).
+
 **Task Server**:
 Not a proxy in front of a compute service — it _is_ the compute service. One deployable process/container may expose multiple Tasks that share one compute environment; each Task's name is unique only within that server. The REST + MCP adapter is one flat uv-managed Python project, with task-kit generating both transports over one shared execution core. Vendored upstream code lives alongside it in `compute/` and is invoked in-process or by subprocess within the same container, never as a separate network service.
 
