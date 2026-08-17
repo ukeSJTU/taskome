@@ -27,14 +27,13 @@ from gateway.core.personal_api_keys import PersonalApiKeyVerificationUnavailable
 class ManagedJWTVerifier(TokenVerifier):
     """JWT verifier whose pooled JWKS client is attached during app startup."""
 
-    def __init__(self, settings: Settings, *, oauth: bool) -> None:
+    def __init__(self, settings: Settings, *, issuer: str, audience: str) -> None:
         super().__init__()
         self._settings = settings
-        self._oauth = oauth
         self._delegate: JWTVerifier | None = None
         self.jwks_uri = settings.auth_jwks_url
-        self.issuer = settings.auth_oauth_issuer if oauth else settings.auth_session_issuer
-        self.audience = settings.mcp_resource if oauth else settings.rest_resource
+        self.issuer = issuer
+        self.audience = audience
 
     def start(self, http_client: httpx2.AsyncClient) -> None:
         """Construct the FastMCP verifier with the app-owned JWKS client."""
@@ -104,20 +103,88 @@ class MCPPrincipalVerifier(TokenVerifier):
         )
 
 
+class RESTPrincipalVerifier(TokenVerifier):
+    """Normalize either REST session JWTs or CLI OAuth access tokens."""
+
+    def __init__(
+        self,
+        *,
+        session_verifier: TokenVerifier,
+        oauth_verifier: TokenVerifier,
+    ) -> None:
+        super().__init__()
+        self.session_verifier = session_verifier
+        self.oauth_verifier = oauth_verifier
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        """Verify a REST credential without allowing MCP-audience tokens."""
+
+        session_token = await self.session_verifier.verify_token(token)
+        if session_token is not None:
+            principal = _principal_from_token(session_token, CredentialKind.SESSION_JWT)
+            if principal is not None:
+                return PrincipalAccessToken.model_validate(
+                    {**session_token.model_dump(), "principal": principal}
+                )
+
+        oauth_token = await self.oauth_verifier.verify_token(token)
+        if oauth_token is None:
+            return None
+        principal = _principal_from_token(oauth_token, CredentialKind.OAUTH_ACCESS_TOKEN)
+        if principal is None:
+            return None
+        return PrincipalAccessToken.model_validate(
+            {**oauth_token.model_dump(), "principal": principal}
+        )
+
+
 bearer_scheme = HTTPBearer(auto_error=False)
 api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
-def create_rest_token_verifier(settings: Settings) -> ManagedJWTVerifier:
-    """Create a session-JWT verifier initialized later by the app lifespan."""
+def create_rest_token_verifier(settings: Settings) -> RESTPrincipalVerifier:
+    """Create REST verifiers for Web session JWTs and CLI OAuth access tokens."""
 
-    return ManagedJWTVerifier(settings, oauth=False)
+    return RESTPrincipalVerifier(
+        session_verifier=ManagedJWTVerifier(
+            settings,
+            issuer=settings.auth_session_issuer,
+            audience=settings.rest_resource,
+        ),
+        oauth_verifier=ManagedJWTVerifier(
+            settings,
+            issuer=settings.auth_oauth_issuer,
+            audience=settings.rest_resource,
+        ),
+    )
 
 
 def create_mcp_token_verifier(settings: Settings) -> MCPPrincipalVerifier:
     """Create an OAuth verifier initialized later by the app lifespan."""
 
-    return MCPPrincipalVerifier(ManagedJWTVerifier(settings, oauth=True))
+    return MCPPrincipalVerifier(
+        ManagedJWTVerifier(
+            settings,
+            issuer=settings.auth_oauth_issuer,
+            audience=settings.mcp_resource,
+        )
+    )
+
+
+def create_rest_auth_provider(
+    settings: Settings,
+    token_verifier: TokenVerifier,
+) -> RemoteAuthProvider:
+    """Publish OAuth protected-resource metadata for Gateway REST."""
+
+    return RemoteAuthProvider(
+        token_verifier=token_verifier,
+        authorization_servers=[AnyHttpUrl(settings.auth_oauth_issuer)],
+        base_url=settings.gateway_public_url,
+        resource_base_url=settings.gateway_public_url,
+        scopes_supported=["taskome"],
+        resource_name="Taskome REST API",
+    )
 
 
 def create_mcp_auth_provider(
@@ -203,9 +270,12 @@ async def current_principal(
     token = await verifier.verify_token(credentials.credentials)
     if token is None:
         raise _unauthenticated()
-    principal = _principal_from_token(token, CredentialKind.SESSION_JWT)
-    if principal is None:
-        raise _unauthenticated()
+    if isinstance(token, PrincipalAccessToken):
+        principal = token.principal
+    else:
+        principal = _principal_from_token(token, CredentialKind.SESSION_JWT)
+        if principal is None:
+            raise _unauthenticated()
     request.state.principal = principal
     _bind_principal(principal)
     return principal

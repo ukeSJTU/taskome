@@ -22,7 +22,7 @@ def public_openapi_schema(application: FastAPI) -> dict[str, Any]:
         projected_item = deepcopy(path_item)
         for method, operation in projected_item.items():
             if method in _HTTP_METHODS:
-                operation["security"] = [{"APIKeyHeader": []}]
+                operation["security"] = [{"BearerAuth": []}, {"APIKeyHeader": []}]
         paths[path.removeprefix("/v1")] = projected_item
 
     schema = deepcopy(full_schema)
@@ -31,7 +31,8 @@ def public_openapi_schema(application: FastAPI) -> dict[str, Any]:
         {"url": f"{str(application.state.settings.gateway_public_url).rstrip('/')}/v1"}
     ]
     schema.setdefault("components", {})["securitySchemes"] = {
-        "APIKeyHeader": {"in": "header", "name": "X-API-Key", "type": "apiKey"}
+        "BearerAuth": {"scheme": "bearer", "type": "http"},
+        "APIKeyHeader": {"in": "header", "name": "X-API-Key", "type": "apiKey"},
     }
     application.state.public_openapi_schema = schema
     return schema

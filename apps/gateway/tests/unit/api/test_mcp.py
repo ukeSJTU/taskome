@@ -35,7 +35,7 @@ def _base64url(value: bytes) -> str:
     return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
 
 
-def _channel_tokens() -> tuple[str, str, JWTVerifier]:
+def _channel_tokens() -> tuple[str, str, str, JWTVerifier]:
     private_key = Ed25519PrivateKey.generate()
     jwks = {
         "keys": [
@@ -86,14 +86,19 @@ def _channel_tokens() -> tuple[str, str, JWTVerifier]:
         issuer="http://localhost:3000",
         audience="http://localhost:8000/v1",
     )
-    return oauth_token, session_token, verifier
+    rest_oauth_token = sign(
+        issuer="http://localhost:3000/api/auth",
+        audience="http://localhost:8000/v1",
+        client_id="taskome-cli",
+    )
+    return oauth_token, session_token, rest_oauth_token, verifier
 
 
 def test_mcp_accepts_oauth_token_and_rejects_session_token_through_protocol(
     create_test_app: Callable[..., FastAPI],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    oauth_token, session_token, verifier = _channel_tokens()
+    oauth_token, session_token, rest_oauth_token, verifier = _channel_tokens()
 
     class LifespanStateApp:
         def __init__(self, app: ASGIApp) -> None:
@@ -140,6 +145,8 @@ def test_mcp_accepts_oauth_token_and_rejects_session_token_through_protocol(
     ]
     with pytest.raises(MCPError):
         asyncio.run(list_tools(session_token))
+    with pytest.raises(MCPError):
+        asyncio.run(list_tools(rest_oauth_token))
     with pytest.raises(MCPError):
         asyncio.run(list_tools_with_personal_api_key())
 
@@ -203,6 +210,24 @@ def test_mcp_publishes_protected_resource_metadata(
         "bearer_methods_supported": ["header"],
         "resource": "http://localhost:8000/mcp",
         "resource_name": "Taskome MCP",
+        "scopes_supported": ["taskome"],
+    }
+
+
+def test_rest_publishes_protected_resource_metadata(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    app = create_test_app(Settings(app_environment=Environment.TEST))
+
+    with TestClient(app) as client:
+        response = client.get("/.well-known/oauth-protected-resource/v1")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "authorization_servers": ["http://localhost:3000/api/auth"],
+        "bearer_methods_supported": ["header"],
+        "resource": "http://localhost:8000/v1",
+        "resource_name": "Taskome REST API",
         "scopes_supported": ["taskome"],
     }
 

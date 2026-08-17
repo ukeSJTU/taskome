@@ -8,7 +8,17 @@ import (
 
 // Execute runs Taskome's command-line interface and returns its process exit code.
 func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	command := newRootCommand()
+	return executeWith(ctx, args, stdin, stdout, stderr, defaultCommandDependencies())
+}
+
+func executeWith(
+	ctx context.Context,
+	args []string,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+	dependencies commandDependencies,
+) int {
+	command := newRootCommand(dependencies)
 	command.SetArgs(args)
 	command.SetIn(stdin)
 	command.SetOut(stdout)

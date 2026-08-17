@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 from gateway.core.auth import (
     ManagedJWTVerifier,
+    RESTPrincipalVerifier,
     create_mcp_token_verifier,
     create_rest_token_verifier,
 )
@@ -91,10 +92,17 @@ def test_rest_accepts_session_jwt_as_principal(
     )
     app = create_test_app(
         Settings(app_environment=Environment.TEST),
-        rest_token_verifier=_verifier(
-            jwks=jwks,
-            issuer="http://localhost:3000",
-            audience="http://localhost:8000/v1",
+        rest_token_verifier=RESTPrincipalVerifier(
+            session_verifier=_verifier(
+                jwks=jwks,
+                issuer="http://localhost:3000",
+                audience="http://localhost:8000/v1",
+            ),
+            oauth_verifier=_verifier(
+                jwks=jwks,
+                issuer="http://localhost:3000/api/auth",
+                audience="http://localhost:8000/v1",
+            ),
         ),
     )
 
@@ -106,6 +114,41 @@ def test_rest_accepts_session_jwt_as_principal(
         "user_id": "user-123",
         "credential_kind": "session_jwt",
         "credential_id": None,
+    }
+
+
+def test_rest_accepts_cli_oauth_access_token_as_principal(
+    create_test_app: Callable[..., FastAPI],
+) -> None:
+    token, jwks = _signed_token(
+        issuer="http://localhost:3000/api/auth",
+        audience="http://localhost:8000/v1",
+        client_id="taskome-cli",
+    )
+    app = create_test_app(
+        Settings(app_environment=Environment.TEST),
+        rest_token_verifier=RESTPrincipalVerifier(
+            session_verifier=_verifier(
+                jwks=jwks,
+                issuer="http://localhost:3000",
+                audience="http://localhost:8000/v1",
+            ),
+            oauth_verifier=_verifier(
+                jwks=jwks,
+                issuer="http://localhost:3000/api/auth",
+                audience="http://localhost:8000/v1",
+            ),
+        ),
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "user_id": "user-123",
+        "credential_kind": "oauth_access_token",
+        "credential_id": "taskome-cli",
     }
 
 
@@ -154,9 +197,14 @@ def test_channel_verifiers_derive_distinct_issuers_and_resources() -> None:
     rest_verifier = create_rest_token_verifier(settings)
     mcp_verifier = create_mcp_token_verifier(settings)
 
-    assert rest_verifier.jwks_uri == "http://web:3000/api/auth/jwks"
-    assert rest_verifier.issuer == "https://example.com"
-    assert rest_verifier.audience == "https://api.example.com/v1"
+    assert isinstance(rest_verifier.session_verifier, ManagedJWTVerifier)
+    assert rest_verifier.session_verifier.jwks_uri == "http://web:3000/api/auth/jwks"
+    assert rest_verifier.session_verifier.issuer == "https://example.com"
+    assert rest_verifier.session_verifier.audience == "https://api.example.com/v1"
+    assert isinstance(rest_verifier.oauth_verifier, ManagedJWTVerifier)
+    assert rest_verifier.oauth_verifier.jwks_uri == "http://web:3000/api/auth/jwks"
+    assert rest_verifier.oauth_verifier.issuer == "https://example.com/api/auth"
+    assert rest_verifier.oauth_verifier.audience == "https://api.example.com/v1"
     assert isinstance(mcp_verifier.token_verifier, ManagedJWTVerifier)
     assert mcp_verifier.token_verifier.jwks_uri == "http://web:3000/api/auth/jwks"
     assert mcp_verifier.token_verifier.issuer == "https://example.com/api/auth"

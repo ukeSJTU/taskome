@@ -338,7 +338,7 @@ describe("/api/auth", () => {
     expect(oauthMetadata).toMatchObject({
       authorization_endpoint: `${baseURL}/api/auth/oauth2/authorize`,
       code_challenge_methods_supported: ["S256"],
-      grant_types_supported: ["authorization_code"],
+      grant_types_supported: ["authorization_code", "refresh_token"],
       jwks_uri: `${baseURL}/api/auth/jwks`,
       registration_endpoint: `${baseURL}/api/auth/oauth2/register`,
       token_endpoint: `${baseURL}/api/auth/oauth2/token`,
@@ -552,6 +552,138 @@ describe("/api/auth", () => {
       issuer: oauthIssuer,
     });
     expect(verified.payload.sub).toBe(user.id);
+  });
+
+  it("issues and refreshes REST-audience tokens only for the official CLI client", async () => {
+    const { context, headers } = await authenticatedUser("cli@example.com", "CLI User");
+    const now = new Date();
+    await context.adapter.create({
+      model: "oauthClient",
+      data: {
+        clientId: "taskome-cli",
+        createdAt: now,
+        grantTypes: ["authorization_code", "refresh_token"],
+        name: "Taskome CLI",
+        public: true,
+        redirectUris: ["http://127.0.0.1/callback"],
+        requirePKCE: true,
+        responseTypes: ["code"],
+        scopes: ["openid", "offline_access", "taskome"],
+        tokenEndpointAuthMethod: "none",
+        type: "native",
+        updatedAt: now,
+      },
+    });
+    const codeVerifier = "cli-verifier-for-taskome-test-1234567890";
+    const codeChallenge = createHash("sha256").update(codeVerifier).digest("base64url");
+    const authorizationQuery = new URLSearchParams({
+      client_id: "taskome-cli",
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+      redirect_uri: "http://127.0.0.1:49152/callback",
+      response_type: "code",
+      scope: "openid offline_access taskome",
+      state: "cli-state",
+    });
+
+    const authorizationResponse = await GET(
+      new Request(`${baseURL}/api/auth/oauth2/authorize?${authorizationQuery}`, {
+        headers: authHeaders(headers),
+      }),
+    );
+    const consentURL = new URL(authorizationResponse.headers.get("location") ?? baseURL, baseURL);
+    expect(consentURL.pathname).toBe("/oauth/consent");
+
+    const consentResponse = await POST(
+      new Request(`${baseURL}/api/auth/oauth2/consent`, {
+        body: JSON.stringify({
+          accept: true,
+          oauth_query: consentURL.search.slice(1),
+          scope: "openid offline_access taskome",
+        }),
+        headers: new Headers({
+          ...Object.fromEntries(authHeaders(headers)),
+          "content-type": "application/json",
+        }),
+        method: "POST",
+      }),
+    );
+    const callbackURL = new URL((await consentResponse.json()).url);
+    expect(callbackURL.searchParams.get("state")).toBe("cli-state");
+
+    const exchange = (body: URLSearchParams) =>
+      POST(
+        new Request(`${baseURL}/api/auth/oauth2/token`, {
+          body,
+          headers: new Headers({
+            origin: baseURL,
+            "content-type": "application/x-www-form-urlencoded",
+          }),
+          method: "POST",
+        }),
+      );
+    const tokenResponse = await exchange(
+      new URLSearchParams({
+        client_id: "taskome-cli",
+        code: callbackURL.searchParams.get("code") ?? "",
+        code_verifier: codeVerifier,
+        grant_type: "authorization_code",
+        redirect_uri: "http://127.0.0.1:49152/callback",
+      }),
+    );
+    expect(tokenResponse.status).toBe(200);
+    const token = await tokenResponse.json();
+    expect(token.refresh_token).toEqual(expect.any(String));
+
+    const jwks = await (await GET(new Request(`${baseURL}/api/auth/jwks`))).json();
+    await expect(
+      jwtVerify(token.access_token, createLocalJWKSet(jwks), {
+        audience: gatewayRESTAudience,
+        issuer: oauthIssuer,
+      }),
+    ).resolves.toBeDefined();
+
+    const refreshResponse = await exchange(
+      new URLSearchParams({
+        client_id: "taskome-cli",
+        grant_type: "refresh_token",
+        refresh_token: token.refresh_token,
+      }),
+    );
+    expect(refreshResponse.status).toBe(200);
+    const refreshed = await refreshResponse.json();
+    expect(refreshed.refresh_token).toEqual(expect.any(String));
+    expect(refreshed.refresh_token).not.toBe(token.refresh_token);
+    await expect(
+      jwtVerify(refreshed.access_token, createLocalJWKSet(jwks), {
+        audience: gatewayRESTAudience,
+        issuer: oauthIssuer,
+      }),
+    ).resolves.toBeDefined();
+
+    const revokeResponse = await POST(
+      new Request(`${baseURL}/api/auth/oauth2/revoke`, {
+        body: new URLSearchParams({
+          client_id: "taskome-cli",
+          token: refreshed.refresh_token,
+          token_type_hint: "refresh_token",
+        }),
+        headers: new Headers({
+          origin: baseURL,
+          "content-type": "application/x-www-form-urlencoded",
+        }),
+        method: "POST",
+      }),
+    );
+    expect(revokeResponse.status).toBe(200);
+    const rejectedRefresh = await exchange(
+      new URLSearchParams({
+        client_id: "taskome-cli",
+        grant_type: "refresh_token",
+        refresh_token: refreshed.refresh_token,
+      }),
+    );
+    expect(rejectedRefresh.status).toBe(400);
   });
 
   it("enables TOTP, gates password sign-in, and accepts a backup code", async () => {

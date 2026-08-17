@@ -31,8 +31,8 @@ Milestones 1-3 are Taskome's shared foundation; they don't depend on each other 
 5. **Web App channel — Not started.** Reuses milestone 4's dispatch path; no new Gateway-side work.
     - [ ] Web's BFF can submit a `task-fpocket` Job through Gateway
     - [ ] Web's BFF can surface a Job's status
-6. **CLI channel — Not started.** Uses interactive OAuth for the REST resource and retains Personal API Keys for automation; Gateway must accept the new REST OAuth credential path — [ADR-0009](../adr/0009-cli-oauth-login-and-api-key-automation.md).
-    - [ ] A CLI tool authenticates through OAuth login or an explicit Personal API Key path
+6. **CLI channel — Authentication foundation complete.** Uses interactive OAuth for the REST resource and retains Personal API Keys for automation — [ADR-0009](../adr/0009-cli-oauth-login-and-api-key-automation.md).
+    - [x] A CLI tool authenticates through OAuth login or an explicit Personal API Key path
     - [ ] The CLI covers Job submission and status lookup
 
 Once milestone 6 lands, `task-fpocket` is reachable from all four Access Channels — the Now bar.
