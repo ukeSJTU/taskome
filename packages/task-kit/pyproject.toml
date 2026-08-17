@@ -7,7 +7,7 @@ authors = [{ name = "ukeSJTU", email = "uke_sjtu@sjtu.edu.cn" }]
 requires-python = ">=3.14"
 dependencies = [
   "anyio>=4.14.2",
-  "boto3>=1.43.69",
+  "boto3>=1.43.71",
   "fastapi[standard]>=0.141.1",
   "fastmcp==4.0.0b2",
   "httpx>=0.28.1",
