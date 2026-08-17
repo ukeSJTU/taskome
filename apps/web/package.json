@@ -36,6 +36,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
+    "framer-motion": "^13.1.0",
     "lucide-react": "catalog:",
     "next": "^16.3.0",
     "next-intl": "4.13.4",
