@@ -4,7 +4,7 @@ name: taskome
 # A real deployment supplies the public origins from .env.production.example.
 services:
   caddy:
-    image: caddy:2.10.2-alpine
+    image: caddy:2.11.4-alpine
     environment:
       WEB_ADDRESS: ${WEB_ADDRESS:-http://localhost}
       DOCS_ADDRESS: ${DOCS_ADDRESS:-http://docs.localhost}
