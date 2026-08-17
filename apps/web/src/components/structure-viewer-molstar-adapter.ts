@@ -28,12 +28,12 @@ export async function createMolstarAdapter(container: HTMLElement): Promise<Mols
       import("molstar/lib/mol-plugin-state/formats/trajectory.js"),
     ]);
   const plugin = new PluginContext(DefaultPluginSpec());
-  await plugin.init();
   const mounted = await plugin.mountAsync(container);
   if (!mounted) {
     plugin.dispose();
     throw new Error("WebGL is unavailable");
   }
+  await plugin.init();
 
   let structure: Awaited<ReturnType<typeof plugin.builders.structure.createStructure>> | undefined;
   let appearance: StructureAppearance = { representation: "automatic", coloring: "chain" };
