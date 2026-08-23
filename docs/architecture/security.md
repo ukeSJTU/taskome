@@ -270,8 +270,9 @@ snapshot binds its artifact digest, and the execution path verifies that digest
 before starting the workload. Mutable tags, unapproved local images, and
 runtime installation of undeclared dependencies cannot enter the production
 path. Each artifact keeps a reviewable inventory of its Upstream Software and
-dependencies. Runtime artifacts use OCI images in GitHub Container Registry;
-the exact signing, software-bill-of-materials format, vulnerability-scanning,
+dependencies. Runtime artifacts are immutable OCI images bound by digest as
+defined in [`components/tool-runtime.md`](./components/tool-runtime.md). The
+exact signing, software-bill-of-materials format, vulnerability-scanning,
 retention, and admission-verification mechanisms remain deployment and Runtime
 decisions.
 

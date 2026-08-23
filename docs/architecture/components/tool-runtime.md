@@ -121,6 +121,9 @@ Pixi
     └── compute-side PyPI dependencies
 ```
 
+Pixi is the only Conda-ecosystem client in the supported build path. Runtime
+builds do not install Miniconda and do not invoke the `conda` CLI.
+
 Dependency ownership follows the process seam:
 
 - place a dependency in `pyproject.toml` when the adapter or
@@ -183,6 +186,10 @@ sha256 = "<archive-sha256>"
 The release process uploads a deterministic archive rather than relying on
 GitHub's automatically generated source archive. The committed SHA-256 makes a
 changed or replaced asset fail closed during the build.
+
+GitHub Release assets are the source-archive store; this path requires no
+separate or paid artifact store. Delivery of licensed or very large non-source
+artifacts remains a distinct Tool-specific decision.
 
 The fork uses two roles:
 
