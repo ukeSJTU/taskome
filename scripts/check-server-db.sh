@@ -6,9 +6,9 @@ SCRIPT_NAME="$(basename -- "${BASH_SOURCE[0]}")"
 # shellcheck source=scripts/lib.sh
 source "$SCRIPT_DIR/lib.sh"
 install_error_trap
-enter_repo_root
 
-repo_root="$(pwd -P)"
+repo_root="$(cd -- "$SCRIPT_DIR/.." && pwd -P)"
+cd -- "$repo_root" || die "Could not enter repository root: $repo_root"
 server_dir="$repo_root/apps/server"
 check_dir="$(mktemp -d "$server_dir/.drizzle-check.XXXXXX")"
 
