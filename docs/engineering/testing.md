@@ -42,6 +42,52 @@ mise run //apps/cli:test:race
 mise run //apps/cli:test:coverage
 ```
 
+## Tool Runtimes
+
+Each project under `runtimes/<upstream>` tests two public seams. Tests do not
+reach into helper functions or import modules from the Pixi compute prefix.
+
+The fast Runtime seam lives under `tests/runtime`. It invokes the Runtime's
+Python interface with a fake Upstream Software subprocess and verifies curated
+input translation, generated arguments or configuration, failure
+classification, output validation, and manifest construction. These tests run
+from the root uv workspace and never require Docker, a GPU, or scientific
+compute dependencies. Root Ruff, ty, and pytest configuration covers Runtime
+adapter code and these tests; it excludes the upstream compute environment.
+Type checking runs per workspace package so Runtime packages remain
+independently actionable.
+
+The image seam lives under `tests/image`. It runs the final OCI entrypoint and
+verifies that the uv adapter environment and Pixi compute prefix cooperate. It
+also checks the non-root user, fixed filesystem contract, immutable Runtime
+paths, required executables and dynamic libraries, mock behavior, and output
+contract.
+
+Runtime CI uses three levels:
+
+1. Every pull request runs Ruff, ty, and the fast Runtime tests.
+2. A change under one Runtime validates its committed locks, builds the final
+   image, and runs the image tests in mock mode. A small CPU Runtime may add a
+   real smoke fixture here.
+3. Release or explicit qualification jobs run real scientific compute on the
+   required CPU or GPU runner and verify output invariants, resource behavior,
+   and the absence of undeclared compute-time downloads.
+
+Host development does not provide a second supported real-compute path.
+Developers run fast tests through uv and run real Upstream Software through the
+same Runtime image used outside development. The target command surface is:
+
+```bash
+mise run runtime:test -- fpocket
+mise run runtime:test:image -- fpocket
+mise run runtime:qualify -- fpocket
+```
+
+These commands are target architecture until the first Runtime and the shared
+`scripts/runtime/` build tooling exist. See
+[`Tool Runtime packaging and runtime_toolkit`](../architecture/components/tool-runtime.md)
+for the owning repository and image design.
+
 ## Repository defaults
 
 ```bash

@@ -25,10 +25,10 @@ that JSON differs by language:
   [`evlog`](https://www.evlog.dev/) — chosen for its "wide events" pattern
   (one complete, context-rich log line per operation instead of many
   disconnected ones) and its built-in structured-error fields, which fit
-  `packages/toolkit`'s error-classification responsibility (see
+  `runtime_toolkit`'s error-classification responsibility (see
   [`architecture/components/tool-runtime.md`](../architecture/components/tool-runtime.md))
   better than a conventional line-by-line logger would.
-- Python processes (every `apps/tool-*` Tool Runtime) use
+- Python processes (every `runtimes/*` Tool Runtime) use
   [`structlog`](https://www.structlog.org/), the established
   structured-logging library for Python.
 
@@ -176,7 +176,7 @@ decision sets a numeric availability or scaling target to measure against.
   Observability Backend as an external system, and its failure-handling
   rules.
 - [`architecture/components/tool-runtime.md`](../architecture/components/tool-runtime.md) —
-  `packages/toolkit`'s structured-logging and error-classification
+  `runtime_toolkit`'s structured-logging and error-classification
   responsibility.
 - [`architecture/risks.md`](../architecture/risks.md) — why no numeric target
   exists yet for a metrics design to measure against.

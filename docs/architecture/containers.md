@@ -178,7 +178,11 @@ artifact. The manifest binds:
 - an immutable identifier for the Runtime artifact.
 
 An Attempt records the exact versions and Runtime artifact it uses. The
-artifact format, registry, and publication mechanism remain unresolved.
+Runtime artifact is an OCI image stored in GitHub Container Registry. A
+human-readable tag combines the upstream version with a Runtime revision, but
+the Attempt binds the immutable OCI digest. Exact build, signing, scanning,
+retention, and promotion mechanisms remain unresolved; see
+[`components/tool-runtime.md`](./components/tool-runtime.md).
 
 ## Map target containers to the repository
 
@@ -192,10 +196,13 @@ artifact format, registry, and publication mechanism remain unresolved.
 | Temporal Service     | Not present in the current repository.                                       |
 | Kubernetes Cluster   | Not present in the current repository.                                       |
 | Object Storage       | Not present in the current repository.                                       |
-| Tool Runtimes        | Not present in the current repository.                                       |
+| Tool Runtimes        | Target location `runtimes/<upstream>`; no Runtime is implemented yet.        |
 
 Shared packages such as `@taskome/config`, `@taskome/env`, and `@taskome/ui`
 are not containers because they are not deployed or executed independently.
+The `packages/toolkit` scaffold similarly targets the shared
+`runtime_toolkit` Python library that Runtime images embed; it is not an
+independently deployed container.
 
 The following repository applications also stay outside the Taskome Container
 diagram:
@@ -215,7 +222,7 @@ and remain unresolved:
 - the Kubernetes distribution and node-management platform (for example a
   lightweight distribution such as k3s or k0s, self-managed nodes, or a
   managed Kubernetes offering);
-- the Tool Runtime artifact format and registry;
+- Tool Runtime signing, scanning, retention, and promotion policy;
 - Web App hosting and the production public edge, including whether Taskome
   uses Caddy, Nginx, Traefik, or a managed edge service; and
 - concrete scaling, availability, timeout, and retry settings.
@@ -232,5 +239,7 @@ and remain unresolved:
   cancellation, failure recovery, retry, and result publication.
 - [`deployment.md`](./deployment.md) — environment shapes, container-to-machine
   mapping, and open deployment choices.
+- [`components/tool-runtime.md`](./components/tool-runtime.md) — Runtime
+  repository layout, dependency planes, source tracking, and image contract.
 - [`docs/README.md`](../README.md) — documentation status and source-of-truth
   rules during the architecture rewrite.

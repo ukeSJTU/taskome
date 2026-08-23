@@ -152,6 +152,12 @@ One Runtime may support more than one Tool only when those Tools share the same
 Upstream Software, dependencies, artifact, and deployment lifecycle. Taskome
 does not expose the Runtime itself as a public REST or MCP service.
 
+Each Runtime is an OCI image stored in GitHub Container Registry. Published
+Tools bind its immutable digest rather than relying on a mutable tag. The
+repository layout, uv/Pixi dependency split, upstream source tracking, and
+image contract belong in
+[`components/tool-runtime.md`](./components/tool-runtime.md).
+
 ## Keep file bytes out of control and workflow traffic
 
 The Control Plane Server authorizes short-lived, scoped file access and stores
@@ -178,7 +184,7 @@ Control Plane Server, Temporal, or Kubernetes into a binary-file transport.
 | **Domain persistence**      | PostgreSQL and Drizzle migrations support the current server.          | PostgreSQL stores authoritative authentication, domain, provenance, outbox, and usage records.                     |
 | **Execution coordination**  | Execution Service and Temporal are not present.                        | Execution Service dispatches the outbox and durably coordinates one Temporal Workflow per Attempt.                 |
 | **Resource scheduling**     | Kubernetes is not present.                                             | Kubernetes schedules every Attempt against its Tool's declared resources as a Kubernetes Job.                      |
-| **Scientific execution**    | Tool Runtimes are not present.                                         | One immutable Runtime invocation performs the scientific execution for an Attempt.                                 |
+| **Scientific execution**    | `runtimes/` is empty; no Tool Runtime is implemented.                  | One immutable OCI Runtime from `runtimes/<upstream>` performs the scientific execution for an Attempt.             |
 | **Scientific-file storage** | Object Storage is not present.                                         | Object Storage holds saved scientific files, immutable Job inputs, and Job Outputs; the product remains undecided. |
 
 The target column records accepted responsibilities, not a claim that the
@@ -193,7 +199,7 @@ The following decisions are not settled by this overview:
 - Temporal Cloud or a self-hosted Temporal Service;
 - the Object Storage product and provider;
 - the Kubernetes distribution and node-management platform;
-- Tool Runtime artifact format, registry, and publication mechanism;
+- Tool Runtime signing, scanning, retention, and promotion policy;
 - production hosting, public ingress, and TLS termination;
 - additional account authentication methods, exact authorization scope names,
   credential lifetimes, and security-control mechanisms;
@@ -217,6 +223,8 @@ or needs durable rationale beyond the architecture page.
 - [`CONTEXT.md`](../../CONTEXT.md) — canonical domain vocabulary.
 - [`runtime.md`](./runtime.md) — Job and Attempt submission, execution,
   cancellation, failure recovery, retry, and result publication.
+- [`components/tool-runtime.md`](./components/tool-runtime.md) — Runtime
+  repository layout, upstream packaging, image contract, and verification.
 - [`data.md`](./data.md) — data ownership, lifecycle, and consistency.
 - [`security.md`](./security.md) — identity, authorization, trust boundaries,
   and least-authority rules.

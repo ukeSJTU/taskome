@@ -270,8 +270,11 @@ snapshot binds its artifact digest, and the execution path verifies that digest
 before starting the workload. Mutable tags, unapproved local images, and
 runtime installation of undeclared dependencies cannot enter the production
 path. Each artifact keeps a reviewable inventory of its Upstream Software and
-dependencies. Signing, registry, software-bill-of-materials format, and
-vulnerability-scanning mechanisms remain deployment and Runtime decisions.
+dependencies. Runtime artifacts are immutable OCI images bound by digest as
+defined in [`components/tool-runtime.md`](./components/tool-runtime.md). The
+exact signing, software-bill-of-materials format, vulnerability-scanning,
+retention, and admission-verification mechanisms remain deployment and Runtime
+decisions.
 
 ## Limit file and browser capabilities
 
@@ -377,8 +380,9 @@ the corresponding feature or deployment design has enough evidence:
 - audit schema, storage, retention, alerts, and review experience;
 - secret manager, key rotation, encryption-key management, ingress, TLS
   termination, internal networks, and break-glass implementation;
-- Runtime sandbox, egress allowlist, artifact signing, registry, software bill
-  of materials, and vulnerability scanning;
+- Runtime sandbox, egress allowlist, artifact signing, software bill of
+  materials, vulnerability scanning, registry retention, and admission
+  verification;
 - file-grant representation and lifetime; and
 - Assistant context, human confirmation, conversation and provider retention,
   and tool permissions.

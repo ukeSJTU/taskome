@@ -42,6 +42,11 @@ This is a deployment-time implementation swap, not a general-purpose scheduler a
 
 The Tool Runtime image itself cooperates: every Tool Runtime supports a mock invocation mode that skips downloading real inputs and running the actual Upstream Software, and instead returns deterministic fixture output. Combining the local Activity implementation with mock mode lets a developer exercise the full submit → observe → publish path — including cancellation and failure handling — without a GPU, without real scientific compute, and without a Kubernetes cluster. See [`components/tool-runtime.md`](./components/tool-runtime.md) for how a Tool Runtime image implements this mode.
 
+Host development does not provide a second supported real-compute path through
+Pixi. Developers run adapter tests on the host and run real Upstream Software
+through the same Runtime image used by staging and production. Direct `pixi
+run` use remains a diagnostic technique, not a deployment contract.
+
 ## Understand what a Kubernetes control-plane outage does and doesn't affect
 
 [`runtime.md`](./runtime.md) already distinguishes a transient Kubernetes API failure from a confirmed-lost Job or node. The deployment consequence of that distinction is worth stating plainly: an already-scheduled Pod keeps running on its node even while the cluster's control plane is temporarily unreachable, because the component that keeps a Pod running lives on the node, not in the control plane. A control-plane outage blocks new Job submissions and status observation until it recovers — it does not, by itself, kill Attempts that are already executing.
@@ -68,7 +73,10 @@ Whether the Control Plane Server and Execution Service ship as one release artif
 
 - Temporal Cloud or a self-hosted Temporal Service — [`containers.md`](./containers.md).
 - The Object Storage product and provider — [`containers.md`](./containers.md), [`data.md`](./data.md).
-- GPU driver and container-runtime provisioning on cluster nodes, and the Tool Runtime artifact registry — [`containers.md`](./containers.md).
+- GPU driver and container-runtime provisioning on cluster nodes, plus Tool
+  Runtime signing, scanning, retention, and admission verification —
+  [`containers.md`](./containers.md),
+  [`components/tool-runtime.md`](./components/tool-runtime.md).
 - Production public ingress and TLS termination — [`containers.md`](./containers.md), [`security.md`](./security.md).
 - Backup products, schedules, and numeric recovery objectives — [`data.md`](./data.md).
 - Observability backend integration and operational runbooks — reserved for their own pages once the deployable units above are settled.
