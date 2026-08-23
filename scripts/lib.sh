@@ -36,6 +36,14 @@ print_error() {
   _print_status 2 31 ERROR "$@"
 }
 
+print_failure() {
+  _print_status 2 31 FAIL "$@"
+}
+
+print_readiness() {
+  _print_status 2 33 READINESS "$@"
+}
+
 die() {
   print_error "$*"
   exit 1
@@ -57,5 +65,6 @@ enter_repo_root() {
 }
 
 install_error_trap() {
+  # shellcheck disable=SC2154 # error_status is assigned when the trap runs.
   trap 'error_status=$?; print_error "$SCRIPT_NAME failed on line $LINENO (exit $error_status)."; exit "$error_status"' ERR
 }

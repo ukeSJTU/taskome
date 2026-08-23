@@ -103,6 +103,7 @@ taskome/
 
 ## Available Scripts
 
+- `mise run doctor`: Check the development baseline; add `-- --verbose` to expand every result
 - `mise run dev`: Start the server and console
 - `mise run build`: Build all deliverable applications
 - `mise run check`: Run read-only repository checks
