@@ -12,7 +12,6 @@ build
 .worktrees/
 
 # Generated files
-__pycache__/
 local.db
 local.db-*
 

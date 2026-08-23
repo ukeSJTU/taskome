@@ -128,10 +128,6 @@ description = "Run service-free repository test suites"
 depends = ["//apps/cli:test", "//apps/server:test"]
 output = "prefix"
 
-[tasks."test:container"]
-description = "Build and smoke-test production OCI images"
-run = "uv run pytest test/container"
-
 [tasks."test:race"]
 description = "Run race-enabled repository test suites"
 depends = ["//apps/cli:test:race"]
