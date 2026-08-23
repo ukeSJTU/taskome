@@ -20,10 +20,13 @@ test = [
 [tool.pytest.ini_options]
 norecursedirs = ["references", "apps/task-*/compute"]
 
+[tool.tombi.files]
+exclude = ["references/**", "apps/task-*/compute/**", ".agents/**", ".claude/**"]
+
 [tool.ruff]
 target-version = "py314"
 line-length = 100
-extend-exclude = ["references", "apps/task-*/compute"]
+extend-exclude = ["references/**", "apps/task-*/compute/**"]
 force-exclude = true
 
 [tool.ruff.lint]
@@ -31,7 +34,7 @@ select = ["ALL"]
 ignore = ["D", "COM812", "ISC001", "CPY001"]
 
 [tool.ty.src]
-exclude = ["references", ".agents", "apps/task-*/compute"]
+exclude = ["references/**", ".agents/**", "apps/task-*/compute/**"]
 
 [tool.ty.environment]
 python-version = "3.14"

@@ -80,7 +80,8 @@
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": ["apps"],
   "python.testing.unittestEnabled": false,
-  "ruff.configurationPreference": "filesystemFirst",
+  "ruff.exclude": ["**/references/**", "**/apps/task-*/compute/**"],
+  "ruff.configurationPreference": "editorFirst",
 
   // Oxc is the repository's JavaScript/TypeScript linter and general formatter.
   "oxc.requireConfig": true,
