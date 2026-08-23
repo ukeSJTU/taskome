@@ -33,6 +33,9 @@ force-exclude = true
 select = ["ALL"]
 ignore = ["D", "COM812", "ISC001", "CPY001"]
 
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = ["PLR2004", "S101"]
+
 [tool.ty.src]
 exclude = ["references/**", ".agents/**", "apps/task-*/compute/**"]
 
