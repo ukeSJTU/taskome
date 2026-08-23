@@ -1,6 +1,8 @@
 # Lefthook configuration
 # https://github.com/evilmartians/lefthook
 
+rc: '"$(git rev-parse --show-toplevel)/scripts/lefthook-env.sh"'
+
 pre-commit:
   parallel: false
   jobs:
