@@ -4,13 +4,15 @@ This page explains how Taskome accepts a Job, executes it, and publishes its res
 
 Every Access Channel shares one lifecycle. REST and MCP both return a Job identifier once the Job is durably accepted, then let the caller query status. The Web App may add Server-Sent Events or a similar live-update experience, but that is a convenience layer over the same durable state, not a different lifecycle.
 
-> **Target architecture, not shipped behavior.** The fpocket image skeleton
-> does not implement the Attempt lifecycle on this page. The Execution Service,
-> Temporal, Kubernetes, Object Storage, and the final Runtime entrypoint also
-> remain unimplemented. This page describes the accepted design those pieces
-> must follow when they are built — see [`overview.md`](./overview.md) and
-> [`containers.md`](./containers.md) for the container-level decisions this
-> page assumes.
+> **Target architecture with partial development support.** The repository now
+> runs PostgreSQL, Temporal's development server, and a SeaweedFS development
+> object store through `compose.yml`. The fpocket image skeleton also exists,
+> but it does not implement the Attempt lifecycle on this page. The Execution
+> Service, Kubernetes integration, final Runtime entrypoint, and production
+> infrastructure remain unimplemented. This page describes the accepted runtime
+> design those pieces must follow when they are built — see
+> [`overview.md`](./overview.md) and [`containers.md`](./containers.md) for the
+> container-level decisions this page assumes.
 
 ## Attempt lifecycle and state
 

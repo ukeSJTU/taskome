@@ -190,7 +190,8 @@ corresponding feature or deployment design has enough evidence to decide them:
 - how Saved File changes preserve historical content, such as immutable
   versions, snapshots, or content-addressed storage;
 - how upload and download grants are scoped, expired, revoked, and verified;
-- the Object Storage product, object-key layout, checksum algorithm, and
+- the production Object Storage product and provider, object-key layout,
+  checksum algorithm, and
   physical deduplication boundary;
 - upload lifecycle states and the validation point for supported format, size,
   and checksum;

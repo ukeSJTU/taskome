@@ -2,10 +2,13 @@
 
 This page explains how Taskome's accepted containers map onto real machines across development, staging, and production, and which deployment choices remain open. It does not repeat [`containers.md`](./containers.md)'s responsibilities or [`runtime.md`](./runtime.md)'s execution flow — it covers what those pages don't: where each container actually runs, how local development avoids needing real compute infrastructure, and the specific choices deployment still has to make.
 
-> **Target architecture, not shipped behavior.** The fpocket image skeleton is
-> buildable, but it has no Attempt entrypoint or deployment integration. This
-> page describes the accepted design that the Execution Service, Temporal,
-> Kubernetes, Object Storage, and runnable Tool Runtimes must follow — see
+> **Target architecture with partial development support.** The repository now
+> runs PostgreSQL, Temporal's development server, and a SeaweedFS development
+> object store through `compose.yml`. It also contains a buildable fpocket image
+> skeleton, but that image has no Attempt entrypoint or deployment integration.
+> The Execution Service, Kubernetes integration, runnable Tool Runtime
+> entrypoints, and production infrastructure remain unimplemented. This page
+> describes the accepted deployment design those components must follow — see
 > [`overview.md`](./overview.md) and [`containers.md`](./containers.md) for the
 > container-level decisions this page assumes.
 
@@ -32,12 +35,41 @@ This shape is why [`overview.md`](./overview.md) and [`containers.md`](./contain
 | Control Plane Server              | Long-running HTTP service, at least one replica                                 | No                                                            | Yes — broad domain-authority role                         |
 | Execution Service                 | Long-running Temporal Worker process, independent from the Control Plane Server | No — it schedules work, it doesn't run it                     | Yes — narrow, least-privilege domain-transition role only |
 | Application Database (PostgreSQL) | Managed or self-hosted database                                                 | No                                                            | —                                                         |
-| Object Storage                    | Managed or self-hosted object store                                             | No                                                            | No                                                        |
+| Object Storage                    | SeaweedFS locally; managed or self-hosted object store outside development      | No                                                            | No                                                        |
 | Temporal Service                  | Managed (Temporal Cloud) or self-hosted service                                 | No                                                            | No — owns only its own persistence                        |
 | Kubernetes Cluster                | The execution infrastructure itself                                             | The cluster's GPU-capable nodes do; its control plane doesn't | No                                                        |
 | Tool Runtime                      | One Kubernetes Job's Pod per Attempt, using an immutable image                  | Only for GPU Tools                                            | No — reads and writes only Object Storage                 |
 
 The Control Plane Server and the Execution Service are separate deployment units even when they share a repository and a build. [`containers.md`](./containers.md) gives them different database roles for a reason: the Execution Service's narrow, least-privilege role only ever transitions Attempt state, records usage, and finalizes outputs, and collapsing it into the Control Plane Server's broader role would erase that boundary. Whether they ship as one release artifact with two entrypoints or as fully separate builds is still open — see [Decide how the Control Plane Server and Execution Service release](#decide-how-the-control-plane-server-and-execution-service-release) below.
+
+## Use SeaweedFS for local object storage
+
+Local development runs the pinned SeaweedFS `4.42` image in single-process
+`weed mini` mode. The service creates one `taskome-dev` bucket, persists bytes
+in a Compose named volume, and uses fixed credentials that are valid only for
+local development. Normal `mise run dev:down` leaves the volume intact;
+`mise run dev:clean` explicitly removes it with the other local service data.
+
+The container listens on all interfaces inside the Compose network. The host
+publishes only the S3 endpoint at `127.0.0.1:8333` and the development Admin UI
+at `127.0.0.1:23646`. Development CORS allows every origin so browser ports can
+change without editing infrastructure configuration. The service runs as the
+image's `seaweed` user with a read-only root filesystem, no Linux capabilities,
+and `/data` as its only persistent writable path.
+
+SeaweedFS is a development dependency, not the selected production Object
+Storage product. Taskome depends on a small S3-compatible contract: core object
+operations, presigned GET and PUT, and multipart upload. Application code must
+not use SeaweedFS management APIs or directory semantics.
+
+When file features are implemented, the TypeScript Control Plane Server and
+Execution Service use `@aws-sdk/client-s3` and
+`@aws-sdk/s3-request-presigner`. Browser code uses native `fetch` with URLs
+issued by the Server. Python `runtime_toolkit` uses Boto3's synchronous S3
+client and managed `upload_file`, `download_file`, and `TransferConfig`
+transfers. Boto3 already provides threaded multipart concurrency; Taskome does
+not add `aioboto3` without a measured need for event-loop concurrency. These
+libraries are selected but are not installed in the current scaffolds.
 
 ## Run compute without Kubernetes in local development
 
@@ -77,7 +109,7 @@ Whether the Control Plane Server and Execution Service ship as one release artif
 ### Other open choices already tracked elsewhere
 
 - Temporal Cloud or a self-hosted Temporal Service — [`containers.md`](./containers.md).
-- The Object Storage product and provider — [`containers.md`](./containers.md), [`data.md`](./data.md).
+- The production Object Storage product and provider — [`containers.md`](./containers.md), [`data.md`](./data.md).
 - GPU driver and container-runtime provisioning on cluster nodes, plus Tool
   Runtime signing, scanning, retention, and admission verification —
   [`containers.md`](./containers.md),

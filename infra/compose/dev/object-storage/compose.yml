@@ -1,0 +1,40 @@
+services:
+  object-storage:
+    image: chrislusf/seaweedfs:4.42
+    user: seaweed
+    command:
+      - mini
+      - -dir=/data
+      - -ip.bind=0.0.0.0
+      - -s3.allowedOrigins=*
+    environment:
+      AWS_ACCESS_KEY_ID: taskome-development
+      AWS_SECRET_ACCESS_KEY: taskome-development-only-secret
+      S3_BUCKET: taskome-dev
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://127.0.0.1:8333/healthz
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    ports:
+      - "127.0.0.1:8333:8333"
+      - "127.0.0.1:23646:23646"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    volumes:
+      - object_storage_data:/data
+
+volumes:
+  object_storage_data:

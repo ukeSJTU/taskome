@@ -93,7 +93,7 @@ traffic, but it must not own identity or business policy.
 | **Control Plane Server** | Owns authentication, authorization, REST, MCP, the Tool catalog, domain operations, file-access grants, and the Agent Assistant backend.          | Owns authentication and Taskome domain records in the Application Database.                                                                                                                           |
 | **Execution Service**    | Dispatches the transactional outbox, runs Taskome's Temporal Worker, coordinates Attempts, and submits, observes, or stops Kubernetes Jobs.       | Writes Attempt transitions, usage, and output finalization directly to the Application Database through a narrow, least-privilege domain-transition role. It does not own a separate domain database. |
 | **Application Database** | Persists authentication, authorization, Projects, Tool metadata, Batches, Jobs, Attempts, file metadata, provenance, and usage.                   | PostgreSQL is the authoritative source for user-visible Taskome state. It does not contain scientific file bytes.                                                                                     |
-| **Object Storage**       | Durably stores saved scientific files, immutable Job inputs, and published Job Outputs.                                                           | Owns scientific file bytes. The provider and storage product remain unresolved.                                                                                                                       |
+| **Object Storage**       | Durably stores saved scientific files, immutable Job inputs, and published Job Outputs.                                                           | Owns scientific file bytes. Local development uses SeaweedFS; the production provider and product remain unresolved.                                                                                  |
 | **Temporal Service**     | Persists workflow history, maintains Temporal Task Queues, timers, and workflow recovery.                                                         | Owns Temporal's internal workflow state. It never becomes the authoritative Taskome domain store.                                                                                                     |
 | **Kubernetes Cluster**   | Schedules every launch Attempt against declared CPU, GPU, and custom resources as a Kubernetes Job, then runs its workload.                       | Owns transient scheduling and execution state (Job and Pod objects). It is not durable Taskome file storage.                                                                                          |
 | **Tool Runtime**         | Runs one immutable version of an Upstream Software for an Attempt. One Runtime may expose one or more Tools from that Software.                   | Reads and publishes scientific files through Object Storage. It cannot access the Application Database or user authorization records.                                                                 |
@@ -191,11 +191,11 @@ retention, and promotion mechanisms remain unresolved; see
 | Web App              | `apps/console`                                                                                  |
 | CLI                  | `apps/cli`                                                                                      |
 | Control Plane Server | `apps/server`                                                                                   |
-| Application Database | PostgreSQL is the only supporting service in `compose.yml`.                                     |
+| Application Database | PostgreSQL runs as a development service from `infra/compose/dev/postgres`.                     |
 | Execution Service    | Not present in the current repository; its source layout remains unresolved.                    |
-| Temporal Service     | Not present in the current repository.                                                          |
+| Temporal Service     | Temporal's development server runs from `infra/compose/dev/temporal`.                           |
 | Kubernetes Cluster   | Not present in the current repository.                                                          |
-| Object Storage       | Not present in the current repository.                                                          |
+| Object Storage       | SeaweedFS `weed mini` runs from `infra/compose/dev/object-storage`.                             |
 | Tool Runtimes        | `runtimes/fpocket` contains a locked image skeleton; its Attempt entrypoint is not implemented. |
 
 Shared packages such as `@taskome/config`, `@taskome/env`, and `@taskome/ui`
@@ -219,7 +219,7 @@ The following choices do not change the accepted Container responsibilities
 and remain unresolved:
 
 - Temporal Cloud or a self-hosted Temporal Service;
-- the Object Storage product and provider;
+- the production Object Storage product and provider;
 - the Kubernetes distribution and node-management platform (for example a
   lightweight distribution such as k3s or k0s, self-managed nodes, or a
   managed Kubernetes offering);

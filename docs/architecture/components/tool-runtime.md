@@ -54,6 +54,14 @@ Tool-specific parameter models and process adapters stay inside their Runtime.
 Moving them into `runtime_toolkit` would turn the shared package into a shallow
 registry of unrelated Upstream Software behavior.
 
+`runtime_toolkit` uses Boto3's synchronous low-level S3 client for Object
+Storage access. Its managed `upload_file`, `download_file`, and
+`TransferConfig` operations own retries, multipart transfer, and thread-based
+transfer concurrency. Tool-specific adapters depend on the Toolkit's narrow
+file-transfer interface rather than importing Boto3 or receiving SDK response
+objects. The internal Python interface remains open, but the client library and
+its ownership boundary are accepted choices.
+
 ## Use one repository shape
 
 Every Runtime follows this layout:

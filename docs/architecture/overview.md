@@ -182,10 +182,10 @@ Control Plane Server, Temporal, or Kubernetes into a binary-file transport.
 | **Web experience**          | `apps/console` implements the authenticated Web App foundation.                    | Web App provides the launch browser journeys, Utilities, and Agent Assistant UI.                                   |
 | **Control plane**           | `apps/server` provides a Hono API, Better Auth, and PostgreSQL access.             | Server owns domain operations, authorization, REST, MCP, Tool catalog, file grants, and Assistant backend.         |
 | **Domain persistence**      | PostgreSQL and Drizzle migrations support the current server.                      | PostgreSQL stores authoritative authentication, domain, provenance, outbox, and usage records.                     |
-| **Execution coordination**  | Execution Service and Temporal are not present.                                    | Execution Service dispatches the outbox and durably coordinates one Temporal Workflow per Attempt.                 |
+| **Execution coordination**  | Temporal's development server runs locally; the Execution Service is not present.  | Execution Service dispatches the outbox and durably coordinates one Temporal Workflow per Attempt.                 |
 | **Resource scheduling**     | Kubernetes is not present.                                                         | Kubernetes schedules every Attempt against its Tool's declared resources as a Kubernetes Job.                      |
 | **Scientific execution**    | `runtimes/fpocket` provides a locked image skeleton without an Attempt entrypoint. | One immutable OCI Runtime from `runtimes/<upstream>` performs the scientific execution for an Attempt.             |
-| **Scientific-file storage** | Object Storage is not present.                                                     | Object Storage holds saved scientific files, immutable Job inputs, and Job Outputs; the product remains undecided. |
+| **Scientific-file storage** | SeaweedFS runs locally; application file flows are not implemented.                | Object Storage holds saved scientific files, immutable Job inputs, and Job Outputs; the product remains undecided. |
 
 The target column records accepted responsibilities, not a claim that the
 components already run. New implementation must preserve these boundaries;
@@ -197,7 +197,7 @@ silently redefine the target architecture.
 The following decisions are not settled by this overview:
 
 - Temporal Cloud or a self-hosted Temporal Service;
-- the Object Storage product and provider;
+- the production Object Storage product and provider;
 - the Kubernetes distribution and node-management platform;
 - Tool Runtime signing, scanning, retention, and promotion policy;
 - production hosting, public ingress, and TLS termination;

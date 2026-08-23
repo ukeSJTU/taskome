@@ -1,3 +1,4 @@
 include:
   - path: ./infra/compose/dev/postgres/compose.yml
   - path: ./infra/compose/dev/temporal/compose.yml
+  - path: ./infra/compose/dev/object-storage/compose.yml

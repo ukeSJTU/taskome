@@ -24,12 +24,16 @@ Install the pinned toolchain and dependencies:
 mise run setup
 ```
 
-## Database Setup
+## Local development
 
-This project uses PostgreSQL with Drizzle ORM.
+The local Compose stack runs PostgreSQL, Temporal's development server, and a
+SeaweedFS S3-compatible object store. SeaweedFS keeps objects in a named volume,
+serves S3 at [http://localhost:8333](http://localhost:8333), and serves its
+development Admin UI at
+[http://localhost:23646](http://localhost:23646).
 
-Start local PostgreSQL, create the server environment file, and apply committed
-migrations:
+Start the support services, create the server environment file, and apply the
+committed PostgreSQL migrations:
 
 ```bash
 cp apps/server/.env.example apps/server/.env
@@ -109,7 +113,7 @@ taskome/
 - `mise run check`: Run read-only repository checks
 - `mise run test`: Run service-free test suites
 - `mise run test:integration`: Run container-backed integration suites
-- `mise run dev:up | dev:down | dev:logs`: Manage local PostgreSQL
+- `mise run dev:up | dev:down | dev:logs`: Manage local support services
 - `mise run //apps/server:db:generate | db:migrate | db:studio`: Manage the server schema
 
 See [`apps/server/README.md`](apps/server/README.md) for the server's feature
