@@ -44,4 +44,4 @@ package = false
 default-groups = ["dev"]
 
 [tool.uv.workspace]
-members = ["packages/toolkit"]
+members = ["packages/toolkit", "runtimes/*"]

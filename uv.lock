@@ -4,8 +4,9 @@ requires-python = ">=3.14"
 
 [manifest]
 members = [
+    "fpocket-runtime",
+    "runtime-toolkit",
     "taskome",
-    "taskome-toolkit",
 ]
 
 [[package]]
@@ -216,6 +217,17 @@ wheels = [
 ]
 
 [[package]]
+name = "fpocket-runtime"
+version = "0.0.0"
+source = { editable = "runtimes/fpocket" }
+dependencies = [
+    { name = "runtime-toolkit" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "runtime-toolkit", editable = "packages/toolkit" }]
+
+[[package]]
 name = "idna"
 version = "3.19"
 source = { registry = "https://pypi.org/simple" }
@@ -390,6 +402,11 @@ wheels = [
 ]
 
 [[package]]
+name = "runtime-toolkit"
+version = "0.0.0"
+source = { editable = "packages/toolkit" }
+
+[[package]]
 name = "taskome"
 version = "0.0.0"
 source = { virtual = "." }
@@ -447,11 +464,6 @@ test = [
     { name = "testcontainers", extras = ["postgres"] },
     { name = "time-machine" },
 ]
-
-[[package]]
-name = "taskome-toolkit"
-version = "0.0.0"
-source = { editable = "packages/toolkit" }
 
 [[package]]
 name = "testcontainers"

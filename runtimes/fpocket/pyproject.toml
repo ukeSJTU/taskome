@@ -1,11 +1,14 @@
 [project]
-name = "runtime-toolkit"
+name = "fpocket-runtime"
 version = "0.0.0"
-description = "Shared execution support for Taskome Tool Runtimes"
+description = "Taskome Tool Runtime for fpocket"
 authors = [{ name = "ukeSJTU", email = "uke_sjtu@sjtu.edu.cn" }]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = ["runtime-toolkit"]
 
 [build-system]
 requires = ["uv_build>=0.12.1,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+runtime-toolkit = { workspace = true }
