@@ -1,0 +1,11 @@
+{
+  "extends": "@taskome/config/tsconfig.react.json",
+  "compilerOptions": {
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@taskome/ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "*.ts"]
+}

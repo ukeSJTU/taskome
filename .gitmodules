@@ -1,0 +1,65 @@
+[submodule "references/galaxy-mcp"]
+	path = references/galaxy-mcp
+	url = https://github.com/galaxyproject/galaxy-mcp.git
+	branch = main
+	shallow = true
+[submodule "references/galaxy"]
+	path = references/galaxy
+	url = https://github.com/galaxyproject/galaxy.git
+	branch = dev
+	shallow = true
+[submodule "references/mcp-spec"]
+	path = references/mcp-spec
+	url = https://github.com/modelcontextprotocol/modelcontextprotocol.git
+	branch = main
+	shallow = true
+[submodule "references/biomcp"]
+	path = references/biomcp
+	url = https://github.com/genomoncology/biomcp.git
+	branch = main
+	shallow = true
+[submodule "references/pepmimic"]
+	path = references/pepmimic
+	url = https://github.com/kxz18/PepMimic.git
+	branch = main
+	shallow = true
+[submodule "references/bindcraft"]
+	path = references/bindcraft
+	url = https://github.com/martinpacesa/BindCraft.git
+	branch = main
+	shallow = true
+[submodule "references/fpocket"]
+	path = references/fpocket
+	url = https://github.com/Discngine/fpocket.git
+	branch = master
+	shallow = true
+[submodule "references/pdb-tools"]
+	path = references/pdb-tools
+	url = https://github.com/haddocking/pdb-tools.git
+	branch = master
+	shallow = true
+[submodule "references/old-website"]
+	path = references/old-website
+	url = https://github.com/XDenovo/old-website.git
+	branch = main
+	shallow = true
+[submodule "references/restctl-template"]
+	path = references/restctl-template
+	url = https://github.com/jwmoss/restctl-template.git
+	branch = main
+	shallow = true
+[submodule "references/oras"]
+	path = references/oras
+	url = https://github.com/oras-project/oras.git
+	branch = main
+	shallow = true
+[submodule "references/github-cli"]
+	path = references/github-cli
+	url = https://github.com/cli/cli.git
+	branch = trunk
+	shallow = true
+[submodule "references/perses"]
+	path = references/perses
+	url = https://github.com/perses/perses.git
+	branch = main
+	shallow = true

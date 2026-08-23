@@ -1,0 +1,37 @@
+packages:
+  - apps/console
+  - apps/docs
+  - apps/server
+  - apps/web
+  - apps/execution
+  - packages/config
+  - packages/env
+  - packages/ui
+allowBuilds:
+  cpu-features: false
+  esbuild: true
+  protobufjs: false
+  sharp: true
+  ssh2: false
+blockExoticSubdeps: true
+catalog:
+  dotenv: ^17.4.2
+  zod: ^4.4.3
+  typescript: ^6.0.3
+  vite: ^8.1.5
+  "@types/node": ^22.20.1
+  auth: 1.7.1
+  better-auth: 1.7.1
+  lucide-react: ^1.27.0
+  next-themes: ^0.4.6
+  react: ^19.2.8
+  react-dom: ^19.2.8
+  sonner: ^2.0.7
+  "@types/react": ^19.2.17
+  "@types/react-dom": ^19.2.3
+  tailwindcss: ^4.3.3
+minimumReleaseAgeExclude:
+  - "@hono/zod-openapi@1.6.1"
+minimumReleaseAge: 1440
+overrides:
+  "lodash@<=4.17.23": "4.18.1"

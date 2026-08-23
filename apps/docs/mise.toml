@@ -1,0 +1,19 @@
+[tasks.dev]
+description = "Run docs in development mode"
+run = "pnpm run dev"
+
+[tasks.build]
+description = "Build the documentation site for production"
+run = "pnpm run build"
+
+[tasks.start]
+description = "Start the production documentation server"
+run = "pnpm run start"
+
+[tasks.lint]
+description = "Apply safe lint fixes to the documentation site"
+run = "pnpm run lint"
+
+[tasks.check]
+description = "Run read-only documentation lint and type checks"
+run = ["pnpm run lint:check", "pnpm run check-types"]

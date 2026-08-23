@@ -1,0 +1,44 @@
+[project]
+name = "taskome"
+version = "0.0.0"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [{ include-group = "lint" }, { include-group = "test" }]
+lint = ["ruff", "ty"]
+test = [
+  "polyfactory",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "pytest-mock",
+  "testcontainers[postgres]",
+  "time-machine",
+]
+
+[tool.pytest.ini_options]
+norecursedirs = ["references", "apps/task-*/compute"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["references", "apps/task-*/compute"]
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D", "COM812", "ISC001", "CPY001"]
+
+[tool.ty.src]
+exclude = ["references", ".agents", "apps/task-*/compute"]
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+[tool.uv.workspace]
+members = ["packages/toolkit"]

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/editorconfig-checker/editorconfig-checker/v3.11.1/.editorconfig-checker.schema.json",
+  "Exclude": [
+    "^\\.agents/",
+    "^\\.claude/",
+    "^\\.codex/",
+    "^references/",
+    "^apps/console/src/routeTree\\.gen\\.ts$"
+  ]
+}

@@ -1,0 +1,36 @@
+[tasks.run]
+description = "Run the Taskome CLI from source"
+raw_args = true
+run = "go run ."
+
+[tasks.format]
+description = "Format Taskome CLI Go source"
+run = "gofmt -w ."
+
+[tasks.build]
+description = "Build the Taskome CLI"
+run = "go build -trimpath -o ../../build/taskome ."
+
+[tasks.check]
+description = "Run read-only Taskome CLI checks"
+run = ["test -z \"$(gofmt -l .)\"", "go vet ./...", "staticcheck ./...", "go mod tidy -diff"]
+
+[tasks.test]
+description = "Run Taskome CLI tests"
+run = "go test -timeout=2m ./..."
+
+[tasks."test:race"]
+description = "Run Taskome CLI tests with the race detector"
+run = "go test -race -shuffle=on -timeout=2m ./..."
+
+[tasks."test:coverage"]
+description = "Generate the Taskome CLI coverage report"
+run = [
+  "mkdir -p ../../coverage",
+  "go test -timeout=2m -covermode=atomic -coverpkg=./... -coverprofile=../../coverage/cli.out ./...",
+  "go tool cover -func=../../coverage/cli.out",
+]
+
+[tasks.security]
+description = "Scan Taskome CLI dependencies for reachable known vulnerabilities"
+run = "govulncheck ./..."

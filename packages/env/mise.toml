@@ -1,0 +1,7 @@
+[tasks.lint]
+description = "Apply safe lint fixes to shared environment schemas"
+run = "pnpm run lint"
+
+[tasks.check]
+description = "Run read-only shared environment schema lint and type checks"
+run = ["pnpm run lint:check", "pnpm run check-types"]

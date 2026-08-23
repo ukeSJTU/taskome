@@ -1,0 +1,38 @@
+# Lefthook configuration
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: false
+  jobs:
+    - name: gitleaks
+      run: gitleaks git --staged --config .gitleaks.toml --redact --no-banner .
+    - name: oxfmt
+      run: pnpm oxfmt --write --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    - name: oxlint
+      run: pnpm oxlint --fix --deny-warnings --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    - name: gofmt
+      glob: "*.go"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
+    - name: ruff-check
+      glob: "*.py"
+      run: uv run ruff check --fix {staged_files}
+      stage_fixed: true
+    - name: ruff-format
+      glob: "*.py"
+      run: uv run ruff format {staged_files}
+      stage_fixed: true
+    - name: editorconfig
+      run: mise exec -- ec -no-color {staged_files}
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - name: verify
+      run: mise run verify

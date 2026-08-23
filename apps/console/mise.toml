@@ -1,0 +1,19 @@
+[tasks.dev]
+description = "Run the console in development mode"
+run = "pnpm run dev"
+
+[tasks.build]
+description = "Build the console for production"
+run = "pnpm run build"
+
+[tasks.preview]
+description = "Preview the production console build locally"
+run = "pnpm run serve"
+
+[tasks.lint]
+description = "Apply safe lint fixes to the console"
+run = "pnpm run lint"
+
+[tasks.check]
+description = "Run read-only console lint and type checks"
+run = ["pnpm run lint:check", "pnpm run check-types"]

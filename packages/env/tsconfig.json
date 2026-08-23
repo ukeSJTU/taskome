@@ -1,0 +1,7 @@
+{
+  "extends": "@taskome/config/tsconfig.node.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"]
+  },
+  "include": ["src/**/*.ts"]
+}

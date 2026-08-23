@@ -1,0 +1,221 @@
+# Remember to run `mise lock` after changing this file to update the lockfile.
+monorepo_root = true
+
+[monorepo]
+config_roots = [
+  "apps/cli",
+  "apps/console",
+  "apps/docs",
+  "apps/server",
+  "apps/web",
+  "packages/config",
+  "packages/env",
+  "packages/ui",
+]
+
+[tools]
+go = "1.26.6"
+"go:honnef.co/go/tools/cmd/staticcheck" = "0.7.0"
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.7.0"
+node = "24"
+python = "3.14"
+pnpm = "11"
+uv = "0.12.1"
+lefthook = "2"
+gitleaks = "8.30.1"
+editorconfig-checker = "3.11.1"
+"npm:@modelcontextprotocol/inspector" = { version = "2.2.0" }
+
+[settings]
+lockfile = true
+lockfile_platforms = ["macos-arm64", "linux-x64"]
+locked = true
+python.uv_venv_auto = "source"
+
+[env]
+UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
+# _.path = ["apps/cli/bin"]
+
+[tasks.setup]
+description = "Install the pinned toolchain, dependencies, local environment files, and Git hooks"
+run = [
+  "mise install --locked",
+  "uv sync --frozen",
+  "pnpm install --frozen-lockfile",
+  "go -C apps/cli mod download",
+  { task = "env:init" },
+  "lefthook install",
+]
+
+[tasks."env:init"]
+description = "Create missing local environment files without overwriting existing files"
+run = "bash scripts/env-init.sh"
+
+[tasks.doctor]
+description = "Diagnose the local Taskome development environment"
+run = "bash scripts/doctor.sh"
+
+[tasks.dev]
+description = "Start local support services, the server, and the console"
+depends = ["//apps/server:db:prepare"]
+run = [{ tasks = ["//apps/server:dev", "//apps/console:dev"] }]
+output = "prefix"
+
+[tasks.build]
+description = "Build all deliverable applications"
+depends = [
+  "//apps/cli:build",
+  "//apps/console:build",
+  "//apps/docs:build",
+  "//apps/server:build",
+  "//apps/web:build",
+]
+output = "prefix"
+
+[tasks.format]
+description = "Format repository source files"
+depends = ["format:typescript", "//apps/cli:format"]
+output = "prefix"
+
+[tasks."format:typescript"]
+hide = true
+run = "pnpm exec oxfmt --write ."
+
+[tasks.lint]
+description = "Apply safe lint fixes across supported workspaces"
+depends = [
+  "//apps/console:lint",
+  "//apps/docs:lint",
+  "//apps/server:lint",
+  "//apps/web:lint",
+  "//packages/config:lint",
+  "//packages/env:lint",
+  "//packages/ui:lint",
+]
+output = "prefix"
+
+[tasks.check]
+description = "Run all read-only static checks across the repository"
+depends = [
+  "check:editorconfig",
+  "check:format",
+  "check:root",
+  "//apps/cli:check",
+  "//apps/console:check",
+  "//apps/docs:check",
+  "//apps/server:check",
+  "//apps/web:check",
+  "//packages/config:check",
+  "//packages/env:check",
+  "//packages/ui:check",
+]
+output = "prefix"
+
+[tasks."check:editorconfig"]
+hide = true
+run = "ec -no-color"
+
+[tasks."check:format"]
+hide = true
+run = "pnpm exec oxfmt --check ."
+
+[tasks."check:root"]
+hide = true
+run = "pnpm exec oxlint --deny-warnings --report-unused-disable-directives oxlint.config.ts commitlint.config.js"
+
+[tasks.test]
+description = "Run service-free repository test suites"
+depends = ["//apps/cli:test", "//apps/server:test"]
+output = "prefix"
+
+[tasks."test:race"]
+description = "Run race-enabled repository test suites"
+depends = ["//apps/cli:test:race"]
+output = "prefix"
+
+[tasks."test:coverage"]
+description = "Generate repository test coverage reports"
+depends = ["//apps/cli:test:coverage", "//apps/server:test:coverage"]
+output = "prefix"
+
+[tasks."test:integration"]
+description = "Run container-backed integration test suites"
+depends = ["//apps/server:test:integration"]
+output = "prefix"
+
+[tasks.verify]
+description = "Run the complete repository verification gate"
+depends = ["check", "test", "test:race", "test:integration"]
+run = [{ task = "build" }]
+output = "prefix"
+
+[tasks.security]
+description = "Scan repository dependencies and Git history for known vulnerabilities and secrets"
+depends = ["security:dependencies", "security:secrets"]
+output = "prefix"
+
+[tasks."security:dependencies"]
+description = "Audit locked JavaScript, Python, and Go dependencies for known vulnerabilities"
+depends = ["security:javascript", "security:python", "//apps/cli:security"]
+output = "prefix"
+
+[tasks."security:javascript"]
+hide = true
+run = "pnpm audit --audit-level high"
+
+[tasks."security:python"]
+hide = true
+run = "uv audit --preview-features audit-command --frozen"
+
+[tasks."security:secrets"]
+description = "Scan committed repository history for secrets"
+run = "gitleaks git --config .gitleaks.toml --redact --no-banner ."
+
+[tasks."dev:up"]
+description = "Start and wait for development support services"
+run = "docker compose -f compose.yml up --detach --wait --wait-timeout 60"
+
+[tasks."dev:down"]
+description = "Stop development support services without removing volumes"
+run = "docker compose -f compose.yml down --timeout 10"
+
+[tasks."dev:clean"]
+description = "Stop development support services and delete their local data"
+confirm = { message = "Delete all containers, orphan services, and volumes for this local Compose project?", default = "no" }
+run = "docker compose -f compose.yml down --timeout 10 --remove-orphans --volumes"
+
+[tasks."dev:logs"]
+description = "Tail logs from development support services"
+run = "docker compose -f compose.yml logs --follow --tail 100 --timestamps"
+
+[tasks."worktree:create"]
+description = "Create a feature worktree from origin/main"
+usage = '''
+arg "<type>" help="Branch type: feat, fix, or chore"
+arg "<slug>" help="Lowercase kebab-case feature name"
+'''
+run = "bash scripts/create-worktree.sh"
+
+[tasks."worktree:remove"]
+description = "Remove a clean feature worktree and its local branch"
+usage = '''
+arg "<type>" help="Branch type: feat, fix, or chore"
+arg "<slug>" help="Lowercase kebab-case feature name"
+'''
+run = "bash scripts/remove-worktree.sh"
+
+[tasks."ref:sync"]
+description = "Sync submodule config and checkout the pinned reference revisions"
+run = [
+  "git submodule sync --recursive",
+  "git submodule update --init --recursive --recommend-shallow",
+]
+
+[tasks."ref:status"]
+description = "Show the current reference submodule revisions"
+run = "git submodule status --recursive"
+
+[tasks."ref:reset"]
+description = "Discard all local changes in reference submodules, restoring them to read-only pinned state"
+confirm = { message = "Discard all local changes and untracked files in reference submodules?", default = "no" }
+run = "git submodule foreach --recursive 'git clean -fdx && git checkout -- .'"

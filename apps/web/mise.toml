@@ -1,0 +1,19 @@
+[tasks.dev]
+description = "Run the web application in development mode"
+run = "pnpm run dev"
+
+[tasks.build]
+description = "Build the web application for production"
+run = "pnpm run build"
+
+[tasks.start]
+description = "Start the production web application"
+run = "pnpm run start"
+
+[tasks.lint]
+description = "Apply safe lint fixes to the web application"
+run = "pnpm run lint"
+
+[tasks.check]
+description = "Run read-only web application lint and type checks"
+run = ["pnpm run lint:check", "pnpm run check-types"]

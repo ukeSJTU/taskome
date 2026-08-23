@@ -1,0 +1,22 @@
+{
+  "name": "taskome",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {},
+  "dependencies": {
+    "@taskome/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@taskome/config": "workspace:*",
+    "@types/node": "catalog:",
+    "oxfmt": "^0.63.0",
+    "oxlint": "1.79.0",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@11.18.0"
+}

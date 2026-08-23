@@ -1,0 +1,29 @@
+{
+  "recommendations": [
+    // Reproducible toolchain and repository conventions.
+    "editorconfig.editorconfig",
+    "hverlin.mise-vscode",
+
+    // TypeScript, React, styling, documentation, and tests.
+    "oxc.oxc-vscode",
+    "bradlc.vscode-tailwindcss",
+    "unifiedjs.vscode-mdx",
+    "vitest.explorer",
+
+    // Python and Go.
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "golang.go",
+
+    // Project configuration and local infrastructure.
+    "tombi-toml.tombi",
+    "redhat.vscode-yaml",
+    "docker.docker"
+  ],
+  "unwantedRecommendations": [
+    "biomejs.biome",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next"
+  ]
+}

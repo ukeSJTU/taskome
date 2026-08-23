@@ -1,0 +1,26 @@
+{
+  "name": "@taskome/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./oxlint/base": "./src/oxlint/base.ts",
+    "./oxlint/node": "./src/oxlint/node.ts",
+    "./oxlint/react": "./src/oxlint/react.ts",
+    "./oxlint/next": "./src/oxlint/next.ts",
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.node.json": "./tsconfig.node.json",
+    "./tsconfig.react.json": "./tsconfig.react.json",
+    "./tsconfig.next.json": "./tsconfig.next.json"
+  },
+  "scripts": {
+    "lint": "oxlint --fix .",
+    "lint:check": "oxlint --deny-warnings --report-unused-disable-directives .",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "oxlint": "1.79.0",
+    "typescript": "catalog:"
+  }
+}

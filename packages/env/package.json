@@ -1,0 +1,27 @@
+{
+  "name": "@taskome/env",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./server": "./src/server.ts",
+    "./server/database": "./src/server/database.ts",
+    "./console": "./src/console.ts"
+  },
+  "scripts": {
+    "lint": "oxlint --fix .",
+    "lint:check": "oxlint --deny-warnings --report-unused-disable-directives .",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@t3-oss/env-core": "^0.13.11",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@taskome/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

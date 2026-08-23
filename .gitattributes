@@ -1,0 +1,19 @@
+# Normalize text files to LF in the repository and working tree.
+* text=auto eol=lf
+
+# Keep Windows command files using native CRLF line endings.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Bioinformatics structure files are text and should produce readable diffs.
+*.cif text eol=lf
+*.pdb text eol=lf
+
+# Binary assets must never be line-ending normalized or text-diffed.
+*.gif binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.pdf binary
+*.png binary
+*.webp binary

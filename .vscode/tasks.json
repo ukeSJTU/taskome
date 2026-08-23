@@ -1,0 +1,112 @@
+{
+  "version": "2.0.0",
+  "presentation": {
+    "echo": true,
+    "reveal": "always",
+    "focus": false,
+    "panel": "dedicated",
+    "showReuseMessage": false,
+    "clear": true
+  },
+  "tasks": [
+    {
+      "label": "mise: setup",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "setup"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "mise: services up",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "dev:up"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "mise: services down",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "dev:down"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "mise: database migrate",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "//apps/server:db:migrate"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "mise: dev",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "mise: build",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "build"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "mise: check",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "check"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "mise: test",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "test"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "mise: test integration",
+      "type": "process",
+      "command": "mise",
+      "args": ["run", "test:integration"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "test"
+    }
+  ]
+}

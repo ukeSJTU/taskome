@@ -1,0 +1,30 @@
+{
+  "name": "web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3002",
+    "build": "next build",
+    "start": "next start --port 3002",
+    "check-types": "next typegen && tsc --noEmit",
+    "lint": "oxlint --fix .",
+    "lint:check": "oxlint --deny-warnings --report-unused-disable-directives ."
+  },
+  "dependencies": {
+    "@taskome/ui": "workspace:*",
+    "next": "16.3.0",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@taskome/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "postcss": "^8.5.26",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
+  }
+}

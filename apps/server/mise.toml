@@ -1,0 +1,81 @@
+[tasks.dev]
+description = "Run the server in development mode"
+run = "pnpm run dev"
+
+[tasks.build]
+description = "Build the server for production"
+run = "pnpm run build"
+
+[tasks.start]
+description = "Start the built server"
+run = "pnpm run start"
+
+[tasks.lint]
+description = "Apply safe lint fixes to the server"
+run = "pnpm run lint"
+
+[tasks.check]
+description = "Run read-only server lint, type, and database artifact checks"
+run = ["pnpm run lint:check", "pnpm run check-types", "bash ../../scripts/check-server-db.sh"]
+
+[tasks.test]
+description = "Run server unit and HTTP contract tests"
+run = "pnpm run test:unit"
+
+[tasks."test:watch"]
+description = "Watch server unit and HTTP contract tests"
+run = "pnpm run test:watch"
+
+[tasks."test:coverage"]
+description = "Generate the server coverage report"
+run = "pnpm run test:coverage"
+
+[tasks."test:integration"]
+description = "Run server tests against a disposable PostgreSQL container"
+run = "pnpm run test:integration"
+
+[tasks."auth:generate"]
+description = "Regenerate the Better Auth Drizzle schema"
+run = [
+  "pnpm run auth:generate",
+  "printf 'Generated src/db/schema/auth.ts; review the schema diff before generating a migration.\\n'",
+]
+
+[tasks."db:generate"]
+description = "Generate a named Drizzle migration from schema changes"
+usage = '''
+arg "<name>" help="Short kebab-case migration name"
+'''
+run = [
+  "pnpm run db:generate --name \"$usage_name\"",
+  "printf 'Generation complete; review any new SQL in drizzle/ before applying it.\\n'",
+]
+
+[tasks."db:check"]
+description = "Check migration history and schema-to-migration drift without modifying tracked files"
+run = "bash ../../scripts/check-server-db.sh"
+
+[tasks."db:migrate"]
+description = "Apply committed Drizzle migrations"
+run = [
+  "pnpm run db:migrate",
+  "printf 'Applied committed migrations to the configured database.\\n'",
+]
+
+[tasks."db:studio"]
+description = "Open Drizzle Studio for a loopback PostgreSQL database"
+run = [
+  "pnpm exec tsx scripts/assert-local-database.ts local",
+  "printf 'Opening Drizzle Studio; review DATABASE_URL before editing data.\\n'",
+  "pnpm run db:studio",
+]
+
+[tasks."db:reset"]
+description = "Recreate and migrate the local Compose database"
+confirm = { message = "Delete all data in the local Taskome Compose database?", default = "no" }
+run = "bash ../../scripts/reset-server-db.sh"
+
+[tasks."db:prepare"]
+hide = true
+depends = ["//:dev:up"]
+run = ["pnpm exec tsx scripts/assert-local-database.ts compose", "pnpm run db:migrate"]

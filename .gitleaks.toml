@@ -1,0 +1,8 @@
+title = "Taskome secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Pinned third-party reference repositories are not Taskome source"
+paths = ['''^references/''']

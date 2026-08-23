@@ -1,0 +1,10 @@
+{
+  "extends": "@taskome/config/tsconfig.react.json",
+  "compilerOptions": {
+    "paths": {
+      "@taskome/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
+}

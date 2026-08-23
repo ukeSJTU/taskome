@@ -1,0 +1,9 @@
+{
+  "ignorePatterns": [
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    "references/**",
+    "apps/console/src/routeTree.gen.ts"
+  ]
+}

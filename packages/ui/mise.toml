@@ -1,0 +1,7 @@
+[tasks.lint]
+description = "Apply safe lint fixes to shared UI source"
+run = "pnpm run lint"
+
+[tasks.check]
+description = "Run read-only shared UI lint and type checks"
+run = ["pnpm run lint:check", "pnpm run check-types"]
