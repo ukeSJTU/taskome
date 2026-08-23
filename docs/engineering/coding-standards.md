@@ -48,7 +48,7 @@ not a coding standard for code that doesn't exist.
 - **Error handling** — two different things, one implemented and one not:
   `apps/server`'s HTTP-level `application/problem+json` convention (RFC 9457)
   is documented in its own README; follow it, don't re-derive a competing
-  convention. `packages/toolkit`'s Attempt `failure_kind` classification
+  convention. `runtime_toolkit`'s Attempt `failure_kind` classification
   doesn't exist yet — see [`architecture/components/tool-runtime.md`](../architecture/components/tool-runtime.md)
   for its target design, and add a convention here once that package exists.
 - **Comments** — root `CLAUDE.md` already states the rule (default to none; only when the WHY is non-obvious). This page doesn't repeat it.
