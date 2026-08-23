@@ -41,5 +41,5 @@ if [[ -e "$worktree" ]]; then
   exit 1
 fi
 
-git fetch origin main
+git fetch --no-recurse-submodules origin main
 git worktree add -b "$branch" "$worktree" origin/main
