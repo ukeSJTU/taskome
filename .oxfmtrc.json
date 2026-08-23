@@ -4,6 +4,7 @@
     ".claude/**",
     ".codex/**",
     "references/**",
+    "runtimes/**/pixi.lock",
     "apps/console/src/routeTree.gen.ts"
   ]
 }

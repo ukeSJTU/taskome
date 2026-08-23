@@ -1,0 +1,7 @@
+schema = 1
+name = "fpocket"
+upstream = "git+https://github.com/Discngine/fpocket.git@4bb0d8447f62fee77e2c3c29f54b5fcaf5e2c066"
+
+[delivery]
+kind = "pixi-package"
+package = "fpocket"
