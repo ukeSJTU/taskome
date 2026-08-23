@@ -1,0 +1,4 @@
+interface:
+  display_name: "Using Git Worktrees"
+  short_description: "Select and prepare a Taskome development checkout"
+  default_prompt: "Use $using-git-worktrees to select and prepare the correct checkout for this change."

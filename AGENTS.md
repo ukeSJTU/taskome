@@ -8,11 +8,26 @@ Taskome is XDenovo's product for running binder and de novo protein design compu
 
 Each AI owns one task at a time.
 
+- **Worktrees:** Before changing repository files, use the `using-git-worktrees` skill to select the direct-edit exception or prepare an isolated worktree.
 - **Tests:** When designing or writing tests, use the `tdd` skill so tests exercise behavior through agreed public seams. See `docs/engineering/testing.md` for this repo's seam definitions, directory conventions, and fixture strategy for `apps/web` and `apps/server`.
 - **Review:** Before opening a feature PR, use the `code-review` skill to review the diff against project standards and its specification.
 - **Conflicts:** When an in-progress merge or rebase has conflicts, use the `resolving-merge-conflicts` skill to resolve them by intent.
 - **Commits:** Write Conventional Commits messages (`type(scope?): subject`); the `commit-msg` hook enforces them with commitlint.
 - **Docs:** When writing documents, if the document is intended to be read by humans, follow the guidance in `writing-web-documentation`; if the document is intended to be read by ai agents, follow the guidance in `writing-for-agents`.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked in GitHub Issues for `ukeSJTU/taskome`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the five default canonical labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Domain documentation uses the single-context layout. See `docs/agents/domain.md`.
 
 ## Engineering principles
 
