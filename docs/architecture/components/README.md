@@ -4,4 +4,6 @@
 
 ## Pages
 
-- [`tool-runtime.md`](./tool-runtime.md) — how each Tool's runtime is structured, what `packages/toolkit` shares across every Tool, and how a Tool Runtime cooperates with the Execution Service without ever calling it directly.
+- [`tool-runtime.md`](./tool-runtime.md) — how each Upstream Software Runtime is
+  structured, what `runtime_toolkit` shares across Runtimes, and how a Tool
+  Runtime cooperates with the Execution Service without calling it directly.

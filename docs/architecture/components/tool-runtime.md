@@ -1,90 +1,393 @@
-# Tool Runtime and packages/toolkit
+# Tool Runtime packaging and `runtime_toolkit`
 
-This page goes one level below [`containers.md`](../containers.md)'s Tool Runtime container: how each Tool's runtime is actually structured in the repository, what it shares with every other Tool, and how it cooperates with the Execution Service without ever talking to it directly. It does not restate the surrounding execution flow — see [`runtime.md`](../runtime.md) for how a Kubernetes Job around a Tool Runtime gets submitted, observed, and finalized.
+This page defines how Taskome packages one Upstream Software as an immutable
+Tool Runtime. It owns the repository layout, the separation between
+Taskome-owned Python code and scientific compute dependencies, upstream source
+tracking, container assembly, and Runtime verification.
 
-> **Target architecture, not shipped code.** No `apps/tool-*` application or `packages/toolkit` package exists in the repository yet. This page describes the accepted design they must follow once built.
+See [`runtime.md`](../runtime.md) for the Kubernetes Job lifecycle around a
+Runtime invocation. See [`containers.md`](../containers.md) for the surrounding
+container responsibilities and trust boundaries.
 
-> **Boundary, not internal design.** This page fixes _what_ `packages/toolkit` is responsible for, _what_ stays Tool-specific, and _how_ a Tool Runtime cooperates with the rest of the system — the boundary is the actual decision here. It does not fix `packages/toolkit`'s internal API: module names, file layout, function signatures, and other internal naming are intentionally left open and need their own concrete design pass immediately before implementation, not inferred from this page's illustrative descriptions.
+> **Accepted target architecture, not shipped behavior.** The repository has
+> an empty `runtimes/` directory and a scaffold at `packages/toolkit`, but no
+> implemented Tool Runtime. The scaffold still uses its original package name
+> and does not yet implement the design on this page.
 
-## One immutable application per Tool
+## Package one Upstream Software as one release unit
 
-Every launch Tool — Pocket Detection, Protein Binder Design, and the rest — is its own application: `apps/tool-fpocket`, `apps/tool-bindcraft`, and so on. Each is a `uv` Python project with its own `Dockerfile`, built into the immutable Runtime artifact that [`containers.md`](../containers.md) says every Attempt's Kubernetes Job runs.
+Each independently released Upstream Software runtime lives at
+`runtimes/<upstream>`. For example, fpocket and BindCraft live at
+`runtimes/fpocket` and `runtimes/bindcraft`.
 
-Each Tool application owns only what's specific to that Tool:
+A Runtime may support more than one Tool only when those Tools share the same
+Upstream Software, dependencies, image, and deployment lifecycle. Naming the
+directory after the Upstream Software preserves that distinction: a Tool is a
+curated product capability, while a Runtime is the execution artifact that
+hosts it.
 
-- its curated input, parameter, and output contract (the reviewed surface [`requirements.md`](../../product/requirements.md)'s `TOOL-002` requires, not Upstream Software's full configuration);
-- its adapter around the actual Upstream Software invocation; and
-- its own tests.
+Every Runtime owns:
 
-Everything else — the plumbing every Tool needs regardless of which Upstream Software it wraps — lives in `packages/toolkit`, a Python library each `apps/tool-*` depends on. The table below names responsibilities, not modules, functions, or files — see [Design packages/toolkit's internal API before implementation](#design-packagestoolkits-internal-api-before-implementation) below:
+- its curated input, parameter, and output contracts;
+- its adapter around the Upstream Software process;
+- its scientific compute environment and upstream identity;
+- its Dockerfile; and
+- tests through the Python Runtime interface and the final image entrypoint.
 
-| `packages/toolkit` responsibility           | Why it's shared, not per-Tool                                                                                                |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Invocation and Result data types            | Every Tool Runtime parses the same shape of input and produces the same shape of manifest.                                   |
-| Staged input download and output upload     | Every Tool Runtime reads from and writes to Object Storage the same way.                                                     |
-| Checksum and manifest generation            | The manifest format that `validateAndFinalize` (see [`runtime.md`](../runtime.md)) verifies is one format, not one per Tool. |
-| Structured logging and error classification | Every Attempt's `failure_kind` needs to come from a shared, consistent classification, not five independent ones.            |
-| Mock invocation mode                        | Described below — every Tool needs the same escape hatch for local development.                                              |
-| Runtime test utilities                      | Testing the sequence below shouldn't be reinvented per Tool.                                                                 |
+Shared Attempt plumbing belongs in `packages/toolkit`, whose target Python
+distribution and import package are `runtime-toolkit` and `runtime_toolkit`.
+The shared package owns:
 
-A Tool's own parameter models and Upstream Software adapter are deliberately _not_ in `packages/toolkit` — they're the one part of each Tool that has to stay Tool-specific, and folding them into a shared package would recreate the "expose Upstream Software's complete configuration" problem `TOOL-002` exists to prevent.
+| Responsibility                                | Why it is shared                                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Invocation and result types                   | Every Runtime accepts the same invocation envelope and produces the same result envelope. |
+| Input download and output upload              | Every Runtime uses the same Attempt-scoped Object Storage flow.                           |
+| Checksums and manifest generation             | The Execution Service validates one result manifest contract.                             |
+| Structured logging and failure classification | Attempt logs and `failure_kind` values must remain consistent across Tools.               |
+| Mock invocation mode                          | Every image needs the same GPU-free local-development path.                               |
+| Runtime test support                          | Each Runtime verifies the same outer execution sequence.                                  |
 
-## The sequence every Tool Runtime follows
+Tool-specific parameter models and process adapters stay inside their Runtime.
+Moving them into `runtime_toolkit` would turn the shared package into a shallow
+registry of unrelated Upstream Software behavior.
 
-A Tool Runtime container has exactly one job: run once, then exit. It is not a server, does not poll for work, and does not outlive its Attempt. Every Tool Runtime performs the same sequence, regardless of which Tool it is:
+## Use one repository shape
 
-1. Read the Attempt's invocation — scoped input references, parameters, and its Object Storage staging target — from whatever the Kubernetes Job's Pod spec and environment carry, and nothing more.
-2. If invoked in mock mode (see below), skip straight to step 4 with deterministic fixture output instead of running the Tool.
-3. Otherwise, download the referenced inputs, then run the Tool's own adapter against them.
-4. Build a manifest describing the result, and upload both the manifest and the staged outputs to the Attempt's Object Storage staging namespace.
-5. Exit with a status that reflects success or failure.
+Every Runtime follows this layout:
 
-The container never receives a Temporal, database, or Kubernetes credential of any kind at any step, matching [`security.md`](../security.md)'s least-authority rule for Tool Runtimes: one short-lived Attempt grant, immutable input references, and its ephemeral workspace. This sequence — not any particular module or function name — is what `packages/toolkit` needs to make easy to implement consistently across every Tool.
+```text
+runtimes/fpocket/
+├── pyproject.toml
+├── src/
+│   └── fpocket_runtime/
+├── tests/
+│   ├── runtime/
+│   └── image/
+├── compute/
+│   ├── pixi.toml
+│   ├── pixi.lock
+│   ├── upstream.toml
+│   └── artifacts.lock.toml  # only when non-package payloads exist
+├── Dockerfile
+└── README.md
+```
 
-## Why the manifest travels through Object Storage, not a direct call
+The naming convention omits the Taskome product name:
 
-`runtime.md`'s `validateAndFinalize` Activity needs the manifest — output names, checksums, sizes, and object references — that a finished Tool Runtime produced. A Tool Runtime can't hand that manifest to the Execution Service directly: it holds no credential that would let it call Temporal, the Kubernetes API, or the Application Database, and it has no network path to the Execution Service to call even if it wanted to.
+| Repository concept  | fpocket example    |
+| ------------------- | ------------------ |
+| Directory           | `runtimes/fpocket` |
+| Python distribution | `fpocket-runtime`  |
+| Import package      | `fpocket_runtime`  |
+| Executable          | `fpocket-runtime`  |
 
-Object Storage is the one system a Tool Runtime already has scoped write access to, so the manifest travels the same way the outputs it describes do: written as a JSON file into the Attempt's own staging namespace, alongside the staged outputs it describes. Once the Kubernetes Job reaches a terminal state, `validateAndFinalize` reads that file from the same staging namespace, checks it against the objects that actually exist, and only then commits the Job Output rows [`data.md`](../data.md) treats as authoritative. This adds no new communication channel — it reuses the boundary [`containers.md`](../containers.md) already draws around Tool Runtimes.
+Using `fpocket_runtime` avoids colliding with an upstream `fpocket` Python
+package. Generic package names such as `adapter` are also invalid because all
+Runtime projects share one development workspace.
 
-Because the Execution Service (TypeScript) and `packages/toolkit` (Python) don't share a language, this manifest format is a schema-level contract, not a shared-code one: both sides parse and produce the same JSON shape independently. Where that schema is defined and how each side validates against it is still open — see [Define the manifest schema's source of truth](#define-the-manifest-schemas-source-of-truth) below.
+`artifacts.lock.toml` is optional. Create it only when a Runtime needs models,
+licensed binaries, or other byte payloads that neither `pixi.lock` nor
+`upstream.toml` identifies. The delivery policy for licensed or very large
+artifacts remains Tool-specific.
 
-## Run without real compute in local development
+## Keep uv and Pixi in separate dependency planes
 
-Every Tool Runtime image supports the same mock invocation mode: step 2 of the sequence above branches around downloading real inputs and running the Tool's own adapter, and returns deterministic fixture output instead — no network access to Object Storage, no GPU, and no real Upstream Software execution required.
+The root uv workspace contains `packages/toolkit` and every `runtimes/*`
+project. All Taskome-owned Python packages share the root `uv.lock`, Python
+compatibility range, and development tools such as Ruff, ty, and pytest. Each
+Runtime still declares its own adapter dependencies in its `pyproject.toml`.
+Root Ruff, ty, and pytest configuration applies to the adapter source and
+Runtime tests, not to vendored or installed Upstream Software under
+`compute/`. Run ty one workspace package at a time so an incomplete Runtime
+does not prevent type checking the others.
 
-This exists specifically to pair with [`deployment.md`](../deployment.md)'s local-development Activity swap: a developer's machine runs the same immutable image real environments run, with the Execution Service pointed at a local container runtime instead of a real Kubernetes cluster, and the image itself pointed at mock mode instead of real compute. The result is that submission, observation, cancellation, and output publication are all exercisable end to end on a GPU-less workstation, without a second, divergent "dev version" of the Tool Runtime to keep in sync with the real one.
+Production builds install only `runtime_toolkit`, the selected Runtime package,
+and their production dependencies into the adapter environment. They do not
+install root lint or test dependency groups.
 
-## Trade-offs and design choices
+Pixi owns the independent compute environment:
 
-- **One immutable image per Tool, not a shared mutable Runtime serving several Tools.** [`overview.md`](../overview.md) allows one Runtime to support more than one Tool only when they share the same Upstream Software, dependencies, artifact, and deployment lifecycle — which is why `apps/tool-fpocket` and `apps/tool-bindcraft` are separate applications rather than branches inside one. The cost is more Dockerfiles and more images to publish; the benefit is that retiring, patching, or rolling back one Tool's Upstream Software version never risks another's.
-- **`packages/toolkit` is Python even though the Execution Service is TypeScript.** It has to be — it's a library `apps/tool-*` imports directly, and every Tool Runtime is Python. The cost is that the Invocation/Result/manifest contract can't be a shared type definition across the process boundary; it has to be a schema both sides implement against independently, as described above.
-- **Mock mode lives inside the real image, not in a separate dev-only image.** This costs a small amount of conditional logic in every entrypoint. It buys the guarantee that local development is exercising the same artifact — not a parallel one that can silently drift from what staging and production actually run.
+```text
+uv
+└── Taskome-owned adapter environment
+    ├── runtime_toolkit
+    ├── fpocket_runtime
+    └── adapter dependencies
 
-## Resolve implementation decisions in the owning section
+Pixi
+└── Upstream compute environment
+    ├── Conda packages and native libraries
+    ├── the Upstream Software when available as a package
+    └── compute-side PyPI dependencies
+```
 
-### Design packages/toolkit's internal API before implementation
+Dependency ownership follows the process seam:
 
-This page fixes `packages/toolkit`'s responsibilities and the sequence a Tool Runtime follows — not its internal API. Module names, function signatures, file layout, and internal naming inside `packages/toolkit` are unspecified and need their own concrete design pass immediately before implementation begins, not inferred from this page's illustrative descriptions.
+- place a dependency in `pyproject.toml` when the adapter or
+  `runtime_toolkit` imports it;
+- place a dependency in `compute/pixi.toml` when the Upstream Software imports
+  or executes it; and
+- allow the same package to appear independently in both environments when
+  both sides genuinely need it.
 
-### Decide the uv workspace layout
+The adapter never imports a module from the compute prefix. It invokes the
+Upstream Software through a subprocess and exchanges configuration, inputs,
+outputs, environment variables, stdout, stderr, and exit status. uv and Pixi
+never modify the same prefix.
 
-Whether each `apps/tool-*` is an independent `uv` project with `packages/toolkit` as a path dependency, or all Python packages share one `uv` workspace (with GPU- or dependency-conflicted Tools excluded and independently locked), is not decided. CUDA and PyTorch compatibility, upstream dependency conflicts, image build reproducibility, independent Tool releases, editable local development, and CI lock verification are the facts that should decide this once gathered.
+Each Runtime commits `pixi.toml` as human-edited intent and `pixi.lock` as the
+exact Linux `x86_64` dependency resolution. A GPU Runtime also records the
+CUDA-compatible solve assumptions required by its supported deployment. The
+Docker build performs a locked Pixi install; the final image contains the
+resulting prefix, not Pixi or a package solver.
 
-### Define the manifest schema's source of truth
+## Track source identity independently of dependencies
 
-Where the Invocation/Result/manifest JSON shape is authoritatively defined, and how the TypeScript Execution Service validates against it independently of `packages/toolkit`'s Python types, is open. A language-neutral schema (for example, JSON Schema generated from `packages/toolkit`'s types, or maintained as its own artifact) is a candidate, not a decision.
+Every Runtime commits `compute/upstream.toml`. This thin Taskome manifest
+identifies the selected upstream source lineage and how the build obtains the
+source bytes. It does not duplicate the Pixi dependency graph, a generated
+SBOM, or release approval state.
 
-### Other open choices already tracked elsewhere
+An existing Conda package can deliver the Upstream Software. fpocket has this
+shape:
 
-- The Tool Runtime artifact format, registry, and publication mechanism — [`containers.md`](../containers.md).
-- Retry policy when a retried Job's original Tool version has been retired — not yet decided by any page.
+```toml
+schema = 1
+name = "fpocket"
+upstream = "git+https://github.com/Discngine/fpocket.git@<full-commit>"
+
+[delivery]
+kind = "pixi-package"
+package = "fpocket"
+```
+
+`pixi.lock` records the exact package channel, build, URL, and hash. The
+upstream manifest records which source revision Taskome reviewed; it does not
+pretend that an upstream Git tag alone identifies the packaged bytes.
+
+When Taskome must maintain source changes, XDenovo forks the upstream
+repository and publishes a source archive as an explicit GitHub Release asset:
+
+```toml
+schema = 1
+name = "BindCraft"
+source = "git+https://github.com/XDenovo/BindCraft.git@<fork-commit>"
+upstream = "git+https://github.com/martinpacesa/BindCraft.git@<upstream-base-commit>"
+
+[delivery]
+kind = "archive"
+uri = "https://github.com/XDenovo/BindCraft/releases/download/<tag>/source.tar.gz"
+sha256 = "<archive-sha256>"
+```
+
+The release process uploads a deterministic archive rather than relying on
+GitHub's automatically generated source archive. The committed SHA-256 makes a
+changed or replaced asset fail closed during the build.
+
+The fork uses two roles:
+
+1. An upstream-tracking branch mirrors the official repository without
+   Taskome changes.
+2. A Runtime branch carries small, independently reviewable Taskome commits on
+   one approved upstream base.
+
+An upgrade rebases the Runtime commits onto a new approved upstream base. If
+upstream accepts one of those commits, the next rebase removes the local copy.
+Release tags such as `v1.5.3-r1` or `git-efb5bf-r1` identify the source archive
+used by Taskome.
+
+The top-level `references/` directory has no release role. Its submodules are
+temporary, read-only research checkouts used while studying external projects.
+A Runtime build, source identity, or test must not depend on a corresponding
+reference checkout, and the reference may be removed after implementation.
+
+## Build from the monorepo root
+
+Every Runtime has its own Dockerfile, but every image uses the monorepo root as
+its build context:
+
+```text
+docker build -f runtimes/fpocket/Dockerfile .
+```
+
+The root context is required because the adapter build consumes the shared
+`uv.lock` and `packages/toolkit`. A restrictive root `.dockerignore` excludes
+reference checkouts, unrelated generated data, local environments, and caches
+from the context.
+
+Root mise tasks provide the stable developer and CI interface:
+
+```text
+mise run runtime:lock -- fpocket
+mise run runtime:source:fetch -- bindcraft
+mise run runtime:build -- fpocket
+mise run runtime:test:image -- fpocket
+mise run runtime:check -- fpocket
+```
+
+The normal build command reads `upstream.toml`, downloads the declared GitHub
+Release asset when required, verifies its SHA-256, and passes the verified
+source to Docker. A separate fetch command exists for diagnosis; developers do
+not need to run it before the normal build.
+
+The implementation behind these tasks belongs under `scripts/runtime/`.
+Repository build and release concerns must not enter `runtime_toolkit`, which
+ships in the Runtime image.
+
+Each Dockerfile has independent adapter-builder, compute-builder, and final
+stages. CPU and GPU Runtimes may choose different pinned base images and system
+libraries. They do not share a conditional universal Dockerfile or a shared
+base image until implemented Runtimes demonstrate stable duplication worth
+extracting.
+
+## Enforce one final image contract
+
+Every final Runtime image uses the same paths:
+
+```text
+/opt/taskome/adapter/    # uv-built adapter environment
+/opt/taskome/compute/    # Pixi-built compute prefix
+/opt/taskome/upstream/   # unpacked source when delivery is an archive
+/opt/taskome/artifacts/  # immutable non-package payloads
+/work/                   # one Attempt's writable workspace
+```
+
+The image:
+
+- runs as a fixed non-root user;
+- treats `/opt/taskome/**` as read-only;
+- writes only to `/work` and explicitly provided temporary locations;
+- omits uv, Pixi, package solvers, compilers, and other build-only tools;
+- enters through the unique `<upstream>-runtime` executable; and
+- invokes the Upstream Software only through the subprocess seam.
+
+The deployment layer selects physical GPUs by limiting which devices the
+container can see. The Runtime passes container-local device identities to the
+Upstream Software and removes or neutralizes upstream attempts to choose host
+physical GPU IDs.
+
+## Run one Attempt, then exit
+
+A Tool Runtime performs the same outer sequence for every Tool:
+
+1. Read the Attempt invocation, scoped input references, parameters, and
+   Object Storage staging target.
+2. In mock mode, produce deterministic fixture output without Object Storage,
+   a GPU, or real Upstream Software execution.
+3. Otherwise download the immutable inputs into the Attempt workspace and run
+   the Tool-specific adapter.
+4. Validate the expected outputs, build the result manifest, and upload both
+   manifest and output files to the Attempt staging namespace.
+5. Exit with a status that distinguishes success from configuration,
+   Upstream Software, infrastructure, cancellation, and publication failure.
+
+The Runtime never receives a Temporal, Kubernetes, Application Database, or
+user credential. It receives only one Attempt-scoped Object Storage grant.
+
+The result manifest travels through Object Storage because the Runtime has no
+direct call path to the Execution Service. Once the Kubernetes Job terminates,
+the Execution Service reads and validates the staged manifest before it commits
+Job Output records. The manifest remains a language-neutral schema implemented
+independently by the TypeScript Execution Service and Python
+`runtime_toolkit`.
+
+## Test the two public seams
+
+Runtime tests use two public seams:
+
+```text
+tests/
+├── runtime/  # Python Runtime interface with a fake upstream subprocess
+└── image/    # final OCI image entrypoint
+```
+
+Runtime-interface tests cover curated input translation, subprocess arguments,
+configuration generation, failure classification, output validation, and
+manifest construction. They do not run scientific compute.
+
+Image tests verify that the adapter and compute prefixes cooperate, required
+executables and dynamic libraries exist, the image runs as non-root, immutable
+paths remain read-only, mock mode needs no network access, and the entrypoint
+produces the expected output contract. Real execution still uses the adapter's
+Attempt-scoped Object Storage access; the Upstream Software must not perform
+undeclared downloads.
+
+CI uses three levels:
+
+1. Every pull request runs Ruff, ty, and the fast Runtime-interface tests.
+2. A change under one Runtime validates its locks, builds its final image, and
+   runs that image in mock mode. A small CPU Tool may also run a real smoke
+   fixture.
+3. Release or explicit qualification jobs run real compute on the required CPU
+   or GPU runner and verify output invariants, resources, and the absence of
+   undeclared compute-time downloads.
+
+Host development does not support real compute as a second execution path.
+Developers run adapter tests on the host and real Upstream Software through the
+same image that production uses.
+
+## Pin Runtime releases by digest
+
+The OCI digest is the authoritative Runtime artifact identity. Kubernetes Jobs
+use the digest, never only a mutable image tag.
+
+A human-readable tag combines the upstream base with a Taskome Runtime
+revision:
+
+```text
+ghcr.io/xdenovo/fpocket-runtime:4.2.3-r1
+ghcr.io/xdenovo/bindcraft-runtime:1.5.3-r2
+```
+
+Increment `rN` when the adapter, Pixi lock, source patches, artifacts, or image
+assembly changes without changing the upstream version. Tool contract versions
+remain independent. A published Tool binds its Tool contract version, upstream
+identity, declared resources, and immutable Runtime digest.
+
+GitHub Container Registry stores final Runtime images. Builds generate an SBOM
+and provenance from the verified source manifest, Pixi lock, uv lock, external
+artifact lock, base-image digest, Taskome commit, and resulting OCI digest. The
+exact SBOM format, signing mechanism, vulnerability scanner, registry retention
+policy, and admission verification remain unresolved security and deployment
+choices.
+
+## Keep Tool-specific decisions with the Tool
+
+The shared structure does not force false scientific uniformity. Each Runtime
+still decides:
+
+- its curated Tool contracts and supported upstream subcommands;
+- CPU, GPU, memory, CUDA, and model requirements;
+- which stochastic controls and output invariants it can promise;
+- the success threshold for candidate-generating computations;
+- how licensed or very large artifacts enter an approved deployment; and
+- its real-compute qualification fixtures and tolerances.
+
+These choices must not weaken the shared dependency, source identity, image,
+process, and verification contracts on this page.
+
+## Resolve the remaining implementation choices at their owning seams
+
+The following choices remain open:
+
+- the internal Python interface of `runtime_toolkit`;
+- the language-neutral Invocation, Result, and manifest schema source of truth;
+- the implementation language and detailed interface of `scripts/runtime/`;
+- exact Docker base images and CUDA compatibility per Runtime;
+- the schema and delivery modes for optional licensed or large artifacts; and
+- SBOM, signing, scanning, retention, and admission-verification mechanisms.
 
 ## Related docs
 
-- [`containers.md`](../containers.md) — the Tool Runtime container responsibilities this page implements.
-- [`runtime.md`](../runtime.md) — the Kubernetes Job lifecycle a Tool Runtime executes inside.
-- [`deployment.md`](../deployment.md) — the local-development Activity swap that mock mode pairs with.
-- [`security.md`](../security.md) — the least-authority rules a Tool Runtime's credentials and network access must satisfy.
-- [`data.md`](../data.md) — why staged outputs aren't Job Outputs until finalization commits.
-- [`../../product/requirements.md`](../../product/requirements.md) — `TOOL-001` and `TOOL-002`, the discoverable and curated Tool contract this page's per-Tool boundary supports.
+- [`containers.md`](../containers.md) — Container responsibilities and Runtime
+  artifact publication.
+- [`runtime.md`](../runtime.md) — Job and Attempt submission, observation,
+  cancellation, and finalization.
+- [`deployment.md`](../deployment.md) — local image execution and production
+  workload placement.
+- [`security.md`](../security.md) — least authority, immutable artifacts, and
+  runtime isolation.
+- [`data.md`](../data.md) — staged output validation and authoritative Job
+  Outputs.
+- [`../../engineering/testing.md`](../../engineering/testing.md) — repository
+  test seams and commands.
