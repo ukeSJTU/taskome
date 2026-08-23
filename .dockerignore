@@ -1,5 +1,7 @@
 **/node_modules
 .git
+.worktrees
+.venv
 
 **/dist
 **/build
@@ -10,6 +12,11 @@
 **/.astro
 **/.turbo
 .turbo
+**/.cache
+coverage
+**/coverage
+.pytest_cache
+.ruff_cache
 
 **/.wrangler
 **/.alchemy
@@ -26,6 +33,13 @@ docker-compose.yml
 **/.env
 **/.env.*
 !**/.env.example
+
+# Development-only repository metadata and editor state.
+.agents
+.claude
+.github
+.vscode
+.idea
 
 local.db
 local.db-*
