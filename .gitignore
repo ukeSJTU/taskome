@@ -67,4 +67,5 @@ temp
 
 # Local scratch work (specs, tickets) not meant for version control
 .scratch/
+docs/research/
 .drizzle-check.*
