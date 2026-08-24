@@ -1,32 +1,56 @@
-import { Button } from "@taskome/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@taskome/ui/components/dropdown-menu";
-import { Moon, Sun } from "lucide-react";
+import {
+  SidebarGroup,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@taskome/ui/components/sidebar";
+import { ChevronRightIcon, SunMoonIcon } from "lucide-react";
 
 import { useTheme } from "@/components/common/theme-provider";
 
 export function ModeToggle() {
-  const { setTheme } = useTheme();
+  const { isMobile } = useSidebar();
+  const { setTheme, theme } = useTheme();
+  const currentTheme = theme === "light" || theme === "dark" ? theme : "system";
+  const currentThemeLabel =
+    currentTheme === "light" ? "Light" : currentTheme === "dark" ? "Dark" : "System";
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="icon" />}>
-        <Sun className="scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-        <Moon className="absolute scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-        <span className="sr-only">Toggle theme</span>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SidebarGroup className="pt-0">
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<SidebarMenuButton tooltip="Appearance" className="pr-2" />}
+            >
+              <SunMoonIcon />
+              <span>Appearance</span>
+              <span className="ml-auto text-xs text-sidebar-foreground/60">
+                {currentThemeLabel}
+              </span>
+              <ChevronRightIcon className="text-sidebar-foreground/50" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side={isMobile ? "bottom" : "right"}
+              align={isMobile ? "end" : "start"}
+            >
+              <DropdownMenuRadioGroup value={currentTheme} onValueChange={setTheme}>
+                <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarGroup>
   );
 }

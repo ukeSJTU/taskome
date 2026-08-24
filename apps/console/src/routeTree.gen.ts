@@ -13,6 +13,7 @@ import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as AuthSettingsChar123SectionChar125RouteImport } from './routes/_auth/settings.{-$section}'
 
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/_auth',
@@ -33,16 +34,24 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthRouteRoute,
 } as any)
+const AuthSettingsChar123SectionChar125Route =
+  AuthSettingsChar123SectionChar125RouteImport.update({
+    id: '/settings/{-$section}',
+    path: '/settings/{-$section}',
+    getParentRoute: () => AuthRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthIndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/settings/{-$section}': typeof AuthSettingsChar123SectionChar125Route
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/': typeof AuthIndexRoute
+  '/settings/{-$section}': typeof AuthSettingsChar123SectionChar125Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,13 +59,20 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_auth/': typeof AuthIndexRoute
+  '/_auth/settings/{-$section}': typeof AuthSettingsChar123SectionChar125Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup'
+  fullPaths: '/' | '/login' | '/signup' | '/settings/{-$section}'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/signup' | '/'
-  id: '__root__' | '/_auth' | '/login' | '/signup' | '/_auth/'
+  to: '/login' | '/signup' | '/' | '/settings/{-$section}'
+  id:
+    | '__root__'
+    | '/_auth'
+    | '/login'
+    | '/signup'
+    | '/_auth/'
+    | '/_auth/settings/{-$section}'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,15 +111,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
+    '/_auth/settings/{-$section}': {
+      id: '/_auth/settings/{-$section}'
+      path: '/settings/{-$section}'
+      fullPath: '/settings/{-$section}'
+      preLoaderRoute: typeof AuthSettingsChar123SectionChar125RouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
   }
 }
 
 interface AuthRouteRouteChildren {
   AuthIndexRoute: typeof AuthIndexRoute
+  AuthSettingsChar123SectionChar125Route: typeof AuthSettingsChar123SectionChar125Route
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthIndexRoute: AuthIndexRoute,
+  AuthSettingsChar123SectionChar125Route:
+    AuthSettingsChar123SectionChar125Route,
 }
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
