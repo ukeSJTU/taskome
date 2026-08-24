@@ -9,6 +9,19 @@ the current-user endpoint, OpenAPI generation, and the database foundation. The
 product domain and compute-coordination APIs described by the target
 architecture are not implemented yet.
 
+## Tech stack
+
+| Technology                  | Role in the server                                          |
+| --------------------------- | ----------------------------------------------------------- |
+| Node.js and TypeScript      | Server runtime and type-safe application code               |
+| Hono                        | HTTP routing, middleware, and application composition       |
+| Zod and `@hono/zod-openapi` | Request and response validation and the OpenAPI contract    |
+| Better Auth                 | Authentication, sessions, and auth database schema          |
+| PostgreSQL and Drizzle ORM  | Application persistence, schema definitions, and migrations |
+| Scalar                      | Interactive rendering of the generated API reference        |
+| Evlog                       | Structured application and request logging                  |
+| Vitest and Testcontainers   | HTTP tests and disposable PostgreSQL integration tests      |
+
 ## Run the server locally
 
 Complete the repository setup in [`CONTRIBUTING.md`](../../CONTRIBUTING.md)
