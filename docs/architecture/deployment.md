@@ -2,7 +2,12 @@
 
 This page explains how Taskome's accepted containers map onto real machines across development, staging, and production, and which deployment choices remain open. It does not repeat [`containers.md`](./containers.md)'s responsibilities or [`runtime.md`](./runtime.md)'s execution flow — it covers what those pages don't: where each container actually runs, how local development avoids needing real compute infrastructure, and the specific choices deployment still has to make.
 
-> **Target architecture, not shipped code.** Nothing on this page exists in the repository yet. This page describes the accepted design the deployment must follow once the Execution Service, Temporal, Kubernetes, Object Storage, and Tool Runtimes are built — see [`overview.md`](./overview.md) and [`containers.md`](./containers.md) for the container-level decisions this page assumes.
+> **Target architecture, not shipped behavior.** The fpocket image skeleton is
+> buildable, but it has no Attempt entrypoint or deployment integration. This
+> page describes the accepted design that the Execution Service, Temporal,
+> Kubernetes, Object Storage, and runnable Tool Runtimes must follow — see
+> [`overview.md`](./overview.md) and [`containers.md`](./containers.md) for the
+> container-level decisions this page assumes.
 
 ## Match deployment shape to how Taskome is actually run
 

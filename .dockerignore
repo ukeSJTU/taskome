@@ -2,6 +2,7 @@
 .git
 .worktrees
 .venv
+references
 
 **/dist
 **/build
@@ -17,6 +18,8 @@ coverage
 **/coverage
 .pytest_cache
 .ruff_cache
+**/.pixi
+**/__pycache__
 
 **/.wrangler
 **/.alchemy
