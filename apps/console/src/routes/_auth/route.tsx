@@ -1,9 +1,9 @@
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { Outlet, createFileRoute, redirect, useMatchRoute } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@taskome/ui/components/sidebar";
 import type { CSSProperties } from "react";
 
 import { RouteErrorState, RoutePendingState } from "@/components/common/route-state";
-import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { AppSidebar, SettingsSidebar } from "@/components/sidebar/app-sidebar";
 import { getCurrentSession } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_auth")({
@@ -23,6 +23,8 @@ export const Route = createFileRoute("/_auth")({
 
 function AuthLayout() {
   const { session } = Route.useRouteContext();
+  const matchRoute = useMatchRoute();
+  const isSettingsRoute = Boolean(matchRoute({ to: "/settings", fuzzy: true }));
 
   return (
     <SidebarProvider
@@ -32,7 +34,11 @@ function AuthLayout() {
         } as CSSProperties
       }
     >
-      <AppSidebar user={session.user} variant="inset" />
+      {isSettingsRoute ? (
+        <SettingsSidebar user={session.user} variant="inset" />
+      ) : (
+        <AppSidebar user={session.user} variant="inset" />
+      )}
       <SidebarInset>
         <div className="flex h-12 shrink-0 items-center px-2 md:hidden">
           <SidebarTrigger />

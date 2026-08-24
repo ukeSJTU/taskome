@@ -13,6 +13,11 @@ import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as AuthSettingsRouteRouteImport } from './routes/_auth/settings/route'
+import { Route as AuthSettingsIndexRouteImport } from './routes/_auth/settings/index'
+import { Route as AuthSettingsApiKeysRouteImport } from './routes/_auth/settings/api-keys'
+import { Route as AuthSettingsProfileRouteImport } from './routes/_auth/settings/profile'
+import { Route as AuthSettingsSecurityRouteImport } from './routes/_auth/settings/security'
 
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/_auth',
@@ -33,30 +38,94 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthRouteRoute,
 } as any)
+const AuthSettingsRouteRoute = AuthSettingsRouteRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthSettingsIndexRoute = AuthSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthSettingsRouteRoute,
+} as any)
+const AuthSettingsApiKeysRoute = AuthSettingsApiKeysRouteImport.update({
+  id: '/api-keys',
+  path: '/api-keys',
+  getParentRoute: () => AuthSettingsRouteRoute,
+} as any)
+const AuthSettingsProfileRoute = AuthSettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthSettingsRouteRoute,
+} as any)
+const AuthSettingsSecurityRoute = AuthSettingsSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AuthSettingsRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthIndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/settings': typeof AuthSettingsRouteRouteWithChildren
+  '/settings/api-keys': typeof AuthSettingsApiKeysRoute
+  '/settings/profile': typeof AuthSettingsProfileRoute
+  '/settings/security': typeof AuthSettingsSecurityRoute
+  '/settings/': typeof AuthSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/': typeof AuthIndexRoute
+  '/settings/api-keys': typeof AuthSettingsApiKeysRoute
+  '/settings/profile': typeof AuthSettingsProfileRoute
+  '/settings/security': typeof AuthSettingsSecurityRoute
+  '/settings': typeof AuthSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_auth': typeof AuthRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/_auth/settings': typeof AuthSettingsRouteRouteWithChildren
   '/_auth/': typeof AuthIndexRoute
+  '/_auth/settings/api-keys': typeof AuthSettingsApiKeysRoute
+  '/_auth/settings/profile': typeof AuthSettingsProfileRoute
+  '/_auth/settings/security': typeof AuthSettingsSecurityRoute
+  '/_auth/settings/': typeof AuthSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/settings'
+    | '/settings/api-keys'
+    | '/settings/profile'
+    | '/settings/security'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/signup' | '/'
-  id: '__root__' | '/_auth' | '/login' | '/signup' | '/_auth/'
+  to:
+    | '/login'
+    | '/signup'
+    | '/'
+    | '/settings/api-keys'
+    | '/settings/profile'
+    | '/settings/security'
+    | '/settings'
+  id:
+    | '__root__'
+    | '/_auth'
+    | '/login'
+    | '/signup'
+    | '/_auth/settings'
+    | '/_auth/'
+    | '/_auth/settings/api-keys'
+    | '/_auth/settings/profile'
+    | '/_auth/settings/security'
+    | '/_auth/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,14 +164,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
+    '/_auth/settings': {
+      id: '/_auth/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthSettingsRouteRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/_auth/settings/': {
+      id: '/_auth/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthSettingsIndexRouteImport
+      parentRoute: typeof AuthSettingsRouteRoute
+    }
+    '/_auth/settings/api-keys': {
+      id: '/_auth/settings/api-keys'
+      path: '/api-keys'
+      fullPath: '/settings/api-keys'
+      preLoaderRoute: typeof AuthSettingsApiKeysRouteImport
+      parentRoute: typeof AuthSettingsRouteRoute
+    }
+    '/_auth/settings/profile': {
+      id: '/_auth/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof AuthSettingsProfileRouteImport
+      parentRoute: typeof AuthSettingsRouteRoute
+    }
+    '/_auth/settings/security': {
+      id: '/_auth/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof AuthSettingsSecurityRouteImport
+      parentRoute: typeof AuthSettingsRouteRoute
+    }
   }
 }
 
+interface AuthSettingsRouteRouteChildren {
+  AuthSettingsApiKeysRoute: typeof AuthSettingsApiKeysRoute
+  AuthSettingsProfileRoute: typeof AuthSettingsProfileRoute
+  AuthSettingsSecurityRoute: typeof AuthSettingsSecurityRoute
+  AuthSettingsIndexRoute: typeof AuthSettingsIndexRoute
+}
+
+const AuthSettingsRouteRouteChildren: AuthSettingsRouteRouteChildren = {
+  AuthSettingsApiKeysRoute: AuthSettingsApiKeysRoute,
+  AuthSettingsProfileRoute: AuthSettingsProfileRoute,
+  AuthSettingsSecurityRoute: AuthSettingsSecurityRoute,
+  AuthSettingsIndexRoute: AuthSettingsIndexRoute,
+}
+
+const AuthSettingsRouteRouteWithChildren =
+  AuthSettingsRouteRoute._addFileChildren(AuthSettingsRouteRouteChildren)
+
 interface AuthRouteRouteChildren {
+  AuthSettingsRouteRoute: typeof AuthSettingsRouteRouteWithChildren
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
+  AuthSettingsRouteRoute: AuthSettingsRouteRouteWithChildren,
   AuthIndexRoute: AuthIndexRoute,
 }
 
