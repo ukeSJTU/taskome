@@ -69,7 +69,12 @@ export function createTaskomeAuthOptions(
           if (!referenceId || !user || tokenResources?.length !== 1) {
             throw new Error("OAuth token is missing its Taskome Grant authority");
           }
+          const request = getAuthRequestCorrelation();
+          if (request.path.endsWith("/oauth2/token") && !request.clientId) {
+            throw new Error("OAuth token request is missing its client binding");
+          }
           return oauthGrants.activateAndClaim({
+            clientId: request.clientId,
             grantId: referenceId,
             ownerUserId: user.id,
             resource: tokenResources[0] ?? "",
@@ -90,7 +95,11 @@ export function createTaskomeAuthOptions(
               });
             }
             const input = await resolveAuthorizationInput(resources.mcp, scopes);
-            return oauthGrants.createReference(user.id, input, getAuthRequestCorrelation());
+            return oauthGrants.createReference(
+              user.id,
+              input,
+              getAuthRequestCorrelation().requestId,
+            );
           },
           page: "/oauth/select-authority",
           shouldRedirect: () => false,

@@ -5,16 +5,50 @@ import { apikey, securityEvent } from "@/db/schema";
 
 export function createApiKeyRepository(db: Database) {
   return {
-    async created(ownerUserId: string, credentialId: string, requestId: string) {
-      await db.insert(securityEvent).values({
-        actorUserId: ownerUserId,
-        credentialId,
-        id: crypto.randomUUID(),
-        operation: "api_key.created",
-        requestId,
-        result: "succeeded",
-        targetId: credentialId,
-        targetType: "api_key",
+    create(input: {
+      expiresAt: Date;
+      hashedSecret: string;
+      id: string;
+      name: string;
+      ownerUserId: string;
+      permissions: string;
+      requestId: string;
+      start: string;
+    }) {
+      return db.transaction(async (transaction) => {
+        const now = new Date();
+        const [created] = await transaction
+          .insert(apikey)
+          .values({
+            createdAt: now,
+            enabled: true,
+            expiresAt: input.expiresAt,
+            id: input.id,
+            key: input.hashedSecret,
+            name: input.name,
+            permissions: input.permissions,
+            prefix: "sk-",
+            rateLimitEnabled: true,
+            rateLimitMax: 100,
+            rateLimitTimeWindow: 60_000,
+            referenceId: input.ownerUserId,
+            requestCount: 0,
+            start: input.start,
+            updatedAt: now,
+          })
+          .returning();
+        await transaction.insert(securityEvent).values({
+          actorUserId: input.ownerUserId,
+          credentialId: input.id,
+          id: crypto.randomUUID(),
+          operation: "api_key.created",
+          requestId: input.requestId,
+          result: "succeeded",
+          targetId: input.id,
+          targetType: "api_key",
+        });
+        if (!created) throw new Error("API key creation returned no record");
+        return created;
       });
     },
     async get(ownerUserId: string, id: string) {

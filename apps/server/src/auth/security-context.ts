@@ -25,8 +25,10 @@ export type SecurityContext =
       credential: { grantId: string; type: "oauth_grant" };
       resource: string;
       scopes: TaskomeScope[];
-      user: SessionIdentity["user"];
+      user: { emailVerified: boolean; id: string };
     };
+
+export type RestSecurityContext = Extract<SecurityContext, { user: SessionIdentity["user"] }>;
 
 export interface VerifiedApiKey {
   id: string;
@@ -50,7 +52,7 @@ export function createRestSecurityContextResolver(options: {
   return async (
     request: Request,
     correlation: RequestCorrelation,
-  ): Promise<SecurityContext | null> => {
+  ): Promise<RestSecurityContext | null> => {
     const authorization = request.headers.get("authorization");
     const hasSessionCookie = sessionCookie.test(request.headers.get("cookie") ?? "");
     if (authorization && hasSessionCookie) throw new Error("multiple_credentials");

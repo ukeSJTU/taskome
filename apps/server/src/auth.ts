@@ -7,17 +7,6 @@ import { db } from "@/db";
 
 interface TaskomeAuthApi {
   api: {
-    adminCreateOAuthClient(input: {
-      body: {
-        application_type: "native";
-        client_name: string;
-        grant_types: string[];
-        redirect_uris: string[];
-        require_pkce: true;
-        response_types: ["code"];
-        token_endpoint_auth_method: "none";
-      };
-    }): Promise<{ client_id: string }>;
     createApiKey(input: {
       body: {
         expiresIn: number;

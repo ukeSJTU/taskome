@@ -1,13 +1,8 @@
 import { and, desc, eq, ne } from "drizzle-orm";
 
 import type { Database } from "@/db/database";
-import {
-  oauthAccessToken,
-  oauthConsent,
-  oauthGrant,
-  oauthRefreshToken,
-  securityEvent,
-} from "@/db/schema";
+import { oauthGrant, securityEvent } from "@/db/schema";
+import { revokeOAuthGrantTokenFamily } from "@/auth/oauth-grant-revocation";
 
 export function createOAuthGrantRepository(db: Database) {
   return {
@@ -46,19 +41,7 @@ export function createOAuthGrantRepository(db: Database) {
             .where(and(eq(oauthGrant.id, id), eq(oauthGrant.ownerUserId, ownerUserId)));
           return Boolean(ownedGrant);
         }
-        await transaction
-          .update(oauthRefreshToken)
-          .set({
-            revoked: revokedAt,
-            rotationReplayExpiresAt: null,
-            rotationReplayResponse: null,
-          })
-          .where(eq(oauthRefreshToken.referenceId, id));
-        await transaction
-          .update(oauthAccessToken)
-          .set({ revoked: revokedAt })
-          .where(eq(oauthAccessToken.referenceId, id));
-        await transaction.delete(oauthConsent).where(eq(oauthConsent.referenceId, id));
+        await revokeOAuthGrantTokenFamily(transaction, id, revokedAt);
         await transaction.insert(securityEvent).values({
           actorUserId: ownerUserId,
           grantId: id,

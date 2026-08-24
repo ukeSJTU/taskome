@@ -1,13 +1,8 @@
 import { and, eq, lt } from "drizzle-orm";
 
 import type { Database } from "@/db/database";
-import {
-  oauthAccessToken,
-  oauthConsent,
-  oauthGrant,
-  oauthRefreshToken,
-  securityEvent,
-} from "@/db/schema";
+import { oauthGrant, securityEvent } from "@/db/schema";
+import { revokeOAuthGrantTokenFamily } from "./oauth-grant-revocation";
 import type { OAuthAuthorizationInput } from "./oauth-authorization-input";
 import { parseTaskomeScopes } from "./scopes";
 
@@ -21,6 +16,7 @@ function sameScopes(left: readonly string[], right: readonly string[]) {
 export function createOAuthGrantService(db: Database) {
   return {
     async activateAndClaim(input: {
+      clientId: string | null;
       grantId: string;
       ownerUserId: string;
       resource: string;
@@ -33,6 +29,7 @@ export function createOAuthGrantService(db: Database) {
       if (
         !grant ||
         grant.ownerUserId !== input.ownerUserId ||
+        (input.clientId !== null && grant.clientId !== input.clientId) ||
         grant.resource !== input.resource ||
         !sameScopes(grant.scopes, scopes) ||
         grant.state === "revoked" ||
@@ -88,19 +85,7 @@ export function createOAuthGrantService(db: Database) {
             .update(oauthGrant)
             .set({ revokedAt: now, state: "revoked", updatedAt: now })
             .where(eq(oauthGrant.id, grant.id));
-          await transaction
-            .update(oauthRefreshToken)
-            .set({
-              revoked: now,
-              rotationReplayExpiresAt: null,
-              rotationReplayResponse: null,
-            })
-            .where(eq(oauthRefreshToken.referenceId, grant.id));
-          await transaction
-            .update(oauthAccessToken)
-            .set({ revoked: now })
-            .where(eq(oauthAccessToken.referenceId, grant.id));
-          await transaction.delete(oauthConsent).where(eq(oauthConsent.referenceId, grant.id));
+          await revokeOAuthGrantTokenFamily(transaction, grant.id, now);
           await transaction.insert(securityEvent).values({
             actorUserId: ownerUserId,
             details: { scopes: input.scopes },

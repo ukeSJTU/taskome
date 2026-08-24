@@ -1,4 +1,7 @@
-import { auth } from "../src/auth";
+import { env } from "@taskome/env/server";
+
+import { registerNativeOAuthClient } from "../src/auth/oauth-client-registration";
+import { protectedResources } from "../src/auth/resources";
 import { database } from "../src/db";
 
 const [clientName, ...redirectUris] = process.argv.slice(2);
@@ -9,18 +12,12 @@ if (!clientName || redirectUris.length === 0) {
 for (const redirectUri of redirectUris) new URL(redirectUri);
 
 try {
-  const client = await auth.api.adminCreateOAuthClient({
-    body: {
-      application_type: "native",
-      client_name: clientName,
-      grant_types: ["authorization_code", "refresh_token"],
-      redirect_uris: redirectUris,
-      require_pkce: true,
-      response_types: ["code"],
-      token_endpoint_auth_method: "none",
-    },
+  const clientId = await registerNativeOAuthClient(database.db, {
+    name: clientName,
+    redirectUris,
+    resource: protectedResources(env.BETTER_AUTH_URL).mcp,
   });
-  process.stdout.write(`${client.client_id}\n`);
+  process.stdout.write(`${clientId}\n`);
 } finally {
   await database.close();
 }

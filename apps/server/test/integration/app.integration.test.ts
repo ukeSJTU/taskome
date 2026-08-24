@@ -2,6 +2,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testconta
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { and, eq } from "drizzle-orm";
 import { resolve } from "node:path";
+import { createHash, randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -11,6 +12,7 @@ import { createApiKeyResolver } from "@/auth/api-key-resolver";
 import { createRestSecurityContextResolver } from "@/auth/security-context";
 import { protectedResources } from "@/auth/resources";
 import { withAuthRequestCorrelation } from "@/auth/request-correlation";
+import { registerNativeOAuthClient } from "@/auth/oauth-client-registration";
 import { createTaskomeMcpHandler } from "@/auth/mcp";
 import { createOAuthGrantService } from "@/auth/oauth-grants";
 import type { DatabaseRuntime } from "@/db/database";
@@ -30,6 +32,18 @@ import { createProjectsModule } from "@/features/projects";
 
 const serverOrigin = "http://localhost:3000";
 const webOrigin = "http://localhost:3001";
+
+async function responseLocation(response: Response) {
+  const location = response.headers.get("location");
+  if (location) return location;
+  const raw = await response.json();
+  const body = z
+    .object({ redirect_uri: z.string().optional(), url: z.string().optional() })
+    .parse(raw);
+  const result = body.redirect_uri ?? body.url;
+  if (!result) throw new Error(`OAuth response has no redirect location: ${JSON.stringify(raw)}`);
+  return result;
+}
 
 describe("server with PostgreSQL and Better Auth", () => {
   let app: App;
@@ -57,11 +71,8 @@ describe("server with PostgreSQL and Better Auth", () => {
     ({ testAuth: auth } = await import("@/auth.test-instance"));
     const getSession = createSessionResolver(auth);
     app = createApp({
-      apiKeyService: createApiKeyService(auth, database.db),
-      authHandler: (request) =>
-        withAuthRequestCorrelation(request.headers.get("x-request-id") ?? crypto.randomUUID(), () =>
-          auth.handler(request),
-        ),
+      apiKeyService: createApiKeyService(database.db),
+      authHandler: (request) => withAuthRequestCorrelation(request, () => auth.handler(request)),
       checkReadiness: database.check,
       corsOrigin: webOrigin,
       drain: () => undefined,
@@ -150,8 +161,18 @@ describe("server with PostgreSQL and Better Auth", () => {
     });
 
     const [stored] = await database.db.select().from(apikey).where(eq(apikey.id, created.id));
+    const creationEvents = await database.db
+      .select()
+      .from(securityEvent)
+      .where(
+        and(
+          eq(securityEvent.credentialId, created.id),
+          eq(securityEvent.operation, "api_key.created"),
+        ),
+      );
     expect(stored?.key).not.toBe(created.secret);
     expect(stored?.key).not.toContain(created.secret);
+    expect(creationEvents).toHaveLength(1);
 
     const listResponse = await app.request(`${serverOrigin}/api/v1/api-keys`, { headers });
     const listed = await listResponse.json();
@@ -214,6 +235,114 @@ describe("server with PostgreSQL and Better Auth", () => {
     expect(metadata).not.toHaveProperty("registration_endpoint");
   });
 
+  it("issues and refreshes a Grant-bound token for a pre-registered PKCE client", async () => {
+    const test = (await auth.$context).test;
+    const user = await test.saveUser(
+      test.createUser({ email: "oauth-flow@example.com", emailVerified: true }),
+    );
+    const headers = await test.getAuthHeaders({ userId: user.id });
+    headers.set("accept", "application/json");
+    headers.set("content-type", "application/json");
+    headers.set("origin", webOrigin);
+    const redirectUri = "http://127.0.0.1:32123/oauth/callback";
+    const clientId = await registerNativeOAuthClient(database.db, {
+      name: "Integration Client",
+      redirectUris: [redirectUri],
+      resource: `${serverOrigin}/mcp`,
+    });
+    const verifier = randomBytes(32).toString("base64url");
+    const challenge = createHash("sha256").update(verifier).digest("base64url");
+    const authorize = new URL(`${serverOrigin}/api/auth/oauth2/authorize`);
+    authorize.search = new URLSearchParams({
+      client_id: clientId,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      redirect_uri: redirectUri,
+      resource: `${serverOrigin}/mcp`,
+      response_type: "code",
+      scope: "openid offline_access taskome:access",
+      state: "integration-state",
+    }).toString();
+
+    const postLoginLocation = await responseLocation(await app.request(authorize, { headers }));
+    const postLoginQuery = new URL(postLoginLocation, serverOrigin).search.slice(1);
+    const consentLocation = await responseLocation(
+      await app.request(`${serverOrigin}/api/auth/oauth2/continue`, {
+        body: JSON.stringify({ oauth_query: postLoginQuery, postLogin: true }),
+        headers,
+        method: "POST",
+      }),
+    );
+    const consentQuery = new URL(consentLocation, serverOrigin).search.slice(1);
+    const callbackLocation = await responseLocation(
+      await app.request(`${serverOrigin}/api/auth/oauth2/consent`, {
+        body: JSON.stringify({ accept: true, oauth_query: consentQuery }),
+        headers,
+        method: "POST",
+      }),
+    );
+    const code = new URL(callbackLocation).searchParams.get("code");
+    expect(code).toBeTruthy();
+
+    const tokenResponse = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
+      body: new URLSearchParams({
+        client_id: clientId,
+        code: code ?? "",
+        code_verifier: verifier,
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri,
+      }),
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      method: "POST",
+    });
+    const tokens = z
+      .object({ access_token: z.string(), refresh_token: z.string() })
+      .parse(await tokenResponse.json());
+    expect(tokenResponse.status).toBe(200);
+    const [grant] = await database.db
+      .select()
+      .from(oauthGrant)
+      .where(and(eq(oauthGrant.clientId, clientId), eq(oauthGrant.ownerUserId, user.id)));
+    expect(grant).toMatchObject({ state: "active" });
+
+    const refreshBody = new URLSearchParams({
+      client_id: clientId,
+      grant_type: "refresh_token",
+      refresh_token: tokens.refresh_token,
+    });
+    const firstRefresh = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
+      body: refreshBody,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      method: "POST",
+    });
+    expect(firstRefresh.status).toBe(200);
+    const rotated = z
+      .object({ access_token: z.string(), refresh_token: z.string() })
+      .parse(await firstRefresh.json());
+    const replayRefresh = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
+      body: refreshBody,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      method: "POST",
+    });
+    expect(replayRefresh.status).toBe(200);
+
+    const revokeResponse = await app.request(`${serverOrigin}/api/v1/oauth-grants/${grant?.id}`, {
+      headers,
+      method: "DELETE",
+    });
+    expect(revokeResponse.status).toBe(204);
+    const revokedRefresh = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
+      body: new URLSearchParams({
+        client_id: clientId,
+        grant_type: "refresh_token",
+        refresh_token: rotated.refresh_token,
+      }),
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      method: "POST",
+    });
+    expect(revokedRefresh.status).toBe(400);
+  });
+
   it("revokes one OAuth Grant, its token family, replay response, consent, and audit atomically", async () => {
     const test = (await auth.$context).test;
     const user = await test.saveUser(
@@ -238,6 +367,16 @@ describe("server with PostgreSQL and Better Auth", () => {
       scopes: ["taskome:access"],
       state: "active",
     });
+    const grantService = createOAuthGrantService(database.db);
+    await expect(
+      grantService.activateAndClaim({
+        clientId: "different-client",
+        grantId,
+        ownerUserId: user.id,
+        resource: `${serverOrigin}/mcp`,
+        scopes: ["taskome:access"],
+      }),
+    ).rejects.toThrow("not authoritative");
     const refreshId = crypto.randomUUID();
     await database.db.insert(oauthRefreshToken).values({
       clientId,

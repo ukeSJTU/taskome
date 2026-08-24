@@ -1,6 +1,9 @@
+import { randomBytes } from "node:crypto";
+
+import { defaultKeyHasher } from "@better-auth/api-key";
+
 import { apiKeyDefaultLifetimeSeconds, apiKeyMaximumLifetimeSeconds } from "@/auth/factory";
 import { permissionsToScopes, scopePermissions, type TaskomeScope } from "@/auth/scopes";
-import type { Auth } from "@/auth";
 import type { Database } from "@/db/database";
 import { apikey } from "@/db/schema";
 import { createApiKeyRepository } from "./api-key.repository";
@@ -33,7 +36,7 @@ function metadataFor(record: typeof apikey.$inferSelect): ApiKeyMetadata {
   };
 }
 
-export function createApiKeyService(auth: Auth, db: Database) {
+export function createApiKeyService(db: Database) {
   const repository = createApiKeyRepository(db);
 
   return {
@@ -46,27 +49,29 @@ export function createApiKeyService(auth: Auth, db: Database) {
     }) {
       const expiresIn = input.expiresIn ?? apiKeyDefaultLifetimeSeconds;
       if (expiresIn > apiKeyMaximumLifetimeSeconds) throw new RangeError("API key expiry");
-      const created = await auth.api.createApiKey({
-        body: {
-          expiresIn,
-          name: input.name,
-          permissions: scopePermissions(input.scopes),
-          prefix: "sk-",
-          userId: input.ownerUserId,
-        },
+      const secret = `sk-${randomBytes(48).toString("base64url")}`;
+      const expiresAt = new Date(Date.now() + expiresIn * 1000);
+      const created = await repository.create({
+        expiresAt,
+        hashedSecret: await defaultKeyHasher(secret),
+        id: crypto.randomUUID(),
+        name: input.name,
+        ownerUserId: input.ownerUserId,
+        permissions: JSON.stringify(scopePermissions(input.scopes)),
+        requestId: input.requestId,
+        start: secret.slice(0, 6),
       });
-      await repository.created(input.ownerUserId, created.id, input.requestId);
       return {
         metadata: {
           createdAt: created.createdAt,
-          expiresAt: created.expiresAt ?? new Date(Date.now() + expiresIn * 1000),
+          expiresAt: created.expiresAt ?? expiresAt,
           id: created.id,
           lastUsedAt: created.lastRequest ?? null,
           name: created.name ?? input.name,
           scopes: input.scopes,
           state: "active" as const,
         },
-        secret: created.key,
+        secret,
       };
     },
 
