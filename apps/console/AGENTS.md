@@ -6,8 +6,9 @@
   between applications, read the introduction in [`README.md`](README.md) and
   the Web App responsibility in
   [`docs/architecture/containers.md`](../../docs/architecture/containers.md).
-- **Routes and UI:** Before adding routes or deciding whether a component is
-  local or shared, read [`README.md`](README.md#work-with-routes-and-ui).
+- **Routes and UI:** Before adding or reorganizing a route or page, or deciding
+  whether UI is local or shared, follow
+  [`README.md`](README.md#work-with-routes-and-ui).
 - **Application API:** Before consuming or regenerating the application API
   client, read [`README.md`](README.md#use-the-server-api).
 

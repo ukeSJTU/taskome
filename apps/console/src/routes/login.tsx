@@ -1,7 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { AuthPage } from "@/components/auth/auth-page";
-import { LoginForm } from "@/components/auth/login-form";
+import { LoginPage } from "@/components/auth/login-page";
 import { RouteErrorState, RoutePendingState } from "@/components/common/route-state";
 import { getCurrentSession } from "@/lib/auth-client";
 
@@ -16,11 +15,3 @@ export const Route = createFileRoute("/login")({
   errorComponent: RouteErrorState,
   component: LoginPage,
 });
-
-function LoginPage() {
-  return (
-    <AuthPage>
-      <LoginForm />
-    </AuthPage>
-  );
-}

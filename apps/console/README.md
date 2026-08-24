@@ -63,6 +63,15 @@ TanStack Router generates `routeTree.gen.ts` from files under `src/routes`.
 Treat the generated file as build output and make route changes in the route
 source files.
 
+Keep each leaf route file focused on TanStack Router configuration and render a
+descriptively named page module from
+`src/components/<feature>/<screen>-page.tsx`. Route modules own URL parsing,
+guards, loaders, redirects, and route-level pending, error, and not-found
+behavior. Root and layout routes also own their layout composition. Page
+modules own the screen implementation and keep their tests beside them. Name
+page files for the screen, such as `projects-page.tsx`, so repository-wide
+searches remain specific.
+
 Reusable primitives and global design tokens live in `packages/ui`. Import them
 through public entry points such as `@taskome/ui/components/button`. Keep
 console-specific pages and composed product components in this app.
