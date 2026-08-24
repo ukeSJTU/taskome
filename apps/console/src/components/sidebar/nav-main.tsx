@@ -35,6 +35,7 @@ type MainNavItemData = {
 function MainNavItem({ item, pathname }: { item: MainNavItemData; pathname: string }) {
   const { isMobile, state } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
+  const isActive = item.url !== "#" && item.url === pathname;
 
   if (item.children && isCollapsed) {
     return (
@@ -89,11 +90,20 @@ function MainNavItem({ item, pathname }: { item: MainNavItemData; pathname: stri
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
+        className="relative"
         tooltip={item.title}
-        isActive={item.url !== "#" && item.url === pathname}
-        render={item.url === "/" ? <Link to="/" /> : <a href={item.url} />}
+        isActive={isActive}
+        render={
+          item.url === "/" ? <Link to="/" activeOptions={{ exact: true }} /> : <a href={item.url} />
+        }
       >
         {item.icon}
+        {isActive ? (
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-2 left-0 hidden w-0.5 rounded-r-full bg-sidebar-foreground group-data-[collapsible=icon]:block"
+          />
+        ) : null}
         <span>{item.title}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>

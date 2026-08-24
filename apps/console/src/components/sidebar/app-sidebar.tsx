@@ -317,14 +317,29 @@ export function SettingsSidebar({
                 </SidebarGroupLabel>
                 <SidebarMenu aria-labelledby={`settings-${section.label.toLowerCase()}-label`}>
                   {section.items.map((item) => {
+                    const isActive = pathname === item.to;
+
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
+                          className="relative"
                           tooltip={item.title}
-                          isActive={pathname === item.to}
-                          render={<Link to={item.to} onClick={closeMobileSidebar} />}
+                          isActive={isActive}
+                          render={
+                            <Link
+                              to={item.to}
+                              activeOptions={{ exact: true }}
+                              onClick={closeMobileSidebar}
+                            />
+                          }
                         >
                           {item.icon}
+                          {isActive ? (
+                            <span
+                              aria-hidden="true"
+                              className="absolute inset-y-2 left-0 hidden w-0.5 rounded-r-full bg-sidebar-foreground group-data-[collapsible=icon]:block"
+                            />
+                          ) : null}
                           <span>{item.title}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
