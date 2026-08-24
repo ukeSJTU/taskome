@@ -4,9 +4,10 @@
 authorization, the application REST surface, and Taskome domain records in
 PostgreSQL. Scientific compute runs outside this process.
 
-The current implementation provides Better Auth, health and readiness checks,
-Project lifecycle APIs, OpenAPI generation, and the database foundation. The
-remaining product domain and compute-coordination APIs described by the target
+The current implementation provides browser sessions, scoped API keys, the
+OAuth and MCP authorization foundation, health and readiness checks, the
+current-user endpoint, OpenAPI generation, and PostgreSQL persistence. The
+product domain and compute-coordination APIs described by the target
 architecture are not implemented yet.
 
 ## Tech stack
@@ -21,6 +22,10 @@ architecture are not implemented yet.
 | Scalar                      | Interactive rendering of the generated API reference        |
 | Evlog                       | Structured application and request logging                  |
 | Vitest and Testcontainers   | HTTP tests and disposable PostgreSQL integration tests      |
+
+Better Auth and its API-key, CIMD, MCP, and OAuth Provider packages stay on
+the pinned 1.7 integration line. The MCP endpoint uses version 2 of the
+official TypeScript SDK.
 
 ## Run the server locally
 
@@ -45,6 +50,32 @@ Use [`/healthz`](http://localhost:3000/healthz) for process liveness and
 
 The server uses Scalar to render its current API reference at
 [http://localhost:3000/reference](http://localhost:3000/reference).
+
+## Use programmatic access in development
+
+Taskome derives both protected resources from `BETTER_AUTH_URL`:
+
+- the REST resource is `<origin>/api/v1`;
+- the MCP resource and endpoint are `<origin>/mcp`.
+
+The development scope registry contains `taskome:access`. API keys use the
+`sk-` prefix and the standard bearer header:
+
+```http
+Authorization: Bearer sk-<secret>
+```
+
+API-key management is available only through Taskome's `/api/v1/api-keys`
+operations with a verified user and a browser session created within the last
+15 minutes. Creation returns the secret once. List, inspect, update, and revoke
+responses contain metadata only. The default lifetime is 90 days, and the
+maximum is 365 days.
+
+OAuth discovery, authorization, token, JWKS, CIMD, and specific-token
+revocation stay under Better Auth's protocol routes. Dynamic Client
+Registration is disabled. The canonical `/mcp` route accepts ordinary Bearer
+tokens, rejects the legacy session-oriented MCP protocol, and checks the
+Taskome OAuth Grant in PostgreSQL after JWT verification.
 
 ## Understand the source layout
 
@@ -101,3 +132,16 @@ mise run //apps/server:db:migrate
 
 Taskome deliberately has no `db:push` task. Shared, local, and test databases
 are built from committed migrations.
+
+The auth generator uses `src/auth.generate.ts`, which omits runtime schema
+validation while producing the new schema. Production uses `src/auth.ts` and
+validates the complete generated schema. Tests use the separate
+`src/auth.test-instance.ts`; only that instance includes Better Auth's
+privileged `testUtils()` context.
+
+After authentication, authorization, or persistence changes, run both suites:
+
+```bash
+mise run //apps/server:test
+mise run //apps/server:test:integration
+```

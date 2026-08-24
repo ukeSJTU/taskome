@@ -7,6 +7,7 @@ import { createRuntime } from "@/runtime";
 const runtime = createRuntime({
   corsOrigin: env.CORS_ORIGIN,
   environment: env.NODE_ENV,
+  serverOrigin: env.BETTER_AUTH_URL,
 });
 
 const server = serve(

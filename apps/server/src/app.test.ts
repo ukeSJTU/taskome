@@ -12,11 +12,23 @@ function createTestApp(
   } = {},
 ) {
   return createApp({
+    apiKeyService: {
+      create: () => Promise.reject(new Error("not used")),
+      get: () => Promise.resolve(null),
+      list: () => Promise.resolve([]),
+      revoke: () => Promise.resolve(false),
+      update: () => Promise.resolve(null),
+    },
     authHandler: overrides.authHandler ?? (() => new Response("auth handler")),
     checkReadiness: overrides.checkReadiness ?? (() => Promise.resolve()),
     corsOrigin,
     drain: () => undefined,
     getSession: overrides.getSession ?? (() => Promise.resolve(null)),
+    oauthGrantService: {
+      get: () => Promise.resolve(undefined),
+      list: () => Promise.resolve([]),
+      revoke: () => Promise.resolve(false),
+    },
     projects: {
       archiveProject: () => Promise.reject(new Error("unused test Project method")),
       createProject: () => Promise.reject(new Error("unused test Project method")),
@@ -85,16 +97,19 @@ describe("server HTTP interface", () => {
       info: { title: "Taskome API" },
       openapi: "3.1.0",
     });
+    expect(document).toHaveProperty(["paths", "/api/v1/me"]);
+    expect(document).toHaveProperty(["paths", "/api/v1/api-keys"]);
+    expect(document).toHaveProperty(["paths", "/api/v1/oauth-grants"]);
     expect(document).toHaveProperty(["paths", "/api/v1/projects"]);
     expect(document).not.toHaveProperty(["paths", "/api/auth/{path}"]);
     expect(referenceResponse.status).toBe(200);
     expect(referenceResponse.headers.get("content-type")).toContain("text/html");
   });
 
-  it("requires a session for the Projects interface", async () => {
+  it("requires a session for the current-user interface", async () => {
     const app = createTestApp();
 
-    const response = await app.request("/api/v1/projects");
+    const response = await app.request("/api/v1/me");
 
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({
@@ -102,6 +117,41 @@ describe("server HTTP interface", () => {
       status: 401,
       title: "Unauthorized",
     });
+  });
+
+  it("rejects competing browser and bearer credentials", async () => {
+    const app = createTestApp();
+
+    const response = await app.request("/api/v1/me", {
+      headers: {
+        authorization: "Bearer sk-competing",
+        cookie: "better-auth.session_token=session",
+      },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({
+      code: "unauthorized",
+      detail: "Present exactly one credential type.",
+    });
+  });
+
+  it("shields Better Auth API-key management endpoints", async () => {
+    const app = createTestApp();
+
+    const response = await app.request("/api/auth/api-key/list");
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: "not_found" });
+  });
+
+  it("shields Better Auth OAuth management while retaining protocol routes", async () => {
+    const app = createTestApp();
+
+    const response = await app.request("/api/auth/oauth2/create-client", { method: "POST" });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: "not_found" });
   });
 
   it("uses the configured credentialed CORS origin", async () => {
