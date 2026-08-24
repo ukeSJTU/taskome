@@ -98,7 +98,7 @@ boundaries, data ownership, execution, and deployment.
 | `packages`                               | Shared libraries and configuration                            |
 | [`runtimes`](runtimes/fpocket/README.md) | Immutable environments for scientific Upstream Software       |
 | [`docs`](docs/README.md)                 | Internal product, architecture, and engineering documentation |
-| `references`                             | Read-only, pinned upstream research checkouts                 |
+| [`references`](references/README.md)     | Read-only, pinned upstream research checkouts                 |
 
 The main implementation stack includes React, TanStack Router, Next.js,
 Tailwind CSS, Hono, Zod OpenAPI, Better Auth, PostgreSQL, Drizzle ORM, Go with
