@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute, redirect, useLocation } from "@tanstack/react-router";
+import { Outlet, createFileRoute, redirect, useMatchRoute } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@taskome/ui/components/sidebar";
 import type { CSSProperties } from "react";
 
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/_auth")({
 
 function AuthLayout() {
   const { session } = Route.useRouteContext();
-  const pathname = useLocation({ select: (location) => location.pathname });
-  const isSettingsRoute = pathname === "/settings" || pathname.startsWith("/settings/");
+  const matchRoute = useMatchRoute();
+  const isSettingsRoute = Boolean(matchRoute({ to: "/settings", fuzzy: true }));
 
   return (
     <SidebarProvider

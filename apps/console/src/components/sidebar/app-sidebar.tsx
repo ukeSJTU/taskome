@@ -99,24 +99,26 @@ const data = {
   ],
 };
 
-type SettingsSection = "profile" | "security" | "api-keys" | undefined;
-
 const settingsSections = [
   {
     label: "Account",
     items: [
-      { title: "General", section: undefined, icon: <Settings2Icon /> },
-      { title: "Profile", section: "profile", icon: <UserRoundIcon /> },
-      { title: "Security", section: "security", icon: <ShieldCheckIcon /> },
+      { title: "General", to: "/settings", icon: <Settings2Icon /> },
+      { title: "Profile", to: "/settings/profile", icon: <UserRoundIcon /> },
+      { title: "Security", to: "/settings/security", icon: <ShieldCheckIcon /> },
     ],
   },
   {
     label: "Developer",
-    items: [{ title: "API Keys", section: "api-keys", icon: <KeyRoundIcon /> }],
+    items: [{ title: "API Keys", to: "/settings/api-keys", icon: <KeyRoundIcon /> }],
   },
 ] satisfies {
   label: string;
-  items: { title: string; section: SettingsSection; icon: React.ReactNode }[];
+  items: {
+    title: string;
+    to: "/settings" | "/settings/profile" | "/settings/security" | "/settings/api-keys";
+    icon: React.ReactNode;
+  }[];
 }[];
 
 function useCloseMobileSidebar() {
@@ -152,10 +154,12 @@ function SearchCommand() {
     void navigate({ to: "/" });
   };
 
-  const navigateToSettings = (section: SettingsSection) => {
+  const navigateToSettings = (
+    to: "/settings" | "/settings/profile" | "/settings/security" | "/settings/api-keys",
+  ) => {
     setOpen(false);
     closeMobileSidebar();
-    void navigate({ to: "/settings/{-$section}", params: { section } });
+    void navigate({ to });
   };
 
   return (
@@ -195,7 +199,7 @@ function SearchCommand() {
                   <CommandItem
                     key={item.title}
                     value={`${section.label} ${item.title}`}
-                    onSelect={() => navigateToSettings(item.section)}
+                    onSelect={() => navigateToSettings(item.to)}
                   >
                     {item.icon}
                     <span>{item.title}</span>
@@ -220,13 +224,7 @@ function SettingsLink() {
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Settings"
-              render={
-                <Link
-                  to="/settings/{-$section}"
-                  params={{ section: undefined }}
-                  onClick={closeMobileSidebar}
-                />
-              }
+              render={<Link to="/settings" onClick={closeMobileSidebar} />}
             >
               <Settings2Icon />
               <span>Settings</span>
@@ -319,20 +317,12 @@ export function SettingsSidebar({
                 </SidebarGroupLabel>
                 <SidebarMenu aria-labelledby={`settings-${section.label.toLowerCase()}-label`}>
                   {section.items.map((item) => {
-                    const href = item.section ? `/settings/${item.section}` : "/settings";
-
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
                           tooltip={item.title}
-                          isActive={pathname === href}
-                          render={
-                            <Link
-                              to="/settings/{-$section}"
-                              params={{ section: item.section }}
-                              onClick={closeMobileSidebar}
-                            />
-                          }
+                          isActive={pathname === item.to}
+                          render={<Link to={item.to} onClick={closeMobileSidebar} />}
                         >
                           {item.icon}
                           <span>{item.title}</span>
