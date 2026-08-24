@@ -1,10 +1,10 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { resolve } from "node:path";
 import { createHash, randomBytes } from "node:crypto";
 import { serve } from "@hono/node-server";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { createApp, type App } from "@/app";
@@ -343,16 +343,18 @@ describe("server with PostgreSQL and Better Auth", () => {
     });
     expect(replayRefresh.status).toBe(200);
 
-    await database.db
-      .update(oauthRefreshToken)
-      .set({ rotationReplayExpiresAt: new Date(Date.now() - 1_000) })
-      .where(and(eq(oauthRefreshToken.clientId, clientId), isNotNull(oauthRefreshToken.revoked)));
-    const expiredReplay = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
-      body: refreshBody,
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      method: "POST",
-    });
-    expect(expiredReplay.status).toBe(400);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(Date.now() + 31_000));
+    try {
+      const expiredReplay = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
+        body: refreshBody,
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        method: "POST",
+      });
+      expect(expiredReplay.status).toBe(400);
+    } finally {
+      vi.useRealTimers();
+    }
 
     const raceBody = new URLSearchParams({
       client_id: clientId,
@@ -386,20 +388,14 @@ describe("server with PostgreSQL and Better Auth", () => {
       method: "POST",
     });
     expect(revokedRefresh.status).toBe(400);
-    const revokedMcp = await createTaskomeMcpHandler(
-      auth,
-      createOAuthGrantService(database.db),
-      serverOrigin,
-    )(
-      new Request(`${serverOrigin}/mcp`, {
-        body: JSON.stringify({ id: 1, jsonrpc: "2.0", method: "initialize", params: {} }),
-        headers: {
-          authorization: `Bearer ${tokens.access_token}`,
-          "content-type": "application/json",
-        },
-        method: "POST",
-      }),
-    );
+    const revokedMcp = await app.request(`${serverOrigin}/mcp`, {
+      body: JSON.stringify({ id: 1, jsonrpc: "2.0", method: "initialize", params: {} }),
+      headers: {
+        authorization: `Bearer ${tokens.access_token}`,
+        "content-type": "application/json",
+      },
+      method: "POST",
+    });
     expect(revokedMcp.status).toBe(401);
   });
 
