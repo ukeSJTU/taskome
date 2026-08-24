@@ -1,45 +1,72 @@
-# Taskome Docs
+# Taskome documentation site
 
-This is the Taskome documentation application, generated with
-[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
+`apps/docs` is the public documentation site for people who use Taskome. It is
+a Next.js application backed by Fumadocs and MDX. It is separate from the
+internal product, architecture, and engineering documents under the repository
+[`docs/`](../../docs/README.md) directory.
 
-Run development server:
+The current site still contains starter content. Treat pages under
+`content/docs` as placeholders until product-facing guides and reference pages
+replace them.
+
+## Run the site locally
+
+From the repository root:
 
 ```bash
-npm run dev
-# or
-pnpm dev
-# or
-yarn dev
+mise run setup
+mise run //apps/docs:dev
 ```
 
-Open http://localhost:4000 with your browser to see the result.
+Open [http://localhost:4000](http://localhost:4000), then visit
+[http://localhost:4000/docs](http://localhost:4000/docs) to render the MDX
+documentation collection.
 
-## Explore
+## Write public documentation
 
-In the project, you can see:
+Author public pages under `content/docs`. Each MDX page supplies frontmatter
+for at least its title and description:
 
-- `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
-- `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
+```mdx
+---
+title: Submit a job
+description: Configure and submit a Taskome Tool from the web app.
+---
+```
 
-| Route                     | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `app/(home)`              | The route group for your landing page and other pages. |
-| `app/docs`                | The documentation layout and pages.                    |
-| `app/api/search/route.ts` | The Route Handler for search.                          |
+Use the public documentation for user journeys, supported product behavior,
+and external reference material. Keep internal design rationale, target
+architecture, engineering conventions, and planning documents under the root
+`docs/` directory.
 
-### Fumadocs MDX
+The application routes include:
 
-Collections are defined with the [Macro API](https://fumadocs.dev/docs/mdx/macro) in `lib/source.ts`.
+| Route                              | Purpose                               |
+| ---------------------------------- | ------------------------------------- |
+| `/`                                | Documentation landing page            |
+| `/docs`                            | Fumadocs page collection              |
+| `/api/search`                      | Documentation search index            |
+| `/llms.txt` and `/llms-full.txt`   | Text views for language-model clients |
+| `/llms.mdx/docs/<slug>/content.md` | Processed Markdown for one page       |
 
-Read the [Introduction](https://fumadocs.dev/docs/mdx) for further details.
+Fumadocs source configuration lives in `src/lib/source.ts`. Layout and route
+code belongs under `src/app`; reusable MDX rendering components belong in
+`src/components/mdx.tsx`.
 
-## Learn More
+## Verify a change
 
-To learn more about Next.js and Fumadocs, take a look at the following
-resources:
+```bash
+mise run //apps/docs:check
+mise run //apps/docs:build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
-  features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Fumadocs](https://fumadocs.dev) - learn about Fumadocs
+The production build is the strongest local verification for MDX imports,
+generated routes, and page rendering.
+
+## Related documentation
+
+- The repository [`docs/README.md`](../../docs/README.md) routes internal
+  product and engineering documentation.
+- [`docs/product/vision.md`](../../docs/product/vision.md) defines the launch
+  boundary that public documentation must represent accurately.
+- [`AGENTS.md`](AGENTS.md) contains generated Next.js instructions for AI agents.

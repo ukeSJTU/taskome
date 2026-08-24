@@ -1,120 +1,88 @@
-# taskome
+# Taskome
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Hono, and more.
+Taskome is XDenovo's platform for running, managing, and reproducing
+protein-design compute. It gives scientists one product for submitting work,
+tracking execution history, and working with scientific files through a browser,
+an AI agent, a CLI, or a direct API client.
 
-## Features
+The repository currently contains the product foundations: the authenticated
+console, control-plane server, CLI, public sites, shared packages, and an fpocket
+Runtime skeleton. The complete scientific execution path described in the
+architecture documentation is not implemented yet.
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - Lightweight, performant server framework
-- **Node.js** - Runtime environment
-- **Go CLI** - Cobra-based command-line interface
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
+## Start local development
 
-## Getting Started
-
-Install the pinned toolchain and dependencies:
+Install [mise](https://mise.jdx.dev/) and Docker, then run the setup task from the
+repository root. Mise installs the pinned Node.js, pnpm, Go, Python, uv, and Pixi
+toolchain; the task also installs dependencies and creates missing local
+environment files.
 
 ```bash
 mise run setup
+mise run doctor
 ```
 
-## Local development
-
-The local Compose stack runs PostgreSQL, Temporal's development server, and a
-SeaweedFS S3-compatible object store. SeaweedFS keeps objects in a named volume,
-serves S3 at [http://localhost:8333](http://localhost:8333), and serves its
-development Admin UI at
-[http://localhost:23646](http://localhost:23646).
-
-Start the support services, create the server environment file, and apply the
-committed PostgreSQL migrations:
-
-```bash
-cp apps/server/.env.example apps/server/.env
-mise run dev:up
-mise run //apps/server:db:migrate
-```
-
-When the Better Auth configuration or plugins change, regenerate and review the schema migration before applying it:
-
-```bash
-pnpm --dir apps/server auth:generate
-mise run //apps/server:db:generate
-mise run //apps/server:db:migrate
-```
-
-Then, run the development server:
+Start PostgreSQL, Temporal, object storage, the control-plane server, and the
+authenticated console:
 
 ```bash
 mise run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the console application.
-The web application is running at [http://localhost:3002](http://localhost:3002).
-The documentation application is running at [http://localhost:4000](http://localhost:4000).
-The API is running at [http://localhost:3000](http://localhost:3000).
+Open the console at [http://localhost:3001](http://localhost:3001). The API runs
+at [http://localhost:3000](http://localhost:3000); a successful local start makes
+[`/healthz`](http://localhost:3000/healthz) return a healthy response.
 
-## UI Customization
-
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
-
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json`, `apps/console/components.json`, and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
+The public sites run separately:
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+mise run //apps/web:dev
+mise run //apps/docs:dev
 ```
 
-Import shared components like this:
+The marketing site uses [http://localhost:3002](http://localhost:3002), and the
+public documentation site uses [http://localhost:4000](http://localhost:4000).
 
-```tsx
-import { Button } from "@taskome/ui/components/button";
+## Find your way around the repository
+
+| Area             | Responsibility                                                               | Start here                                                                                     |
+| ---------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `apps/console`   | Authenticated Taskome product experience                                     | [`apps/console/README.md`](apps/console/README.md)                                             |
+| `apps/server`    | Authentication, REST API, and application data                               | [`apps/server/README.md`](apps/server/README.md)                                               |
+| `apps/cli`       | Go command-line client                                                       | [`apps/cli/README.md`](apps/cli/README.md)                                                     |
+| `apps/web`       | Public XDenovo marketing site                                                | [`apps/web/README.md`](apps/web/README.md)                                                     |
+| `apps/docs`      | Public Taskome documentation site                                            | [`apps/docs/README.md`](apps/docs/README.md)                                                   |
+| `apps/execution` | Reserved scaffold for the future Execution Service                           | [`docs/architecture/containers.md`](docs/architecture/containers.md)                           |
+| `packages`       | Internal TypeScript and Python libraries shared by applications and Runtimes | [`packages/AGENTS.md`](packages/AGENTS.md)                                                     |
+| `runtimes`       | Immutable environments for scientific Upstream Software                      | [`runtimes/fpocket/README.md`](runtimes/fpocket/README.md)                                     |
+| `docs`           | Internal product, architecture, and engineering documentation                | [`docs/README.md`](docs/README.md)                                                             |
+| `references`     | Read-only, pinned upstream research checkouts                                | [`docs/architecture/components/tool-runtime.md`](docs/architecture/components/tool-runtime.md) |
+
+## Run common checks
+
+```bash
+mise run check
+mise run test
+mise run test:integration
+mise run build
 ```
 
-### Add app-specific blocks
+`check` is the read-only static gate. `test` runs service-free suites;
+`test:integration` requires Docker. Run `mise tasks` to discover the complete
+task surface instead of relying on a copied command list in this README.
 
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from the target application in `apps/console` or `apps/web`.
+## Read the project documentation
 
-## Git Hooks and Formatting
+- [`docs/product/vision.md`](docs/product/vision.md) defines the product and its
+  launch boundary.
+- [`CONTEXT.md`](CONTEXT.md) is the canonical domain vocabulary.
+- [`docs/architecture/overview.md`](docs/architecture/overview.md) explains the
+  accepted target architecture and current implementation gap.
+- [`docs/engineering/coding-standards.md`](docs/engineering/coding-standards.md)
+  and [`docs/engineering/testing.md`](docs/engineering/testing.md) guide
+  implementation work.
+- [`AGENTS.md`](AGENTS.md) contains repository-wide instructions for AI agents.
 
-- Run checks: `pnpm run check`
+## License
 
-## Project Structure
-
-```
-taskome/
-├── apps/
-│   ├── cli/         # Go command-line interface
-│   ├── console/     # User console (React + TanStack Router)
-│   ├── docs/        # Documentation application (Next.js + Fumadocs)
-│   ├── web/         # Web application (Next.js)
-│   └── server/      # Backend API, authentication, and database (Hono)
-├── packages/
-│   ├── env/         # Shared environment schemas
-│   └── ui/          # Shared shadcn/ui components and styles
-```
-
-## Available Scripts
-
-- `mise run doctor`: Check the development baseline; add `-- --verbose` to expand every result
-- `mise run dev`: Start the server and console
-- `mise run build`: Build all deliverable applications
-- `mise run check`: Run read-only repository checks
-- `mise run test`: Run service-free test suites
-- `mise run test:integration`: Run container-backed integration suites
-- `mise run dev:up | dev:down | dev:logs`: Manage local support services
-- `mise run //apps/server:db:generate | db:migrate | db:studio`: Manage the server schema
-
-See [`apps/server/README.md`](apps/server/README.md) for the server's feature
-layout, HTTP conventions, and test seams.
+Taskome is licensed under the [MIT License](LICENSE).
