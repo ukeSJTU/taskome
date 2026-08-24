@@ -1,88 +1,143 @@
+<div align="center">
+
 # Taskome
 
-Taskome is XDenovo's platform for running, managing, and reproducing
-protein-design compute. It gives scientists one product for submitting work,
-tracking execution history, and working with scientific files through a browser,
-an AI agent, a CLI, or a direct API client.
+**Run protein-design compute through one consistent, reproducible platform.**
 
-The repository currently contains the product foundations: the authenticated
-console, control-plane server, CLI, public sites, shared packages, and an fpocket
-Runtime skeleton. The complete scientific execution path described in the
-architecture documentation is not implemented yet.
+[![Project status: early development](https://img.shields.io/badge/status-early_development-F59E0B?style=flat-square)](#project-status)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-22C55E?style=flat-square)](LICENSE)
+
+[Product vision](docs/product/vision.md) ·
+[Architecture](docs/architecture/overview.md) ·
+[Contributing](CONTRIBUTING.md)
+
+</div>
+
+Taskome is XDenovo's platform for running, managing, and reproducing
+protein-design compute. It gives scientists a curated interface for submitting
+work, tracking execution history, and working with scientific files from the
+web, an AI agent, the CLI, or a direct API client.
+
+Instead of rebuilding environments and integrations for every scientific
+program, Taskome packages each supported capability as a versioned Tool with
+explicit inputs, parameters, outputs, and provenance.
+
+## Project status
+
+> [!IMPORTANT]
+> Taskome is under active development and is not ready for production use.
+
+The [product vision](docs/product/vision.md) defines the launch boundary. The
+[architecture overview](docs/architecture/overview.md) distinguishes the
+accepted target design from the current implementation.
 
 ## Start local development
 
-Install [mise](https://mise.jdx.dev/) and Docker, then run the setup task from the
-repository root. Mise installs the pinned Node.js, pnpm, Go, Python, uv, and Pixi
-toolchain; the task also installs dependencies and creates missing local
-environment files.
+Install [mise](https://mise.jdx.dev/) and Docker, then run from the repository
+root:
 
 ```bash
 mise run setup
 mise run doctor
-```
-
-Start PostgreSQL, Temporal, object storage, the control-plane server, and the
-authenticated console:
-
-```bash
 mise run dev
 ```
 
-Open the console at [http://localhost:3001](http://localhost:3001). The API runs
-at [http://localhost:3000](http://localhost:3000); a successful local start makes
-[`/healthz`](http://localhost:3000/healthz) return a healthy response.
+When the development environment is ready:
 
-The public sites run separately:
+- the authenticated console runs at
+  [http://localhost:3001](http://localhost:3001);
+- the API runs at [http://localhost:3000](http://localhost:3000);
+- the API health check responds at
+  [http://localhost:3000/healthz](http://localhost:3000/healthz); and
+- Scalar renders the API reference at
+  [http://localhost:3000/reference](http://localhost:3000/reference).
 
-```bash
-mise run //apps/web:dev
-mise run //apps/docs:dev
+The setup task installs the pinned Node.js, pnpm, Go, Python, uv, and Pixi
+toolchain, installs dependencies, creates missing local environment files, and
+configures Git hooks. See the [contribution guide](CONTRIBUTING.md) for the full
+development workflow.
+
+## Understand the platform
+
+```mermaid
+flowchart LR
+    scientist["Scientist"]
+    channels["Web · CLI · REST · MCP"]
+    control["Taskome control plane"]
+    runtime["Curated Tool Runtime"]
+    results["Traceable scientific results"]
+
+    scientist --> channels --> control --> runtime --> results
 ```
 
-The marketing site uses [http://localhost:3002](http://localhost:3002), and the
-public documentation site uses [http://localhost:4000](http://localhost:4000).
+Taskome keeps one product model across every access channel:
 
-## Find your way around the repository
+- **Tools** define curated scientific capabilities and their contracts.
+- **Jobs** record immutable requests with fixed inputs and parameters.
+- **Attempts** record each actual execution of a Job.
+- **Projects** organize related Jobs and scientific files.
+- **Utilities** inspect or prepare scientific data without creating a Job.
 
-| Area             | Responsibility                                                               | Start here                                                                                     |
-| ---------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `apps/console`   | Authenticated Taskome product experience                                     | [`apps/console/README.md`](apps/console/README.md)                                             |
-| `apps/server`    | Authentication, REST API, and application data                               | [`apps/server/README.md`](apps/server/README.md)                                               |
-| `apps/cli`       | Go command-line client                                                       | [`apps/cli/README.md`](apps/cli/README.md)                                                     |
-| `apps/web`       | Public XDenovo marketing site                                                | [`apps/web/README.md`](apps/web/README.md)                                                     |
-| `apps/docs`      | Public Taskome documentation site                                            | [`apps/docs/README.md`](apps/docs/README.md)                                                   |
-| `apps/execution` | Reserved scaffold for the future Execution Service                           | [`docs/architecture/containers.md`](docs/architecture/containers.md)                           |
-| `packages`       | Internal TypeScript and Python libraries shared by applications and Runtimes | [`packages/AGENTS.md`](packages/AGENTS.md)                                                     |
-| `runtimes`       | Immutable environments for scientific Upstream Software                      | [`runtimes/fpocket/README.md`](runtimes/fpocket/README.md)                                     |
-| `docs`           | Internal product, architecture, and engineering documentation                | [`docs/README.md`](docs/README.md)                                                             |
-| `references`     | Read-only, pinned upstream research checkouts                                | [`docs/architecture/components/tool-runtime.md`](docs/architecture/components/tool-runtime.md) |
+Read [`CONTEXT.md`](CONTEXT.md) for the canonical domain vocabulary and the
+[architecture documentation](docs/architecture/overview.md) for system
+boundaries, data ownership, execution, and deployment.
 
-## Run common checks
+## Explore the monorepo
 
-```bash
-mise run check
-mise run test
-mise run test:integration
-mise run build
-```
+| Area                                     | Responsibility                                                |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| [`apps/console`](apps/console/README.md) | Authenticated Taskome product application                     |
+| [`apps/server`](apps/server/README.md)   | Authentication, REST API, and application data                |
+| [`apps/cli`](apps/cli/README.md)         | Go command-line client                                        |
+| [`apps/web`](apps/web/README.md)         | Public XDenovo marketing site                                 |
+| [`apps/docs`](apps/docs/README.md)       | Public Taskome documentation site                             |
+| `apps/execution`                         | Reserved scaffold for the future Execution Service            |
+| `packages`                               | Shared libraries and configuration                            |
+| [`runtimes`](runtimes/fpocket/README.md) | Immutable environments for scientific Upstream Software       |
+| [`docs`](docs/README.md)                 | Internal product, architecture, and engineering documentation |
+| `references`                             | Read-only, pinned upstream research checkouts                 |
 
-`check` is the read-only static gate. `test` runs service-free suites;
-`test:integration` requires Docker. Run `mise tasks` to discover the complete
-task surface instead of relying on a copied command list in this README.
+The main implementation stack includes React, TanStack Router, Next.js,
+Tailwind CSS, Hono, Zod OpenAPI, Better Auth, PostgreSQL, Drizzle ORM, Go with
+Cobra, and Python Tool Runtimes. Mise coordinates the polyglot toolchain and
+repository tasks; pnpm and uv manage the JavaScript and Python workspaces.
 
-## Read the project documentation
+## Run common tasks
 
-- [`docs/product/vision.md`](docs/product/vision.md) defines the product and its
-  launch boundary.
-- [`CONTEXT.md`](CONTEXT.md) is the canonical domain vocabulary.
-- [`docs/architecture/overview.md`](docs/architecture/overview.md) explains the
-  accepted target architecture and current implementation gap.
-- [`docs/engineering/coding-standards.md`](docs/engineering/coding-standards.md)
-  and [`docs/engineering/testing.md`](docs/engineering/testing.md) guide
-  implementation work.
-- [`AGENTS.md`](AGENTS.md) contains repository-wide instructions for AI agents.
+| Command                     | Purpose                                                 |
+| --------------------------- | ------------------------------------------------------- |
+| `mise run dev`              | Start support services, the server, and the console     |
+| `mise run check`            | Run read-only formatting, lint, type, and schema checks |
+| `mise run test`             | Run service-free test suites                            |
+| `mise run test:integration` | Run container-backed integration tests                  |
+| `mise run build`            | Build all deliverable applications                      |
+| `mise run verify`           | Run the complete pre-push verification gate             |
+| `mise tasks`                | Discover repository and workspace-specific tasks        |
+
+## Read the documentation
+
+- [Project documentation](docs/README.md) routes to product, architecture, and
+  engineering material.
+- [Product vision](docs/product/vision.md) explains the problem, audience, and
+  launch scope.
+- [Architecture overview](docs/architecture/overview.md) describes the target
+  system and its current implementation gap.
+- [Domain context](CONTEXT.md) defines the terms used across product, code, and
+  documentation.
+- [Contributing](CONTRIBUTING.md) covers setup, development, verification, and
+  pull requests.
+- [Code of Conduct](CODE_OF_CONDUCT.md) defines the community standards.
+
+## Contributing
+
+Contributions should be focused, tested, and documented. Start with
+[`CONTRIBUTING.md`](CONTRIBUTING.md), follow the project-wide
+[coding standards](docs/engineering/coding-standards.md), and use Conventional
+Commits for commit messages.
 
 ## License
 
-Taskome is licensed under the [MIT License](LICENSE).
+Taskome is available under the [MIT License](LICENSE).
