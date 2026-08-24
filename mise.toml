@@ -138,7 +138,7 @@ run = "pnpm exec oxlint --deny-warnings --report-unused-disable-directives oxlin
 
 [tasks.test]
 description = "Run service-free repository test suites"
-depends = ["//apps/cli:test", "//apps/server:test"]
+depends = ["//apps/cli:test", "//apps/console:test", "//apps/server:test"]
 output = "prefix"
 
 [tasks."test:race"]
