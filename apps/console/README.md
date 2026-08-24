@@ -1,21 +1,34 @@
 # Taskome console
 
-`apps/console` is the authenticated Taskome product experience. It owns the
+`apps/console` is the authenticated Taskome product application. It owns the
 browser journeys for registration, sign-in, and the signed-in workspace. It
-calls `apps/server` for authentication and domain behavior; it is separate from
+calls `apps/server` for authentication and domain behavior and is separate from
 the public marketing site in `apps/web`.
 
-The current implementation provides authentication and dashboard foundations.
-The complete Tool, Job, Project, file, Utility, and Agent Assistant journeys
-remain target behavior rather than implemented features.
+The current implementation provides authentication flows and a dashboard
+foundation. The product workflows described by the target architecture are not
+implemented yet.
+
+## Tech stack
+
+| Technology                     | Role in the console                                                      |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| React and TypeScript           | Product UI and type-safe application code                                |
+| Vite                           | Local development server and production build                            |
+| TanStack Router                | Type-safe file-based routing, loading, and navigation states             |
+| TanStack Query                 | Server-state fetching and caching, including generated query hooks       |
+| TanStack Form and Zod          | Form state and validation                                                |
+| Better Auth                    | Browser authentication and session management                            |
+| Orval                          | Fetch clients and TanStack Query hooks generated from the server OpenAPI |
+| Tailwind CSS and `@taskome/ui` | Styling, design tokens, and shared UI primitives                         |
 
 ## Run the console locally
 
-The shortest path starts the console together with its API and local support
-services from the repository root:
+Complete the repository setup in [`CONTRIBUTING.md`](../../CONTRIBUTING.md)
+first. From the repository root, start the console together with its API and
+local support services:
 
 ```bash
-mise run setup
 mise run dev
 ```
 
@@ -28,52 +41,49 @@ To run only the frontend after the server is available:
 mise run //apps/console:dev
 ```
 
-The setup task creates `apps/console/.env` from `.env.example`. Set
-`VITE_SERVER_URL` to the control-plane server origin; local development uses
-`http://localhost:3000`.
+The setup task creates `apps/console/.env` from
+[`apps/console/.env.example`](.env.example). `VITE_SERVER_URL` specifies the
+control-plane server origin; local development uses `http://localhost:3000`.
 
-## Work in the application
+## Understand the source layout
 
 ```text
 src/
+├── api/             # request adapter and generated application API client
+├── components/      # console-specific UI compositions
+├── lib/             # authentication and browser application helpers
 ├── routes/          # TanStack Router file routes and layouts
-├── components/      # console-specific compositions
-├── lib/             # browser clients and application helpers
-├── data/            # temporary local data used by the current foundation
 ├── main.tsx         # query client and router composition
 └── routeTree.gen.ts # generated route tree
 ```
+
+## Work with routes and UI
 
 TanStack Router generates `routeTree.gen.ts` from files under `src/routes`.
 Treat the generated file as build output and make route changes in the route
 source files.
 
-Reusable primitives and global design tokens live in `packages/ui`. Import
-them through public entry points such as:
+Reusable primitives and global design tokens live in `packages/ui`. Import them
+through public entry points such as `@taskome/ui/components/button`. Keep
+console-specific pages and composed product components in this app.
 
-```tsx
-import { Button } from "@taskome/ui/components/button";
-```
+## Use the server API
 
-Keep console-specific pages and composed product components in this app. A
-component belongs in `packages/ui` only when more than one application should
-consume the same primitive or behavior.
+The console uses Orval to generate Fetch clients and TanStack Query hooks from
+the server's OpenAPI contract. Generated code is split by OpenAPI tag under
+`src/api/generated/`; do not edit these files manually.
 
-## Verify a change
+Shared request behavior lives in `src/api/api-fetch.ts`. It resolves
+`VITE_SERVER_URL`, includes browser credentials, and surfaces unsuccessful
+responses to application code. Better Auth uses the separate client in
+`src/lib/auth-client.ts` because its endpoints are not part of the application
+OpenAPI contract.
+
+After changing the server contract, regenerate the OpenAPI document and all
+clients from the repository root:
 
 ```bash
-mise run //apps/console:check
-mise run //apps/console:build
+mise run //:api:generate
 ```
 
-The check task runs the configured linter and TypeScript compiler. The console
-does not have an automated behavior test suite yet; add tests through a public
-application seam when new behavior warrants one.
-
-## Related documentation
-
-- [`docs/architecture/containers.md`](../../docs/architecture/containers.md)
-  defines the Web App container and distinguishes it from the marketing site.
-- [`docs/engineering/coding-standards.md`](../../docs/engineering/coding-standards.md)
-  defines repository-wide frontend and import boundaries.
-- [`AGENTS.md`](AGENTS.md) contains console-specific instructions for AI agents.
+Review and commit the generated changes with the contract change.
