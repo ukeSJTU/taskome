@@ -4,17 +4,21 @@
 authorization, the application REST surface, and Taskome domain records in
 PostgreSQL. Scientific compute runs outside this process.
 
-The current implementation provides Better Auth, health checks, the current-user
-endpoint, OpenAPI generation, and the database foundation. The complete Tool,
-Job, Attempt, file, MCP, and Agent Assistant APIs remain target behavior.
+The current implementation provides Better Auth, health and readiness checks,
+the current-user endpoint, OpenAPI generation, and the database foundation. The
+product domain and compute-coordination APIs described by the target
+architecture are not implemented yet.
 
 ## Run the server locally
 
-The repository setup task creates `apps/server/.env` from `.env.example`. Start
-the local support services, apply committed migrations, and run the server:
+Complete the repository setup in [`CONTRIBUTING.md`](../../CONTRIBUTING.md)
+first. The setup task creates `apps/server/.env` from
+[`apps/server/.env.example`](.env.example).
+
+From the repository root, start the local support services, apply committed
+migrations, and run the server:
 
 ```bash
-mise run setup
 mise run dev:up
 mise run //apps/server:db:migrate
 mise run //apps/server:dev
@@ -24,25 +28,10 @@ The API listens on [http://localhost:3000](http://localhost:3000) by default.
 Use [`/healthz`](http://localhost:3000/healthz) for process liveness and
 [`/readyz`](http://localhost:3000/readyz) to verify PostgreSQL connectivity.
 
-## Use the HTTP surface
+## Inspect the API
 
-| Path            | Purpose                          |
-| --------------- | -------------------------------- |
-| `/healthz`      | Process liveness                 |
-| `/readyz`       | PostgreSQL readiness             |
-| `/api/auth/*`   | Better Auth endpoints            |
-| `/api/v1/*`     | Versioned application API        |
-| `/openapi.json` | OpenAPI 3.1 application contract |
-| `/reference`    | Scalar API reference             |
-
-Better Auth owns its response contract and is intentionally absent from the
-application OpenAPI document. Application errors use
-`application/problem+json`; Zod request failures return `422`, unknown routes
-return `404`, and unhandled failures produce safe `500` responses.
-
-Evlog is the application logger. Request events carry a request ID and, after
-authentication, the user ID. The observability rules prohibit logging request
-bodies, cookies, authorization headers, passwords, and tokens.
+The server uses Scalar to render its current API reference at
+[http://localhost:3000/reference](http://localhost:3000/reference).
 
 ## Understand the source layout
 
@@ -59,22 +48,24 @@ src/
 └── features/<feature>/    # vertical business slices
 ```
 
-A feature starts flat and exposes its public router from `index.ts`:
+Each feature is a vertical slice under `features/`. Dependencies point from
+route to handler to module to repository, while shared authentication,
+database, and HTTP policy remain in their owning top-level modules.
 
-```text
-features/widgets/
-├── index.ts
-├── widgets.routes.ts
-├── widgets.handlers.ts
-├── widgets.module.ts
-├── widgets.repository.ts
-└── widgets.schemas.ts
+## Change the API contract
+
+Declare application routes with Zod and `createRoute`. Application errors use
+`application/problem+json`. Better Auth owns `/api/auth/*` and is not copied
+into the application OpenAPI document.
+
+After changing the contract, export the OpenAPI document and regenerate the
+TypeScript and Go clients:
+
+```bash
+mise run //:api:generate
 ```
 
-Dependencies point inward from route to handler to module to repository. Add a
-repository only when a feature persists data. Shared authentication, database,
-and HTTP policy remain in their owning top-level modules rather than becoming a
-second application layer.
+Review and commit the generated contract and clients with the source change.
 
 ## Change the database
 
@@ -97,28 +88,3 @@ mise run //apps/server:db:migrate
 
 Taskome deliberately has no `db:push` task. Shared, local, and test databases
 are built from committed migrations.
-
-## Verify a change
-
-```bash
-mise run //apps/server:check
-mise run //apps/server:test
-mise run //apps/server:test:integration
-```
-
-Unit and HTTP tests are colocated with source and call `createApp().request()`.
-Integration tests live under `test/integration`, start disposable PostgreSQL
-with Testcontainers, apply real migrations, and exercise Better Auth and Hono
-through the public HTTP seam.
-
-## Related documentation
-
-- [`docs/architecture/containers.md`](../../docs/architecture/containers.md)
-  defines the server's accepted target responsibility.
-- [`docs/engineering/coding-standards.md`](../../docs/engineering/coding-standards.md)
-  owns repository-wide API and module conventions.
-- [`docs/engineering/observability.md`](../../docs/engineering/observability.md)
-  owns logging and telemetry rules.
-- [`docs/engineering/testing.md`](../../docs/engineering/testing.md) defines
-  server test seams and suite placement.
-- [`AGENTS.md`](AGENTS.md) contains server-specific instructions for AI agents.
