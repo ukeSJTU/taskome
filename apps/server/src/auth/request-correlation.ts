@@ -37,3 +37,7 @@ export function getAuthRequestCorrelation() {
   if (!context) throw new Error("Auth request correlation is unavailable");
   return context;
 }
+
+export function maybeGetAuthRequestCorrelation() {
+  return requestCorrelation.getStore() ?? null;
+}

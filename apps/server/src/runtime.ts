@@ -40,7 +40,7 @@ export function createRuntime(config: RuntimeConfig) {
 
   const getSession = createSessionResolver(auth);
   const app = createApp({
-    apiKeyService: createApiKeyService(database.db),
+    apiKeyService: createApiKeyService(auth, database.db),
     authHandler: (request) => withAuthRequestCorrelation(request, () => auth.handler(request)),
     checkReadiness: database.check,
     corsOrigin: config.corsOrigin,

@@ -9,11 +9,12 @@ import { APIError } from "better-auth";
 import type { Database } from "@/db/database";
 import * as schema from "@/db/schema";
 import { createOAuthAuthorizationInputResolver } from "./oauth-authorization-input";
-import { createOAuthGrantService } from "./oauth-grants";
+import { createOAuthGrantService, oauthGrantClaim } from "./oauth-grants";
 import { protectedResources } from "./resources";
 import { taskomeScopes } from "./scopes";
 import { credentialManagementDenial } from "./credential-management-policy";
-import { getAuthRequestCorrelation } from "./request-correlation";
+import { getAuthRequestCorrelation, maybeGetAuthRequestCorrelation } from "./request-correlation";
+import { getApiKeyCreationAudit } from "./api-key-creation-audit";
 
 export const apiKeyDefaultLifetimeSeconds = 60 * 60 * 24 * 90;
 export const apiKeyMaximumLifetimeSeconds = 60 * 60 * 24 * 365;
@@ -26,13 +27,42 @@ export function createTaskomeAuthOptions(
   const resources = protectedResources(serverOrigin);
   const oauthGrants = createOAuthGrantService(database);
   const resolveAuthorizationInput = createOAuthAuthorizationInputResolver();
+  const adapterConfig = {
+    provider: "pg" as const,
+    ...(includeSchema ? { schema } : {}),
+  };
+  const adapterFactory = drizzleAdapter(database, adapterConfig);
+  type AdapterOptions = Parameters<typeof adapterFactory>[0];
+  type Adapter = ReturnType<typeof adapterFactory>;
+  type CreateInput = Parameters<Adapter["create"]>[0];
 
   return {
     baseURL: serverOrigin,
-    database: drizzleAdapter(database, {
-      provider: "pg" as const,
-      ...(includeSchema ? { schema } : {}),
-    }),
+    database: (options: AdapterOptions) => {
+      const adapter = adapterFactory(options);
+      return {
+        ...adapter,
+        create: async (input: CreateInput) => {
+          const audit = input.model === "apikey" ? getApiKeyCreationAudit() : undefined;
+          if (!audit) return adapter.create(input);
+          return database.transaction(async (transaction) => {
+            const transactionAdapter = drizzleAdapter(transaction, adapterConfig)(options);
+            const created = await transactionAdapter.create(input);
+            await transaction.insert(schema.securityEvent).values({
+              actorUserId: audit.ownerUserId,
+              credentialId: String(created.id),
+              id: crypto.randomUUID(),
+              operation: "api_key.created",
+              requestId: audit.requestId,
+              result: "succeeded",
+              targetId: String(created.id),
+              targetType: "api_key",
+            });
+            return created;
+          });
+        },
+      };
+    },
     emailAndPassword: { enabled: true },
     plugins: [
       apiKey({
@@ -69,7 +99,10 @@ export function createTaskomeAuthOptions(
           if (!referenceId || !user || tokenResources?.length !== 1) {
             throw new Error("OAuth token is missing its Taskome Grant authority");
           }
-          const request = getAuthRequestCorrelation();
+          const request = maybeGetAuthRequestCorrelation();
+          if (!request || !request.path.endsWith("/oauth2/token")) {
+            return { [oauthGrantClaim]: referenceId };
+          }
           if (request.path.endsWith("/oauth2/token") && !request.clientId) {
             throw new Error("OAuth token request is missing its client binding");
           }

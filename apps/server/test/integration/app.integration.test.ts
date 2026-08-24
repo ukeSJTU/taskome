@@ -1,8 +1,9 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { resolve } from "node:path";
 import { createHash, randomBytes } from "node:crypto";
+import { serve } from "@hono/node-server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -15,6 +16,7 @@ import { withAuthRequestCorrelation } from "@/auth/request-correlation";
 import { registerNativeOAuthClient } from "@/auth/oauth-client-registration";
 import { createTaskomeMcpHandler } from "@/auth/mcp";
 import { createOAuthGrantService } from "@/auth/oauth-grants";
+import { oauthGrantClaim } from "@/auth/oauth-grants";
 import type { DatabaseRuntime } from "@/db/database";
 import {
   apikey,
@@ -30,7 +32,7 @@ import { CreatedApiKeySchema } from "@/features/api-keys/api-key.schemas";
 import { createOAuthGrantManagementService } from "@/features/oauth-grants";
 import { createProjectsModule } from "@/features/projects";
 
-const serverOrigin = "http://localhost:3000";
+const serverOrigin = "http://127.0.0.1:31042";
 const webOrigin = "http://localhost:3001";
 
 async function responseLocation(response: Response) {
@@ -50,6 +52,7 @@ describe("server with PostgreSQL and Better Auth", () => {
   let container: StartedPostgreSqlContainer;
   let database: DatabaseRuntime;
   let auth: (typeof import("@/auth.test-instance"))["testAuth"];
+  let httpServer: ReturnType<typeof serve>;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer("postgres:18.4-alpine3.24")
@@ -71,7 +74,7 @@ describe("server with PostgreSQL and Better Auth", () => {
     ({ testAuth: auth } = await import("@/auth.test-instance"));
     const getSession = createSessionResolver(auth);
     app = createApp({
-      apiKeyService: createApiKeyService(database.db),
+      apiKeyService: createApiKeyService(auth, database.db),
       authHandler: (request) => withAuthRequestCorrelation(request, () => auth.handler(request)),
       checkReadiness: database.check,
       corsOrigin: webOrigin,
@@ -86,9 +89,13 @@ describe("server with PostgreSQL and Better Auth", () => {
         verifyApiKey: createApiKeyResolver(auth, database.db),
       }),
     });
+    httpServer = serve({ fetch: app.fetch, hostname: "127.0.0.1", port: 31042 });
   });
 
   afterAll(async () => {
+    await new Promise<void>((resolveClose, reject) => {
+      httpServer?.close((error) => (error ? reject(error) : resolveClose()));
+    });
     await database?.close();
     await container?.stop();
   });
@@ -304,6 +311,10 @@ describe("server with PostgreSQL and Better Auth", () => {
       .from(oauthGrant)
       .where(and(eq(oauthGrant.clientId, clientId), eq(oauthGrant.ownerUserId, user.id)));
     expect(grant).toMatchObject({ state: "active" });
+    const jwtPayload = JSON.parse(
+      Buffer.from(tokens.access_token.split(".")[1] ?? "", "base64url").toString("utf8"),
+    );
+    expect(jwtPayload[oauthGrantClaim]).toBe(grant?.id);
 
     const refreshBody = new URLSearchParams({
       client_id: clientId,
@@ -319,6 +330,12 @@ describe("server with PostgreSQL and Better Auth", () => {
     const rotated = z
       .object({ access_token: z.string(), refresh_token: z.string() })
       .parse(await firstRefresh.json());
+    const grantRefreshTokens = await database.db
+      .select()
+      .from(oauthRefreshToken)
+      .where(eq(oauthRefreshToken.clientId, clientId));
+    expect(grantRefreshTokens.length).toBeGreaterThanOrEqual(2);
+    expect(grantRefreshTokens.every((token) => token.referenceId === grant?.id)).toBe(true);
     const replayRefresh = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
       body: refreshBody,
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -326,21 +343,64 @@ describe("server with PostgreSQL and Better Auth", () => {
     });
     expect(replayRefresh.status).toBe(200);
 
-    const revokeResponse = await app.request(`${serverOrigin}/api/v1/oauth-grants/${grant?.id}`, {
-      headers,
-      method: "DELETE",
+    await database.db
+      .update(oauthRefreshToken)
+      .set({ rotationReplayExpiresAt: new Date(Date.now() - 1_000) })
+      .where(and(eq(oauthRefreshToken.clientId, clientId), isNotNull(oauthRefreshToken.revoked)));
+    const expiredReplay = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
+      body: refreshBody,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      method: "POST",
     });
+    expect(expiredReplay.status).toBe(400);
+
+    const raceBody = new URLSearchParams({
+      client_id: clientId,
+      grant_type: "refresh_token",
+      refresh_token: rotated.refresh_token,
+    });
+    const [raceRefresh, revokeResponse] = await Promise.all([
+      app.request(`${serverOrigin}/api/auth/oauth2/token`, {
+        body: raceBody,
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        method: "POST",
+      }),
+      app.request(`${serverOrigin}/api/v1/oauth-grants/${grant?.id}`, {
+        headers,
+        method: "DELETE",
+      }),
+    ]);
     expect(revokeResponse.status).toBe(204);
+    expect([200, 400]).toContain(raceRefresh.status);
+    const finalRefreshToken =
+      raceRefresh.status === 200
+        ? z.object({ refresh_token: z.string() }).parse(await raceRefresh.json()).refresh_token
+        : rotated.refresh_token;
     const revokedRefresh = await app.request(`${serverOrigin}/api/auth/oauth2/token`, {
       body: new URLSearchParams({
         client_id: clientId,
         grant_type: "refresh_token",
-        refresh_token: rotated.refresh_token,
+        refresh_token: finalRefreshToken,
       }),
       headers: { "content-type": "application/x-www-form-urlencoded" },
       method: "POST",
     });
     expect(revokedRefresh.status).toBe(400);
+    const revokedMcp = await createTaskomeMcpHandler(
+      auth,
+      createOAuthGrantService(database.db),
+      serverOrigin,
+    )(
+      new Request(`${serverOrigin}/mcp`, {
+        body: JSON.stringify({ id: 1, jsonrpc: "2.0", method: "initialize", params: {} }),
+        headers: {
+          authorization: `Bearer ${tokens.access_token}`,
+          "content-type": "application/json",
+        },
+        method: "POST",
+      }),
+    );
+    expect(revokedMcp.status).toBe(401);
   });
 
   it("revokes one OAuth Grant, its token family, replay response, consent, and audit atomically", async () => {
@@ -464,6 +524,64 @@ describe("server with PostgreSQL and Better Auth", () => {
       );
     expect(repeatedGrant?.revokedAt).toEqual(firstRevokedAt);
     expect(repeatedEvents).toHaveLength(1);
+  });
+
+  it("re-authorizes changed scopes and cleans abandoned pending Grants", async () => {
+    const test = (await auth.$context).test;
+    const user = await test.saveUser(
+      test.createUser({ email: "grant-transition@example.com", emailVerified: true }),
+    );
+    const clientId = `transition-${crypto.randomUUID()}`;
+    await database.db.insert(oauthClient).values({
+      clientId,
+      id: crypto.randomUUID(),
+      redirectUris: ["http://127.0.0.1:32123/oauth/callback"],
+    });
+    const grants = createOAuthGrantService(database.db);
+    const firstId = await grants.createReference(
+      user.id,
+      { clientId, resource: `${serverOrigin}/mcp`, scopes: ["taskome:access"] },
+      "scope-request-1",
+    );
+    await grants.activateAndClaim({
+      clientId,
+      grantId: firstId,
+      ownerUserId: user.id,
+      resource: `${serverOrigin}/mcp`,
+      scopes: ["taskome:access"],
+    });
+    const replacementId = await grants.createReference(
+      user.id,
+      { clientId, resource: `${serverOrigin}/mcp`, scopes: [] },
+      "scope-request-2",
+    );
+    const [first] = await database.db.select().from(oauthGrant).where(eq(oauthGrant.id, firstId));
+    const [replacement] = await database.db
+      .select()
+      .from(oauthGrant)
+      .where(eq(oauthGrant.id, replacementId));
+    expect(first).toMatchObject({ state: "revoked" });
+    expect(replacement).toMatchObject({ scopes: [], state: "pending" });
+
+    const staleId = crypto.randomUUID();
+    await database.db.insert(oauthGrant).values({
+      clientId,
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 86_400_000),
+      id: staleId,
+      ownerUserId: user.id,
+      resource: `${serverOrigin}/mcp`,
+      scopes: ["taskome:access"],
+      state: "pending",
+    });
+    await grants.createReference(
+      user.id,
+      { clientId, resource: `${serverOrigin}/mcp`, scopes: ["taskome:access"] },
+      "cleanup-request",
+    );
+    expect(await database.db.select().from(oauthGrant).where(eq(oauthGrant.id, staleId))).toEqual(
+      [],
+    );
   });
 
   it("challenges unauthenticated MCP requests and keeps test helpers test-only", async () => {
