@@ -101,7 +101,9 @@ mise run test
 mise run test:integration
 ```
 
-The default test task runs the service-free CLI and server suites. Container-
-backed server tests stay explicit so the fast path does not require Docker.
-The console, docs, and web apps do not have test tasks configured yet; add a
-public test seam and an owning task when they gain behavior that warrants one.
+The default test task runs the service-free CLI, console, and server suites.
+Container-backed server tests stay explicit so the fast path does not require
+Docker. Run only the console component tests through
+`mise run //apps/console:test`. The docs and web apps do not have test tasks
+configured yet; add a public test seam and an owning task when they gain
+behavior that warrants one.

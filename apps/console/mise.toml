@@ -21,3 +21,7 @@ run = "pnpm run lint"
 [tasks.check]
 description = "Run read-only console lint and type checks"
 run = ["pnpm run lint:check", "pnpm run check-types"]
+
+[tasks.test]
+description = "Run console component tests"
+run = "pnpm run test"
