@@ -1,6 +1,8 @@
 # Coding standards
 
-This page covers conventions that tooling can't enforce. `mise run check` already runs the configured Go, TypeScript, and Python checks across the whole repo — if a rule can be automated, it belongs in tooling rather than a paragraph here. What's left is judgment: naming, where things depend on each other, and how APIs and schemas take shape.
+This page covers conventions that tooling cannot enforce. Automated rules
+belong in the repository checks rather than in prose. The standards below cover
+judgment: naming, dependency boundaries, and API and schema design.
 
 ## Naming
 
@@ -19,16 +21,16 @@ operation's programmatic name.
 
 ## Module and import boundaries
 
-- A workspace package (`packages/*`) is imported by its package name (`@taskome/ui`, `@taskome/db`), never by a relative path that reaches across package boundaries (`../../../packages/ui/src/...`).
+- A workspace package (`packages/*`) is imported by its package name, such as
+  `@taskome/ui` or `@taskome/config`, never by a relative path that reaches
+  across package boundaries (`../../../packages/ui/src/...`).
 - Within an app, prefer path aliases over long relative chains once an import crosses more than one directory level.
 - `apps/server` uses vertical feature slices under `src/features/<feature>/`.
   Follow its README's route → handler → module → repository dependency direction
   rather than growing a shared controller or generic repository layer.
-- Taskome has two separate frontend apps — don't conflate them: `apps/web` is
-  the public marketing site; `apps/console` is the signed-in product console,
-  the `Web App` container [`architecture/containers.md`](../architecture/containers.md)
-  describes. Neither has a documented internal routing or component
-  convention yet; don't assume one from the other.
+- Frontend ownership differs between `apps/web` and `apps/console`. Before
+  moving a route, component, or integration between them, read each app's
+  README; do not infer one app's conventions from the other.
 
 ## API and schema design
 
@@ -43,6 +45,11 @@ Params/Result schema shape); until then, that's a target-architecture
 question for [`architecture/components/tool-runtime.md`](../architecture/components/tool-runtime.md),
 not a coding standard for code that doesn't exist.
 
+## Comments
+
+Default to no comment. Add one when the reason for the code is non-obvious and
+the implementation cannot make that reason clear on its own.
+
 ## Not covered here
 
 - **Error handling** — two different things, one implemented and one not:
@@ -51,13 +58,13 @@ not a coding standard for code that doesn't exist.
   convention. `runtime_toolkit`'s Attempt `failure_kind` classification
   doesn't exist yet — see [`architecture/components/tool-runtime.md`](../architecture/components/tool-runtime.md)
   for its target design, and add a convention here once that package exists.
-- **Comments** — root `CLAUDE.md` already states the rule (default to none; only when the WHY is non-obvious). This page doesn't repeat it.
-- **Where a component file lives** — that's `apps/web/AGENTS.md` and `apps/docs/AGENTS.md`'s job (an app-specific Invariant), not a repo-wide coding standard. `apps/console` doesn't have one of these yet.
-- **Development workflow** (branching, commits, PRs, worktrees) — see [`docs/engineering/local-development.md`](./local-development.md).
+- **Where a component file lives** — the owning app's README defines the local
+  ownership boundary. This page keeps only the cross-application rule.
+- **Development workflow** — [`CONTRIBUTING.md`](../../CONTRIBUTING.md) covers
+  repository setup, verification, commits, and pull requests.
 
 ## Related docs
 
-- [`docs/engineering/local-development.md`](./local-development.md) — day-to-day workflow.
 - [`docs/engineering/testing.md`](./testing.md) — test seams and conventions.
 - [`docs/engineering/observability.md`](./observability.md) — `evlog` as
   `apps/server`'s logger, and the correlation fields its request logging

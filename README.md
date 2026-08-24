@@ -1,120 +1,143 @@
-# taskome
+<div align="center">
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Hono, and more.
+# Taskome
 
-## Features
+**Run protein-design compute through one consistent, reproducible platform.**
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - Lightweight, performant server framework
-- **Node.js** - Runtime environment
-- **Go CLI** - Cobra-based command-line interface
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
+[![Project status: early development](https://img.shields.io/badge/status-early_development-F59E0B?style=flat-square)](#project-status)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-22C55E?style=flat-square)](LICENSE)
 
-## Getting Started
+[Product vision](docs/product/vision.md) ·
+[Architecture](docs/architecture/overview.md) ·
+[Contributing](CONTRIBUTING.md)
 
-Install the pinned toolchain and dependencies:
+</div>
+
+Taskome is XDenovo's platform for running, managing, and reproducing
+protein-design compute. It gives scientists a curated interface for submitting
+work, tracking execution history, and working with scientific files from the
+web, an AI agent, the CLI, or a direct API client.
+
+Instead of rebuilding environments and integrations for every scientific
+program, Taskome packages each supported capability as a versioned Tool with
+explicit inputs, parameters, outputs, and provenance.
+
+## Project status
+
+> [!IMPORTANT]
+> Taskome is under active development and is not ready for production use.
+
+The [product vision](docs/product/vision.md) defines the launch boundary. The
+[architecture overview](docs/architecture/overview.md) distinguishes the
+accepted target design from the current implementation.
+
+## Start local development
+
+Install [mise](https://mise.jdx.dev/) and Docker, then run from the repository
+root:
 
 ```bash
 mise run setup
-```
-
-## Local development
-
-The local Compose stack runs PostgreSQL, Temporal's development server, and a
-SeaweedFS S3-compatible object store. SeaweedFS keeps objects in a named volume,
-serves S3 at [http://localhost:8333](http://localhost:8333), and serves its
-development Admin UI at
-[http://localhost:23646](http://localhost:23646).
-
-Start the support services, create the server environment file, and apply the
-committed PostgreSQL migrations:
-
-```bash
-cp apps/server/.env.example apps/server/.env
-mise run dev:up
-mise run //apps/server:db:migrate
-```
-
-When the Better Auth configuration or plugins change, regenerate and review the schema migration before applying it:
-
-```bash
-pnpm --dir apps/server auth:generate
-mise run //apps/server:db:generate
-mise run //apps/server:db:migrate
-```
-
-Then, run the development server:
-
-```bash
+mise run doctor
 mise run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the console application.
-The web application is running at [http://localhost:3002](http://localhost:3002).
-The documentation application is running at [http://localhost:4000](http://localhost:4000).
-The API is running at [http://localhost:3000](http://localhost:3000).
+When the development environment is ready:
 
-## UI Customization
+- the authenticated console runs at
+  [http://localhost:3001](http://localhost:3001);
+- the API runs at [http://localhost:3000](http://localhost:3000);
+- the API health check responds at
+  [http://localhost:3000/healthz](http://localhost:3000/healthz); and
+- Scalar renders the API reference at
+  [http://localhost:3000/reference](http://localhost:3000/reference).
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+The setup task installs the pinned Node.js, pnpm, Go, Python, uv, and Pixi
+toolchain, installs dependencies, creates missing local environment files, and
+configures Git hooks. See the [contribution guide](CONTRIBUTING.md) for the full
+development workflow.
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json`, `apps/console/components.json`, and `apps/web/components.json`
+## Understand the platform
 
-### Add more shared components
+```mermaid
+flowchart LR
+    scientist["Scientist"]
+    channels["Web · CLI · REST · MCP"]
+    control["Taskome control plane"]
+    runtime["Curated Tool Runtime"]
+    results["Traceable scientific results"]
 
-Run this from the project root to add more primitives to the shared UI package:
-
-```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+    scientist --> channels --> control --> runtime --> results
 ```
 
-Import shared components like this:
+Taskome keeps one product model across every access channel:
 
-```tsx
-import { Button } from "@taskome/ui/components/button";
-```
+- **Tools** define curated scientific capabilities and their contracts.
+- **Jobs** record immutable requests with fixed inputs and parameters.
+- **Attempts** record each actual execution of a Job.
+- **Projects** organize related Jobs and scientific files.
+- **Utilities** inspect or prepare scientific data without creating a Job.
 
-### Add app-specific blocks
+Read [`CONTEXT.md`](CONTEXT.md) for the canonical domain vocabulary and the
+[architecture documentation](docs/architecture/overview.md) for system
+boundaries, data ownership, execution, and deployment.
 
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from the target application in `apps/console` or `apps/web`.
+## Explore the monorepo
 
-## Git Hooks and Formatting
+| Area                                     | Responsibility                                                |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| [`apps/console`](apps/console/README.md) | Authenticated Taskome product application                     |
+| [`apps/server`](apps/server/README.md)   | Authentication, REST API, and application data                |
+| [`apps/cli`](apps/cli/README.md)         | Go command-line client                                        |
+| [`apps/web`](apps/web/README.md)         | Public XDenovo marketing site                                 |
+| [`apps/docs`](apps/docs/README.md)       | Public Taskome documentation site                             |
+| `apps/execution`                         | Reserved scaffold for the future Execution Service            |
+| `packages`                               | Shared libraries and configuration                            |
+| [`runtimes`](runtimes/fpocket/README.md) | Immutable environments for scientific Upstream Software       |
+| [`docs`](docs/README.md)                 | Internal product, architecture, and engineering documentation |
+| `references`                             | Read-only, pinned upstream research checkouts                 |
 
-- Run checks: `pnpm run check`
+The main implementation stack includes React, TanStack Router, Next.js,
+Tailwind CSS, Hono, Zod OpenAPI, Better Auth, PostgreSQL, Drizzle ORM, Go with
+Cobra, and Python Tool Runtimes. Mise coordinates the polyglot toolchain and
+repository tasks; pnpm and uv manage the JavaScript and Python workspaces.
 
-## Project Structure
+## Run common tasks
 
-```
-taskome/
-├── apps/
-│   ├── cli/         # Go command-line interface
-│   ├── console/     # User console (React + TanStack Router)
-│   ├── docs/        # Documentation application (Next.js + Fumadocs)
-│   ├── web/         # Web application (Next.js)
-│   └── server/      # Backend API, authentication, and database (Hono)
-├── packages/
-│   ├── env/         # Shared environment schemas
-│   └── ui/          # Shared shadcn/ui components and styles
-```
+| Command                     | Purpose                                                 |
+| --------------------------- | ------------------------------------------------------- |
+| `mise run dev`              | Start support services, the server, and the console     |
+| `mise run check`            | Run read-only formatting, lint, type, and schema checks |
+| `mise run test`             | Run service-free test suites                            |
+| `mise run test:integration` | Run container-backed integration tests                  |
+| `mise run build`            | Build all deliverable applications                      |
+| `mise run verify`           | Run the complete pre-push verification gate             |
+| `mise tasks`                | Discover repository and workspace-specific tasks        |
 
-## Available Scripts
+## Read the documentation
 
-- `mise run doctor`: Check the development baseline; add `-- --verbose` to expand every result
-- `mise run dev`: Start the server and console
-- `mise run build`: Build all deliverable applications
-- `mise run check`: Run read-only repository checks
-- `mise run test`: Run service-free test suites
-- `mise run test:integration`: Run container-backed integration suites
-- `mise run dev:up | dev:down | dev:logs`: Manage local support services
-- `mise run //apps/server:db:generate | db:migrate | db:studio`: Manage the server schema
+- [Project documentation](docs/README.md) routes to product, architecture, and
+  engineering material.
+- [Product vision](docs/product/vision.md) explains the problem, audience, and
+  launch scope.
+- [Architecture overview](docs/architecture/overview.md) describes the target
+  system and its current implementation gap.
+- [Domain context](CONTEXT.md) defines the terms used across product, code, and
+  documentation.
+- [Contributing](CONTRIBUTING.md) covers setup, development, verification, and
+  pull requests.
+- [Code of Conduct](CODE_OF_CONDUCT.md) defines the community standards.
 
-See [`apps/server/README.md`](apps/server/README.md) for the server's feature
-layout, HTTP conventions, and test seams.
+## Contributing
+
+Contributions should be focused, tested, and documented. Start with
+[`CONTRIBUTING.md`](CONTRIBUTING.md), follow the project-wide
+[coding standards](docs/engineering/coding-standards.md), and use Conventional
+Commits for commit messages.
+
+## License
+
+Taskome is available under the [MIT License](LICENSE).

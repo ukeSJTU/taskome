@@ -1,106 +1,103 @@
 # Taskome server
 
-`apps/server` is Taskome's Node.js control-plane API. It owns authentication and
-application data in PostgreSQL; compute workloads remain outside this process.
+`apps/server` is Taskome's Node.js control-plane API. It owns authentication,
+authorization, the application REST surface, and Taskome domain records in
+PostgreSQL. Scientific compute runs outside this process.
 
-## Run locally
+The current implementation provides Better Auth, health and readiness checks,
+the current-user endpoint, OpenAPI generation, and the database foundation. The
+product domain and compute-coordination APIs described by the target
+architecture are not implemented yet.
+
+## Tech stack
+
+| Technology                  | Role in the server                                          |
+| --------------------------- | ----------------------------------------------------------- |
+| Node.js and TypeScript      | Server runtime and type-safe application code               |
+| Hono                        | HTTP routing, middleware, and application composition       |
+| Zod and `@hono/zod-openapi` | Request and response validation and the OpenAPI contract    |
+| Better Auth                 | Authentication, sessions, and auth database schema          |
+| PostgreSQL and Drizzle ORM  | Application persistence, schema definitions, and migrations |
+| Scalar                      | Interactive rendering of the generated API reference        |
+| Evlog                       | Structured application and request logging                  |
+| Vitest and Testcontainers   | HTTP tests and disposable PostgreSQL integration tests      |
+
+## Run the server locally
+
+Complete the repository setup in [`CONTRIBUTING.md`](../../CONTRIBUTING.md)
+first. The setup task creates `apps/server/.env` from
+[`apps/server/.env.example`](.env.example).
+
+From the repository root, start the local support services, apply committed
+migrations, and run the server:
 
 ```bash
-cp apps/server/.env.example apps/server/.env
 mise run dev:up
 mise run //apps/server:db:migrate
 mise run //apps/server:dev
 ```
 
-The API listens on `http://localhost:3000` by default.
+The API listens on [http://localhost:3000](http://localhost:3000) by default.
+Use [`/healthz`](http://localhost:3000/healthz) for process liveness and
+[`/readyz`](http://localhost:3000/readyz) to verify PostgreSQL connectivity.
 
-| Path            | Purpose                          |
-| --------------- | -------------------------------- |
-| `/healthz`      | Process liveness                 |
-| `/readyz`       | PostgreSQL readiness             |
-| `/api/auth/*`   | Better Auth endpoints            |
-| `/api/v1/*`     | Versioned application API        |
-| `/openapi.json` | OpenAPI 3.1 application contract |
-| `/reference`    | Scalar API reference             |
+## Inspect the API
 
-Better Auth owns its response contract and is intentionally not copied into the
-application OpenAPI document.
+The server uses Scalar to render its current API reference at
+[http://localhost:3000/reference](http://localhost:3000/reference).
 
-## Structure
+## Understand the source layout
 
 ```text
 src/
-├── app.ts                 # pure Hono composition; the HTTP test seam
+├── app.ts                 # pure Hono composition and HTTP test seam
 ├── runtime.ts             # process resources and dependency wiring
-├── index.ts               # listen, signals, and graceful shutdown only
-├── auth.ts                # Better Auth instance; discovered by its CLI
+├── index.ts               # listener, signals, and graceful shutdown
+├── auth.ts                # Better Auth instance discovered by its CLI
 ├── db.ts                  # process-level PostgreSQL instance
 ├── auth/                  # session types and authorization middleware
 ├── db/                    # database factory and Drizzle schemas
 ├── http/                  # cross-cutting HTTP policy
-└── features/<feature>/    # one vertical business slice
+└── features/<feature>/    # vertical business slices
 ```
 
-A feature starts flat and uses suffixes to make responsibilities visible:
+Each feature is a vertical slice under `features/`. Dependencies point from
+route to handler to module to repository, while shared authentication,
+database, and HTTP policy remain in their owning top-level modules.
 
-```text
-features/widgets/
-├── index.ts               # public router and middleware composition
-├── widgets.routes.ts      # Zod/OpenAPI request-response contract
-├── widgets.handlers.ts    # HTTP translation only
-├── widgets.module.ts      # business use cases
-├── widgets.repository.ts  # Drizzle queries, when persistence is needed
-└── widgets.schemas.ts     # feature schemas
-```
+## Change the API contract
 
-Dependencies point inward: route → handler → module → repository. Features do
-not import another feature's private files; expose an intentional API from its
-`index.ts` or move genuinely shared policy under `http/`, `auth/`, or `db/`.
-Do not add generic repositories, a global service container, or a new layer
-until a real feature needs it.
+Declare application routes with Zod and `createRoute`. Application errors use
+`application/problem+json`. Better Auth owns `/api/auth/*` and is not copied
+into the application OpenAPI document.
 
-Use `./` imports inside one cohesive module or feature. Use the `@/` alias when
-an import crosses a top-level module boundary or would otherwise climb through
-`../`; use workspace package names for imports outside this app.
-
-Application errors use `application/problem+json`. Zod request failures are
-`422`; unknown routes are `404`; unhandled failures are safe `500` responses.
-Stoker is limited to small OpenAPI/status helpers—do not use its deprecated
-`oneOf` helpers.
-
-Evlog is the only application logger. Request events carry the request ID and,
-after authentication, the user ID. Do not log request bodies, cookies,
-authorization headers, passwords, or tokens.
-
-## Database changes
-
-Edit `src/db/schema/`, then generate and review a committed migration:
+After changing the contract, export the OpenAPI document and regenerate the
+TypeScript and Go clients:
 
 ```bash
-mise run //apps/server:db:generate
+mise run //:api:generate
+```
+
+Review and commit the generated contract and clients with the source change.
+
+## Change the database
+
+Edit `src/db/schema/`, then generate a named migration, review the SQL under
+`drizzle/`, and apply the committed migration:
+
+```bash
+mise run //apps/server:db:generate -- add-widget
 mise run //apps/server:db:migrate
 ```
 
-When Better Auth configuration changes, run its schema generator before
+When Better Auth configuration or plugins change, regenerate its schema before
 generating the Drizzle migration:
 
 ```bash
-pnpm --dir apps/server auth:generate
-mise run //apps/server:db:generate
+mise run //apps/server:auth:generate
+mise run //apps/server:db:generate -- update-auth
+mise run //apps/server:db:migrate
 ```
 
-There is deliberately no `db:push` command. Shared and test databases must be
-built from committed migrations.
-
-## Tests
-
-```bash
-mise run //apps/server:test
-mise run //apps/server:test:coverage
-mise run //apps/server:test:integration
-```
-
-Unit and HTTP tests are colocated with source and call `createApp().request()`.
-Integration tests live in `test/integration/`, start disposable PostgreSQL with
-Testcontainers, apply real migrations, and exercise Better Auth plus Hono over
-the public HTTP seam. Coverage is reported with V8 and has no threshold yet.
+Taskome deliberately has no `db:push` task. Shared, local, and test databases
+are built from committed migrations.

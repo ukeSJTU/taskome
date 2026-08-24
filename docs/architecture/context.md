@@ -112,5 +112,4 @@ communicates with an independently operated system at runtime.
 - [`CONTEXT.md`](../../CONTEXT.md) — canonical product and domain vocabulary.
 - [`containers.md`](./containers.md) — accepted target containers, ownership,
   and dependency directions inside Taskome.
-- [`docs/README.md`](../README.md) — documentation status and source-of-truth
-  rules during the architecture rewrite.
+- [`docs/README.md`](../README.md) — internal project documentation map.

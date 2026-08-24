@@ -146,4 +146,4 @@ The following capabilities are credible directions, but they have no committed d
 - [`roadmap.md`](./roadmap.md) — the concrete Tool and Utility roster, delivery order, and milestones.
 - [`requirements.md`](./requirements.md) — checkable product behavior and acceptance criteria derived from this vision.
 - [`CONTEXT.md`](../../CONTEXT.md) — Taskome's canonical domain vocabulary.
-- [`docs/README.md`](../README.md) — documentation status and the rewrite sequence.
+- [`docs/README.md`](../README.md) — internal project documentation map.
