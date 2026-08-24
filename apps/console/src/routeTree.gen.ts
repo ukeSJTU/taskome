@@ -13,6 +13,7 @@ import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as AuthProjectsRouteImport } from './routes/_auth/projects'
 import { Route as AuthSettingsRouteRouteImport } from './routes/_auth/settings/route'
 import { Route as AuthSettingsIndexRouteImport } from './routes/_auth/settings/index'
 import { Route as AuthSettingsApiKeysRouteImport } from './routes/_auth/settings/api-keys'
@@ -36,6 +37,11 @@ const SignupRoute = SignupRouteImport.update({
 const AuthIndexRoute = AuthIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthProjectsRoute = AuthProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthSettingsRouteRoute = AuthSettingsRouteRouteImport.update({
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/settings': typeof AuthSettingsRouteRouteWithChildren
+  '/projects': typeof AuthProjectsRoute
   '/settings/api-keys': typeof AuthSettingsApiKeysRoute
   '/settings/profile': typeof AuthSettingsProfileRoute
   '/settings/security': typeof AuthSettingsSecurityRoute
@@ -77,6 +84,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/projects': typeof AuthProjectsRoute
   '/': typeof AuthIndexRoute
   '/settings/api-keys': typeof AuthSettingsApiKeysRoute
   '/settings/profile': typeof AuthSettingsProfileRoute
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_auth/settings': typeof AuthSettingsRouteRouteWithChildren
+  '/_auth/projects': typeof AuthProjectsRoute
   '/_auth/': typeof AuthIndexRoute
   '/_auth/settings/api-keys': typeof AuthSettingsApiKeysRoute
   '/_auth/settings/profile': typeof AuthSettingsProfileRoute
@@ -102,6 +111,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/settings'
+    | '/projects'
     | '/settings/api-keys'
     | '/settings/profile'
     | '/settings/security'
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/signup'
+    | '/projects'
     | '/'
     | '/settings/api-keys'
     | '/settings/profile'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_auth/settings'
+    | '/_auth/projects'
     | '/_auth/'
     | '/_auth/settings/api-keys'
     | '/_auth/settings/profile'
@@ -162,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/_auth/projects': {
+      id: '/_auth/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthProjectsRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/_auth/settings': {
@@ -221,11 +240,13 @@ const AuthSettingsRouteRouteWithChildren =
 
 interface AuthRouteRouteChildren {
   AuthSettingsRouteRoute: typeof AuthSettingsRouteRouteWithChildren
+  AuthProjectsRoute: typeof AuthProjectsRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthSettingsRouteRoute: AuthSettingsRouteRouteWithChildren,
+  AuthProjectsRoute: AuthProjectsRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 

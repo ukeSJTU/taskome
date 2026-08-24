@@ -5,9 +5,9 @@ browser journeys for registration, sign-in, and the signed-in workspace. It
 calls `apps/server` for authentication and domain behavior and is separate from
 the public marketing site in `apps/web`.
 
-The current implementation provides authentication flows and a dashboard
-foundation. The product workflows described by the target architecture are not
-implemented yet.
+The current implementation provides authentication flows, a dashboard
+foundation, and Project management. The remaining product workflows described
+by the target architecture are not implemented yet.
 
 ## Tech stack
 

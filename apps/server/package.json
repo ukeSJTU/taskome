@@ -33,6 +33,7 @@
     "hono": "^4.12.32",
     "pg": "^8.22.0",
     "stoker": "^2.0.1",
+    "unicode-case-folding": "1.1.1",
     "zod": "catalog:"
   },
   "devDependencies": {

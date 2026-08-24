@@ -81,6 +81,18 @@ which its Attempts and outputs appear without changing any identity, input,
 history, or provenance. Moving a Saved File changes its organization, not its
 owner or content history.
 
+Each user has exactly one system-owned `Default Project`. Account creation and
+database backfill establish that invariant. The Project is a permanent fallback
+rather than a mutable preference: a Job or Saved File creation request that
+omits its Project uses `Default Project`. Users can edit its description, but
+cannot rename, archive, or delete it.
+
+Project names are unique per user across active and archived records after
+trimming and Unicode normalization, with case-insensitive comparison.
+Archiving preserves the name and contents, removes the Project from active
+lists by default, and blocks new contents and metadata edits until the user
+restores it.
+
 A Batch remains a user-owned grouping with immutable membership. Its member
 Jobs can be inspected and reorganized independently because the Batch does not
 own their lifecycle or results.

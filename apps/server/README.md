@@ -5,8 +5,8 @@ authorization, the application REST surface, and Taskome domain records in
 PostgreSQL. Scientific compute runs outside this process.
 
 The current implementation provides Better Auth, health and readiness checks,
-the current-user endpoint, OpenAPI generation, and the database foundation. The
-product domain and compute-coordination APIs described by the target
+Project lifecycle APIs, OpenAPI generation, and the database foundation. The
+remaining product domain and compute-coordination APIs described by the target
 architecture are not implemented yet.
 
 ## Tech stack

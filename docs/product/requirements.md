@@ -73,13 +73,15 @@ The exact scope names, scope granularity, credential types, and authorization fl
 
 ## Projects
 
-- **PROJECT-001 — Default Project.** Every new account must receive a private Project named `Default Project`.
+- **PROJECT-001 — Default Project.** Every account must have exactly one private system Project named `Default Project`. Its name is fixed, but its description remains editable.
 - **PROJECT-002 — Required assignment.** Every Job and saved file must belong to exactly one Project. Attempts and Job Outputs must inherit the Project of their Job rather than receiving independent Project assignments.
 - **PROJECT-003 — Organizational only.** Project assignment must not change ownership, access, Job execution order, or dependencies between Jobs.
 - **PROJECT-004 — Reorganization.** A user must be able to move a Job or saved file between their Projects without changing its identity, Job fields, Attempt history, or provenance.
 - **PROJECT-005 — Cross-Project file reuse.** A user must be able to use a saved file from one Project as input to a Job in another Project without duplicating the stored content.
-- **PROJECT-006 — Archive.** A user must be able to archive a non-default Project without changing or deleting its contents.
+- **PROJECT-006 — Archive.** A user must be able to archive and restore a non-default Project without changing or deleting its contents. An archived Project must not accept new Jobs or saved files, or allow metadata edits, until restored.
 - **PROJECT-007 — Safe deletion.** `Default Project` must not be archivable or deletable. A non-default Project may be deleted only when it is empty, and deleting a Project must never cascade to Jobs, Attempts, Job Outputs, or saved files.
+- **PROJECT-008 — Implicit assignment.** When a Job or saved-file creation request omits a Project, Taskome must assign it to the owner's `Default Project`.
+- **PROJECT-009 — Names.** Project names must be unique per user across active and archived Projects after trimming and Unicode normalization, with case-insensitive comparison.
 
 ## Jobs and Attempts
 

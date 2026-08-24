@@ -5,12 +5,10 @@
  * Taskome control-plane API
  * OpenAPI spec version: 1.0.0
  */
+import type { Project } from "./project";
 
-export interface CurrentUser {
-  email: string;
-  emailVerified: boolean;
-  id: string;
+export interface ProjectList {
+  items: Project[];
   /** @nullable */
-  image: string | null;
-  name: string;
+  nextCursor: string | null;
 }

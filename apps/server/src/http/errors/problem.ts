@@ -33,22 +33,23 @@ interface ProblemOptions {
 }
 
 export function problemResponse(c: Context<AppEnv>, options: ProblemOptions) {
-  return new Response(
-    JSON.stringify({
-      code: options.code,
-      detail: options.detail,
-      errors: options.errors,
-      instance: c.req.path,
-      requestId: c.get("requestId"),
-      status: options.status,
-      title: options.title,
-      type: "about:blank",
-    }),
-    {
-      headers: { "content-type": "application/problem+json; charset=UTF-8" },
-      status: options.status,
-    },
-  );
+  return new Response(JSON.stringify(problemDetails(c, options)), {
+    headers: { "content-type": "application/problem+json; charset=UTF-8" },
+    status: options.status,
+  });
+}
+
+export function problemDetails(c: Context<AppEnv>, options: ProblemOptions) {
+  return {
+    code: options.code,
+    detail: options.detail,
+    ...(options.errors ? { errors: options.errors } : {}),
+    instance: c.req.path,
+    requestId: c.get("requestId"),
+    status: options.status,
+    title: options.title,
+    type: "about:blank",
+  };
 }
 
 export const validationHook: NonNullable<OpenAPIHonoOptions<AppEnv>["defaultHook"]> = (
