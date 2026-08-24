@@ -10,6 +10,10 @@ run = "pnpm run build"
 description = "Start the built server"
 run = "pnpm run start"
 
+[tasks."api:export"]
+description = "Export the OpenAPI contract served by the application"
+run = ["pnpm run api:export", "pnpm exec oxfmt --write openapi.json"]
+
 [tasks.lint]
 description = "Apply safe lint fixes to the server"
 run = "pnpm run lint"
