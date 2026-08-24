@@ -3,6 +3,10 @@ description = "Run the Taskome CLI from source"
 raw_args = true
 run = "go run ."
 
+[tasks."api:generate"]
+description = "Generate the Go API client"
+run = "oapi-codegen --config oapi-codegen.yaml ../server/openapi.json"
+
 [tasks.format]
 description = "Format Taskome CLI Go source"
 run = "gofmt -w ."

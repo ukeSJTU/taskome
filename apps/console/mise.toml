@@ -10,6 +10,10 @@ run = "pnpm run build"
 description = "Preview the production console build locally"
 run = "pnpm run serve"
 
+[tasks."api:generate"]
+description = "Generate the Fetch and TanStack Query API client"
+run = "pnpm run api:generate"
+
 [tasks.lint]
 description = "Apply safe lint fixes to the console"
 run = "pnpm run lint"

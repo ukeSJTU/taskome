@@ -17,6 +17,7 @@ config_roots = [
 go = "1.26.6"
 "go:honnef.co/go/tools/cmd/staticcheck" = "0.7.0"
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.7.0"
+"go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "2.8.0"
 node = "24"
 python = "3.14"
 pnpm = "11"
@@ -70,6 +71,17 @@ depends = [
   "//apps/docs:build",
   "//apps/server:build",
   "//apps/web:build",
+]
+output = "prefix"
+
+[tasks."api:generate"]
+description = "Export the OpenAPI contract and regenerate the TypeScript and Go API clients"
+run = [
+  { task = "//apps/server:api:export" },
+  { tasks = [
+    "//apps/console:api:generate",
+    "//apps/cli:api:generate",
+  ] },
 ]
 output = "prefix"
 
