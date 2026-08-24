@@ -78,7 +78,7 @@ const data = {
       items: [
         {
           title: "Projects",
-          url: "#",
+          url: "/projects",
           icon: <FolderIcon />,
         },
         {
@@ -155,6 +155,12 @@ function SearchCommand() {
     void navigate({ to: "/" });
   };
 
+  const navigateToProjects = () => {
+    setOpen(false);
+    closeMobileSidebar();
+    void navigate({ to: "/projects" });
+  };
+
   const navigateToSettings = (
     to: "/settings" | "/settings/profile" | "/settings/security" | "/settings/api-keys",
   ) => {
@@ -192,6 +198,10 @@ function SearchCommand() {
               <CommandItem onSelect={navigateToOverview}>
                 <LayoutDashboardIcon />
                 <span>Overview</span>
+              </CommandItem>
+              <CommandItem onSelect={navigateToProjects}>
+                <FolderIcon />
+                <span>Projects</span>
               </CommandItem>
             </CommandGroup>
             <CommandGroup heading="Settings">

@@ -7,6 +7,7 @@ import { createApp } from "@/app";
 import { auth } from "@/auth";
 import { createSessionResolver } from "@/auth/session";
 import { database } from "@/db";
+import { createProjectsModule } from "@/features/projects";
 
 export type RuntimeConfig = {
   corsOrigin: string;
@@ -33,6 +34,7 @@ export function createRuntime(config: RuntimeConfig) {
     checkReadiness: database.check,
     corsOrigin: config.corsOrigin,
     getSession: createSessionResolver(auth),
+    projects: createProjectsModule(database.db),
     resolveClientIp: (context) => getConnInfo(context).remote.address,
   });
 

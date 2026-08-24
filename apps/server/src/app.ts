@@ -6,7 +6,7 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 
 import type { SessionIdentity } from "@/auth/session";
-import { createMeRouter } from "@/features/me";
+import { createProjectsRouter, type ProjectsModule } from "@/features/projects";
 import { problemResponse, validationHook } from "@/http/errors/problem";
 import { registerHealthRoutes } from "@/http/health";
 import { correlateRequest } from "@/http/middleware/correlate-request";
@@ -18,6 +18,7 @@ export interface AppOptions {
   corsOrigin: string;
   drain?: EvlogHonoOptions["drain"];
   getSession: (headers: Headers) => Promise<SessionIdentity | null>;
+  projects: ProjectsModule;
   resolveClientIp?: (context: Context<AppEnv>) => string | undefined;
 }
 
@@ -27,6 +28,7 @@ export function createApp({
   corsOrigin,
   drain,
   getSession,
+  projects,
   resolveClientIp,
 }: AppOptions) {
   const app = new OpenAPIHono<AppEnv>({ defaultHook: validationHook });
@@ -58,7 +60,7 @@ export function createApp({
   });
 
   registerHealthRoutes(app, checkReadiness);
-  app.route("/api/v1", createMeRouter({ getSession }));
+  app.route("/api/v1", createProjectsRouter({ getSession, projects }));
 
   app.openAPIRegistry.registerComponent("securitySchemes", "cookieAuth", {
     in: "cookie",

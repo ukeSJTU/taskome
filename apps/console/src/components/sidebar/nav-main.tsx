@@ -94,7 +94,13 @@ function MainNavItem({ item, pathname }: { item: MainNavItemData; pathname: stri
         tooltip={item.title}
         isActive={isActive}
         render={
-          item.url === "/" ? <Link to="/" activeOptions={{ exact: true }} /> : <a href={item.url} />
+          item.url === "/" ? (
+            <Link to="/" activeOptions={{ exact: true }} />
+          ) : item.url === "/projects" ? (
+            <Link to="/projects" />
+          ) : (
+            <a href={item.url} />
+          )
         }
       >
         {item.icon}

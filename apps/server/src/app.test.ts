@@ -17,6 +17,15 @@ function createTestApp(
     corsOrigin,
     drain: () => undefined,
     getSession: overrides.getSession ?? (() => Promise.resolve(null)),
+    projects: {
+      archiveProject: () => Promise.reject(new Error("unused test Project method")),
+      createProject: () => Promise.reject(new Error("unused test Project method")),
+      deleteProject: () => Promise.reject(new Error("unused test Project method")),
+      getProject: () => Promise.reject(new Error("unused test Project method")),
+      listProjects: () => Promise.resolve({ items: [], nextCursor: null }),
+      unarchiveProject: () => Promise.reject(new Error("unused test Project method")),
+      updateProject: () => Promise.reject(new Error("unused test Project method")),
+    },
   });
 }
 
@@ -76,16 +85,16 @@ describe("server HTTP interface", () => {
       info: { title: "Taskome API" },
       openapi: "3.1.0",
     });
-    expect(document).toHaveProperty(["paths", "/api/v1/me"]);
+    expect(document).toHaveProperty(["paths", "/api/v1/projects"]);
     expect(document).not.toHaveProperty(["paths", "/api/auth/{path}"]);
     expect(referenceResponse.status).toBe(200);
     expect(referenceResponse.headers.get("content-type")).toContain("text/html");
   });
 
-  it("requires a session for the current-user interface", async () => {
+  it("requires a session for the Projects interface", async () => {
     const app = createTestApp();
 
-    const response = await app.request("/api/v1/me");
+    const response = await app.request("/api/v1/projects");
 
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({

@@ -38,11 +38,12 @@ operation's programmatic name.
   exposed at `/openapi.json`. Contract changes include an HTTP test through
   `app.request()`; do not maintain a second hand-written response schema.
 
-The Tool/Job/Attempt REST and MCP API doesn't exist in `apps/server` yet — the
-only feature slice implemented so far is `me`. Once that API exists, this
-section should gain the conventions for it (curated parameter contracts,
-Params/Result schema shape); until then, that's a target-architecture
-question for [`architecture/components/tool-runtime.md`](../architecture/components/tool-runtime.md),
+The Tool/Job/Attempt REST and MCP API doesn't exist in `apps/server` yet. The
+implemented business feature slice is `projects`. Once the compute API exists,
+this section should gain its conventions (curated parameter contracts,
+Params/Result schema shape); until then, that remains a target-architecture
+question for
+[`architecture/components/tool-runtime.md`](../architecture/components/tool-runtime.md),
 not a coding standard for code that doesn't exist.
 
 ## Comments
