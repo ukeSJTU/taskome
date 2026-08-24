@@ -292,6 +292,12 @@
       "skillPath": "better-auth/twoFactor/SKILL.md",
       "computedHash": "a6f720042e5a090909e0d519a6a50a7eb8179553cd5315f0bbad852a6d20dac8"
     },
+    "typescript-mcp-server-generator": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/typescript-mcp-server-generator/SKILL.md",
+      "computedHash": "389dd5b2f6bf325e142ae1e88833193935c120b4eb0abe34d479a0a788f3c887"
+    },
     "vercel-composition-patterns": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
