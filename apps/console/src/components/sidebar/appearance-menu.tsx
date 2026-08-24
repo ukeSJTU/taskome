@@ -16,7 +16,7 @@ import { ChevronRightIcon, SunMoonIcon } from "lucide-react";
 
 import { useTheme } from "@/components/common/theme-provider";
 
-export function ModeToggle() {
+export function AppearanceMenu() {
   const { isMobile } = useSidebar();
   const { setTheme, theme } = useTheme();
   const currentTheme = theme === "light" || theme === "dark" ? theme : "system";

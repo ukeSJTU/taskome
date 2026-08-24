@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 
-import { ModeToggle } from "@/components/common/mode-toggle";
+import { AppearanceMenu } from "@/components/sidebar/appearance-menu";
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavUser, type NavUserData } from "@/components/sidebar/nav-user";
 import {
@@ -37,6 +37,7 @@ import {
   KeyRoundIcon,
   LayoutDashboardIcon,
   ListChecksIcon,
+  MailIcon,
   PanelsTopLeftIcon,
   SearchIcon,
   ShieldCheckIcon,
@@ -253,6 +254,12 @@ export function AppSidebar({
               <span className="text-base font-semibold">Taskome</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+            <SidebarMenuButton tooltip="Inbox" className="size-8 border border-sidebar-border p-2">
+              <MailIcon />
+              <span className="sr-only">Inbox</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem className="ml-auto">
             <SidebarTrigger />
           </SidebarMenuItem>
@@ -262,7 +269,7 @@ export function AppSidebar({
       <SidebarContent>
         <NavMain overview={data.overview} sections={data.navMain} />
         <SettingsLink />
-        <ModeToggle />
+        <AppearanceMenu />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />
@@ -351,7 +358,7 @@ export function SettingsSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
         <div className="mt-auto">
-          <ModeToggle />
+          <AppearanceMenu />
         </div>
       </SidebarContent>
       <SidebarFooter>
