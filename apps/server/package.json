@@ -15,6 +15,7 @@
     "dev": "tsx watch src/index.ts",
     "lint": "oxlint --fix .",
     "lint:check": "oxlint --deny-warnings --report-unused-disable-directives .",
+    "oauth:register-client": "tsx scripts/register-oauth-client.ts",
     "start": "node dist/index.mjs",
     "test": "vitest run --project unit",
     "test:coverage": "vitest run --project unit --coverage",

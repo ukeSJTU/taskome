@@ -7,6 +7,10 @@ import { z } from "zod";
 
 import { createApp, type App } from "@/app";
 import { createSessionResolver } from "@/auth/session";
+import { createApiKeyResolver } from "@/auth/api-key-resolver";
+import { createRestSecurityContextResolver } from "@/auth/security-context";
+import { protectedResources } from "@/auth/resources";
+import { withAuthRequestCorrelation } from "@/auth/request-correlation";
 import { createTaskomeMcpHandler } from "@/auth/mcp";
 import { createOAuthGrantService } from "@/auth/oauth-grants";
 import type { DatabaseRuntime } from "@/db/database";
@@ -51,16 +55,25 @@ describe("server with PostgreSQL and Better Auth", () => {
     });
 
     ({ testAuth: auth } = await import("@/auth.test-instance"));
+    const getSession = createSessionResolver(auth);
     app = createApp({
       apiKeyService: createApiKeyService(auth, database.db),
-      authHandler: (request) => auth.handler(request),
+      authHandler: (request) =>
+        withAuthRequestCorrelation(request.headers.get("x-request-id") ?? crypto.randomUUID(), () =>
+          auth.handler(request),
+        ),
       checkReadiness: database.check,
       corsOrigin: webOrigin,
       drain: () => undefined,
-      getSession: createSessionResolver(auth),
+      getSession,
       mcpHandler: createTaskomeMcpHandler(auth, createOAuthGrantService(database.db), serverOrigin),
       oauthGrantService: createOAuthGrantManagementService(database.db),
       projects: createProjectsModule(database.db),
+      resolveSecurityContext: createRestSecurityContextResolver({
+        getSession,
+        resource: protectedResources(serverOrigin).rest,
+        verifyApiKey: createApiKeyResolver(auth, database.db),
+      }),
     });
   });
 
@@ -148,6 +161,11 @@ describe("server with PostgreSQL and Better Auth", () => {
 
     const validBefore = await auth.api.verifyApiKey({ body: { key: created.secret } });
     expect(validBefore.valid).toBe(true);
+    const authorizedResponse = await app.request(`${serverOrigin}/api/v1/me`, {
+      headers: { authorization: `Bearer ${created.secret}` },
+    });
+    expect(authorizedResponse.status).toBe(200);
+    expect(await authorizedResponse.json()).toMatchObject({ email: user.email, id: user.id });
 
     const revokeResponse = await app.request(`${serverOrigin}/api/v1/api-keys/${created.id}`, {
       headers,
@@ -156,6 +174,10 @@ describe("server with PostgreSQL and Better Auth", () => {
     expect(revokeResponse.status).toBe(204);
     const validAfter = await auth.api.verifyApiKey({ body: { key: created.secret } });
     expect(validAfter.valid).toBe(false);
+    const deniedResponse = await app.request(`${serverOrigin}/api/v1/me`, {
+      headers: { authorization: `Bearer ${created.secret}` },
+    });
+    expect(deniedResponse.status).toBe(401);
 
     const historyResponse = await app.request(`${serverOrigin}/api/v1/api-keys/${created.id}`, {
       headers,
@@ -284,6 +306,25 @@ describe("server with PostgreSQL and Better Auth", () => {
     expect(access?.revoked).toBeInstanceOf(Date);
     expect(consents).toEqual([]);
     expect(events).toHaveLength(1);
+
+    const firstRevokedAt = grant?.revokedAt;
+    const repeatedResponse = await app.request(`${serverOrigin}/api/v1/oauth-grants/${grantId}`, {
+      headers,
+      method: "DELETE",
+    });
+    expect(repeatedResponse.status).toBe(204);
+    const [repeatedGrant] = await database.db
+      .select()
+      .from(oauthGrant)
+      .where(eq(oauthGrant.id, grantId));
+    const repeatedEvents = await database.db
+      .select()
+      .from(securityEvent)
+      .where(
+        and(eq(securityEvent.grantId, grantId), eq(securityEvent.operation, "oauth_grant.revoked")),
+      );
+    expect(repeatedGrant?.revokedAt).toEqual(firstRevokedAt);
+    expect(repeatedEvents).toHaveLength(1);
   });
 
   it("challenges unauthenticated MCP requests and keeps test helpers test-only", async () => {

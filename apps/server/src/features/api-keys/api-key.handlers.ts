@@ -1,6 +1,7 @@
 import type { RouteHandler } from "@hono/zod-openapi";
 
 import type { AppEnv } from "@/http/types";
+import { problemDetails } from "@/http/errors/problem";
 import type { ApiKeyService } from "./api-key.service";
 import type {
   CreateApiKeyRoute,
@@ -20,6 +21,13 @@ function serialize(metadata: Awaited<ReturnType<ApiKeyService["get"]>> & {}) {
 }
 
 export function createApiKeyHandlers(service: ApiKeyService) {
+  const notFound = (c: Parameters<typeof problemDetails>[0]) =>
+    problemDetails(c, {
+      code: "not_found",
+      detail: "No API key has that identifier.",
+      status: 404,
+      title: "Not found",
+    });
   const create: RouteHandler<CreateApiKeyRoute, AppEnv> = async (c) => {
     const body = c.req.valid("json");
     const session = c.get("session");
@@ -39,18 +47,7 @@ export function createApiKeyHandlers(service: ApiKeyService) {
   const get: RouteHandler<GetApiKeyRoute, AppEnv> = async (c) => {
     const record = await service.get(c.get("session").user.id, c.req.valid("param").id);
     if (record) return c.json(serialize(record), 200);
-    return c.json(
-      {
-        code: "not_found",
-        detail: "No API key has that identifier.",
-        instance: c.req.path,
-        requestId: c.get("requestId"),
-        status: 404,
-        title: "Not found",
-        type: "about:blank",
-      },
-      404,
-    );
+    return c.json(notFound(c), 404, { "content-type": "application/problem+json" });
   };
 
   const update: RouteHandler<UpdateApiKeyRoute, AppEnv> = async (c) => {
@@ -61,18 +58,7 @@ export function createApiKeyHandlers(service: ApiKeyService) {
       requestId: c.get("requestId"),
     });
     if (record) return c.json(serialize(record), 200);
-    return c.json(
-      {
-        code: "not_found",
-        detail: "No API key has that identifier.",
-        instance: c.req.path,
-        requestId: c.get("requestId"),
-        status: 404,
-        title: "Not found",
-        type: "about:blank",
-      },
-      404,
-    );
+    return c.json(notFound(c), 404, { "content-type": "application/problem+json" });
   };
 
   const revoke: RouteHandler<RevokeApiKeyRoute, AppEnv> = async (c) => {
@@ -82,18 +68,7 @@ export function createApiKeyHandlers(service: ApiKeyService) {
       c.get("requestId"),
     );
     if (revoked) return c.body(null, 204);
-    return c.json(
-      {
-        code: "not_found",
-        detail: "No API key has that identifier.",
-        instance: c.req.path,
-        requestId: c.get("requestId"),
-        status: 404,
-        title: "Not found",
-        type: "about:blank",
-      },
-      404,
-    );
+    return c.json(notFound(c), 404, { "content-type": "application/problem+json" });
   };
 
   return { create, get, list, revoke, update };

@@ -3,8 +3,7 @@ import { createMiddleware } from "hono/factory";
 import { problemResponse } from "@/http/errors/problem";
 import type { AppEnv } from "@/http/types";
 import type { GetSession } from "./session";
-
-export const freshSessionSeconds = 60 * 15;
+import { credentialManagementDenial } from "./credential-management-policy";
 
 export function requireCredentialManagementSession(getSession: GetSession) {
   return createMiddleware<AppEnv>(async (c, next) => {
@@ -26,7 +25,11 @@ export function requireCredentialManagementSession(getSession: GetSession) {
         title: "Unauthorized",
       });
     }
-    if (!session.user.emailVerified) {
+    const denial = credentialManagementDenial({
+      emailVerified: session.user.emailVerified,
+      sessionCreatedAt: session.session.createdAt,
+    });
+    if (denial === "email_verification_required") {
       return problemResponse(c, {
         code: "email_verification_required",
         detail: "Verify your email before managing programmatic access.",
@@ -34,7 +37,7 @@ export function requireCredentialManagementSession(getSession: GetSession) {
         title: "Forbidden",
       });
     }
-    if (Date.now() - session.session.createdAt.getTime() > freshSessionSeconds * 1000) {
+    if (denial === "fresh_session_required") {
       return problemResponse(c, {
         code: "fresh_session_required",
         detail: "Sign in again before managing programmatic access.",

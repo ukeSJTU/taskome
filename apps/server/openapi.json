@@ -158,6 +158,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "apiKeyBearer": []
           }
         ],
         "tags": ["Projects"],

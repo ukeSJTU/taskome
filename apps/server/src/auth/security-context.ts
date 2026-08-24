@@ -18,20 +18,21 @@ export type SecurityContext =
       credential: { id: string; type: "api_key" };
       resource: string;
       scopes: TaskomeScope[];
-      user: { emailVerified: true; id: string };
+      user: SessionIdentity["user"];
     }
   | {
       correlation: RequestCorrelation;
       credential: { grantId: string; type: "oauth_grant" };
       resource: string;
       scopes: TaskomeScope[];
-      user: { emailVerified: boolean; id: string };
+      user: SessionIdentity["user"];
     };
 
 export interface VerifiedApiKey {
   id: string;
   ownerUserId: string;
   permissions: Record<string, string[]> | null | undefined;
+  user: SessionIdentity["user"];
 }
 
 export type VerifyApiKey = (
@@ -64,7 +65,7 @@ export function createRestSecurityContextResolver(options: {
         credential: { id: key.id, type: "api_key" },
         resource: options.resource,
         scopes: permissionsToScopes(key.permissions),
-        user: { emailVerified: true, id: key.ownerUserId },
+        user: key.user,
       };
     }
 

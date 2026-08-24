@@ -4,6 +4,7 @@ import { fetchClientMetadataResource } from "@better-auth/cimd/node";
 import { mcp } from "@better-auth/mcp";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { jwt } from "better-auth/plugins";
+import { APIError } from "better-auth";
 
 import type { Database } from "@/db/database";
 import * as schema from "@/db/schema";
@@ -11,6 +12,8 @@ import { createOAuthAuthorizationInputResolver } from "./oauth-authorization-inp
 import { createOAuthGrantService } from "./oauth-grants";
 import { protectedResources } from "./resources";
 import { taskomeScopes } from "./scopes";
+import { credentialManagementDenial } from "./credential-management-policy";
+import { getAuthRequestCorrelation } from "./request-correlation";
 
 export const apiKeyDefaultLifetimeSeconds = 60 * 60 * 24 * 90;
 export const apiKeyMaximumLifetimeSeconds = 60 * 60 * 24 * 365;
@@ -19,7 +22,6 @@ export function createTaskomeAuthOptions(
   database: Database,
   serverOrigin: string,
   includeSchema = true,
-  adapterDatabase: Parameters<typeof drizzleAdapter>[0] = database,
 ) {
   const resources = protectedResources(serverOrigin);
   const oauthGrants = createOAuthGrantService(database);
@@ -27,7 +29,7 @@ export function createTaskomeAuthOptions(
 
   return {
     baseURL: serverOrigin,
-    database: drizzleAdapter(adapterDatabase, {
+    database: drizzleAdapter(database, {
       provider: "pg" as const,
       ...(includeSchema ? { schema } : {}),
     }),
@@ -76,9 +78,19 @@ export function createTaskomeAuthOptions(
         },
         loginPage: "/sign-in",
         postLogin: {
-          consentReferenceId: async ({ scopes, user }) => {
+          consentReferenceId: async ({ scopes, user, session }) => {
+            const denial = credentialManagementDenial({
+              emailVerified: user.emailVerified,
+              sessionCreatedAt: session.createdAt,
+            });
+            if (denial) {
+              throw new APIError("FORBIDDEN", {
+                code: denial,
+                message: "Verify your email and sign in again before authorizing a client.",
+              });
+            }
             const input = await resolveAuthorizationInput(resources.mcp, scopes);
-            return oauthGrants.createReference(user.id, input);
+            return oauthGrants.createReference(user.id, input, getAuthRequestCorrelation());
           },
           page: "/oauth/select-authority",
           shouldRedirect: () => false,

@@ -77,6 +77,15 @@ Registration is disabled. The canonical `/mcp` route accepts ordinary Bearer
 tokens, rejects the legacy session-oriented MCP protocol, and checks the
 Taskome OAuth Grant in PostgreSQL after JWT verification.
 
+For an older native client that cannot publish CIMD metadata, an operator can
+pre-register its exact callback URI as a public S256-PKCE client. The command
+prints the generated client ID and never prints a client secret:
+
+```bash
+mise run //apps/server:oauth:register-client --name "Taskome CLI" \
+  --redirect_uri "http://127.0.0.1:32123/oauth/callback"
+```
+
 ## Understand the source layout
 
 ```text

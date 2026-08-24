@@ -51,7 +51,7 @@ export function createOAuthGrantService(db: Database) {
       return { [oauthGrantClaim]: grant.id };
     },
 
-    async createReference(ownerUserId: string, input: OAuthAuthorizationInput) {
+    async createReference(ownerUserId: string, input: OAuthAuthorizationInput, requestId: string) {
       const now = new Date();
       await db
         .delete(oauthGrant)
@@ -107,7 +107,7 @@ export function createOAuthGrantService(db: Database) {
             grantId: grant.id,
             id: crypto.randomUUID(),
             operation: "oauth_grant.scopes_changed",
-            requestId: crypto.randomUUID(),
+            requestId,
             result: "succeeded",
             targetId: id,
             targetType: "oauth_grant",
@@ -126,7 +126,7 @@ export function createOAuthGrantService(db: Database) {
           grantId: id,
           id: crypto.randomUUID(),
           operation: "oauth_grant.created",
-          requestId: crypto.randomUUID(),
+          requestId,
           result: "succeeded",
           targetId: id,
           targetType: "oauth_grant",
@@ -154,6 +154,17 @@ export function createOAuthGrantService(db: Database) {
         ) ||
         grant.expiresAt <= new Date()
       ) {
+        await db.insert(securityEvent).values({
+          actorUserId: grant?.ownerUserId,
+          grantId: grant?.id,
+          id: crypto.randomUUID(),
+          operation:
+            grant && grant.expiresAt <= new Date() ? "oauth_grant.expired" : "oauth_grant.denied",
+          requestId: input.requestId,
+          result: "denied",
+          targetId: input.grantId,
+          targetType: "oauth_grant",
+        });
         return null;
       }
 

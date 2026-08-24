@@ -1,6 +1,7 @@
 import type { RouteHandler } from "@hono/zod-openapi";
 
 import type { AppEnv } from "@/http/types";
+import { problemDetails } from "@/http/errors/problem";
 import { parseTaskomeScopes } from "@/auth/scopes";
 import type { OAuthGrantManagementService } from "./oauth-grant.service";
 import type {
@@ -23,16 +24,13 @@ function serialize(grant: Grant) {
   };
 }
 
-function notFound(c: { get: (key: "requestId") => string; req: { path: string } }) {
-  return {
+function notFound(c: Parameters<typeof problemDetails>[0]) {
+  return problemDetails(c, {
     code: "not_found",
     detail: "No OAuth Grant has that identifier.",
-    instance: c.req.path,
-    requestId: c.get("requestId"),
-    status: 404 as const,
+    status: 404,
     title: "Not found",
-    type: "about:blank",
-  };
+  });
 }
 
 export function createOAuthGrantHandlers(service: OAuthGrantManagementService) {
@@ -40,7 +38,9 @@ export function createOAuthGrantHandlers(service: OAuthGrantManagementService) {
     c.json((await service.list(c.get("session").user.id)).map(serialize), 200);
   const get: RouteHandler<GetOAuthGrantRoute, AppEnv> = async (c) => {
     const grant = await service.get(c.get("session").user.id, c.req.valid("param").id);
-    return grant ? c.json(serialize(grant), 200) : c.json(notFound(c), 404);
+    return grant
+      ? c.json(serialize(grant), 200)
+      : c.json(notFound(c), 404, { "content-type": "application/problem+json" });
   };
   const revoke: RouteHandler<RevokeOAuthGrantRoute, AppEnv> = async (c) => {
     const done = await service.revoke(
@@ -48,7 +48,9 @@ export function createOAuthGrantHandlers(service: OAuthGrantManagementService) {
       c.req.valid("param").id,
       c.get("requestId"),
     );
-    return done ? c.body(null, 204) : c.json(notFound(c), 404);
+    return done
+      ? c.body(null, 204)
+      : c.json(notFound(c), 404, { "content-type": "application/problem+json" });
   };
   return { get, list, revoke };
 }

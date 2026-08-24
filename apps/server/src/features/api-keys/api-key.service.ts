@@ -1,10 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
-
 import { apiKeyDefaultLifetimeSeconds, apiKeyMaximumLifetimeSeconds } from "@/auth/factory";
 import { permissionsToScopes, scopePermissions, type TaskomeScope } from "@/auth/scopes";
 import type { Auth } from "@/auth";
 import type { Database } from "@/db/database";
-import { apikey, securityEvent } from "@/db/schema";
+import { apikey } from "@/db/schema";
+import { createApiKeyRepository } from "./api-key.repository";
 
 export interface ApiKeyMetadata {
   createdAt: Date;
@@ -35,13 +34,7 @@ function metadataFor(record: typeof apikey.$inferSelect): ApiKeyMetadata {
 }
 
 export function createApiKeyService(auth: Auth, db: Database) {
-  async function ownedRecord(ownerUserId: string, id: string) {
-    const [record] = await db
-      .select()
-      .from(apikey)
-      .where(and(eq(apikey.id, id), eq(apikey.referenceId, ownerUserId)));
-    return record;
-  }
+  const repository = createApiKeyRepository(db);
 
   return {
     async create(input: {
@@ -62,16 +55,7 @@ export function createApiKeyService(auth: Auth, db: Database) {
           userId: input.ownerUserId,
         },
       });
-      await db.insert(securityEvent).values({
-        actorUserId: input.ownerUserId,
-        credentialId: created.id,
-        id: crypto.randomUUID(),
-        operation: "api_key.created",
-        requestId: input.requestId,
-        result: "succeeded",
-        targetId: created.id,
-        targetType: "api_key",
-      });
+      await repository.created(input.ownerUserId, created.id, input.requestId);
       return {
         metadata: {
           createdAt: created.createdAt,
@@ -87,39 +71,17 @@ export function createApiKeyService(auth: Auth, db: Database) {
     },
 
     async get(ownerUserId: string, id: string) {
-      const record = await ownedRecord(ownerUserId, id);
+      const record = await repository.get(ownerUserId, id);
       return record ? metadataFor(record) : null;
     },
 
     async list(ownerUserId: string) {
-      const records = await db
-        .select()
-        .from(apikey)
-        .where(eq(apikey.referenceId, ownerUserId))
-        .orderBy(desc(apikey.createdAt));
+      const records = await repository.list(ownerUserId);
       return records.map(metadataFor);
     },
 
     async revoke(ownerUserId: string, id: string, requestId: string) {
-      return db.transaction(async (transaction) => {
-        const [record] = await transaction
-          .select()
-          .from(apikey)
-          .where(and(eq(apikey.id, id), eq(apikey.referenceId, ownerUserId)));
-        if (!record) return false;
-        await transaction.update(apikey).set({ enabled: false }).where(eq(apikey.id, id));
-        await transaction.insert(securityEvent).values({
-          actorUserId: ownerUserId,
-          credentialId: id,
-          id: crypto.randomUUID(),
-          operation: "api_key.revoked",
-          requestId,
-          result: "succeeded",
-          targetId: id,
-          targetType: "api_key",
-        });
-        return true;
-      });
+      return repository.revoke(ownerUserId, id, requestId);
     },
 
     async update(input: {
@@ -130,41 +92,28 @@ export function createApiKeyService(auth: Auth, db: Database) {
       requestId: string;
       scopes?: TaskomeScope[] | undefined;
     }) {
-      return db.transaction(async (transaction) => {
-        const [record] = await transaction
-          .select()
-          .from(apikey)
-          .where(and(eq(apikey.id, input.id), eq(apikey.referenceId, input.ownerUserId)));
-        if (!record) return null;
-        if (input.expiresIn && input.expiresIn > apiKeyMaximumLifetimeSeconds) {
-          throw new RangeError("API key expiry");
-        }
-        const expiresAt = input.expiresIn
-          ? new Date(Date.now() + input.expiresIn * 1000)
-          : record.expiresAt;
-        const permissions = input.scopes
-          ? JSON.stringify(scopePermissions(input.scopes))
-          : record.permissions;
-        const [updated] = await transaction
-          .update(apikey)
-          .set({ expiresAt, name: input.name ?? record.name, permissions, updatedAt: new Date() })
-          .where(eq(apikey.id, input.id))
-          .returning();
-        if (input.scopes) {
-          await transaction.insert(securityEvent).values({
-            actorUserId: input.ownerUserId,
-            credentialId: input.id,
-            details: { scopes: input.scopes },
-            id: crypto.randomUUID(),
-            operation: "api_key.scopes_changed",
-            requestId: input.requestId,
-            result: "succeeded",
-            targetId: input.id,
-            targetType: "api_key",
-          });
-        }
-        return updated ? metadataFor(updated) : null;
+      const record = await repository.get(input.ownerUserId, input.id);
+      if (!record) return null;
+      if (input.expiresIn && input.expiresIn > apiKeyMaximumLifetimeSeconds) {
+        throw new RangeError("API key expiry");
+      }
+      const expiresAt = input.expiresIn
+        ? new Date(Date.now() + input.expiresIn * 1000)
+        : record.expiresAt;
+      const permissions = input.scopes
+        ? JSON.stringify(scopePermissions(input.scopes))
+        : record.permissions;
+      const updated = await repository.update({
+        expiresAt,
+        id: input.id,
+        name: input.name ?? record.name,
+        ownerUserId: input.ownerUserId,
+        permissions,
+        requestId: input.requestId,
+        scopes: input.scopes ?? [],
+        scopesChanged: Boolean(input.scopes),
       });
+      return updated ? metadataFor(updated) : null;
     },
   };
 }

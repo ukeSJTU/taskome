@@ -6,6 +6,7 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 
 import type { SessionIdentity } from "@/auth/session";
+import type { RestSecurityContextResolver } from "@/auth/require-security-context";
 import { createApiKeyRouter, type ApiKeyService } from "@/features/api-keys";
 import { createOAuthGrantRouter, type OAuthGrantManagementService } from "@/features/oauth-grants";
 import { createMeRouter } from "@/features/me";
@@ -25,6 +26,7 @@ export interface AppOptions {
   mcpHandler?: (request: Request) => Promise<Response> | Response;
   oauthGrantService?: OAuthGrantManagementService;
   projects: ProjectsModule;
+  resolveSecurityContext: RestSecurityContextResolver;
   resolveClientIp?: (context: Context<AppEnv>) => string | undefined;
 }
 
@@ -51,6 +53,7 @@ export function createApp({
   mcpHandler,
   oauthGrantService,
   projects,
+  resolveSecurityContext,
   resolveClientIp,
 }: AppOptions) {
   const app = new OpenAPIHono<AppEnv>({ defaultHook: validationHook });
@@ -112,7 +115,7 @@ export function createApp({
   if (mcpHandler) app.post("/mcp", (c) => mcpHandler(c.req.raw));
 
   registerHealthRoutes(app, checkReadiness);
-  app.route("/api/v1", createMeRouter({ getSession }));
+  app.route("/api/v1", createMeRouter({ resolveSecurityContext }));
   if (apiKeyService) {
     app.route("/api/v1", createApiKeyRouter({ getSession, service: apiKeyService }));
   }

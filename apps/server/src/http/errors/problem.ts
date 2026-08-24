@@ -24,19 +24,12 @@ export const ProblemDetailsSchema = z
   })
   .openapi("ProblemDetails");
 
-interface ProblemOptions {
+export interface ProblemOptions {
   code: string;
   detail: string;
   errors?: Array<{ code: string; message: string; path: string }>;
   status: number;
   title: string;
-}
-
-export function problemResponse(c: Context<AppEnv>, options: ProblemOptions) {
-  return new Response(JSON.stringify(problemDetails(c, options)), {
-    headers: { "content-type": "application/problem+json; charset=UTF-8" },
-    status: options.status,
-  });
 }
 
 export function problemDetails(c: Context<AppEnv>, options: ProblemOptions) {
@@ -50,6 +43,13 @@ export function problemDetails(c: Context<AppEnv>, options: ProblemOptions) {
     title: options.title,
     type: "about:blank",
   };
+}
+
+export function problemResponse(c: Context<AppEnv>, options: ProblemOptions) {
+  return new Response(JSON.stringify(problemDetails(c, options)), {
+    headers: { "content-type": "application/problem+json; charset=UTF-8" },
+    status: options.status,
+  });
 }
 
 export const validationHook: NonNullable<OpenAPIHonoOptions<AppEnv>["defaultHook"]> = (

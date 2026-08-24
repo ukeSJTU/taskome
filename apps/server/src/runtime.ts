@@ -7,7 +7,11 @@ import { createApp } from "@/app";
 import { auth } from "@/auth";
 import { createTaskomeMcpHandler } from "@/auth/mcp";
 import { createOAuthGrantService } from "@/auth/oauth-grants";
+import { createApiKeyResolver } from "@/auth/api-key-resolver";
+import { createRestSecurityContextResolver } from "@/auth/security-context";
 import { createSessionResolver } from "@/auth/session";
+import { protectedResources } from "@/auth/resources";
+import { withAuthRequestCorrelation } from "@/auth/request-correlation";
 import { database } from "@/db";
 import { createApiKeyService } from "@/features/api-keys";
 import { createOAuthGrantManagementService } from "@/features/oauth-grants";
@@ -34,12 +38,16 @@ export function createRuntime(config: RuntimeConfig) {
     pretty: config.environment === "development",
   });
 
+  const getSession = createSessionResolver(auth);
   const app = createApp({
     apiKeyService: createApiKeyService(auth, database.db),
-    authHandler: (request) => auth.handler(request),
+    authHandler: (request) =>
+      withAuthRequestCorrelation(request.headers.get("x-request-id") ?? crypto.randomUUID(), () =>
+        auth.handler(request),
+      ),
     checkReadiness: database.check,
     corsOrigin: config.corsOrigin,
-    getSession: createSessionResolver(auth),
+    getSession,
     mcpHandler: createTaskomeMcpHandler(
       auth,
       createOAuthGrantService(database.db),
@@ -47,6 +55,11 @@ export function createRuntime(config: RuntimeConfig) {
     ),
     oauthGrantService: createOAuthGrantManagementService(database.db),
     projects: createProjectsModule(database.db),
+    resolveSecurityContext: createRestSecurityContextResolver({
+      getSession,
+      resource: protectedResources(config.serverOrigin).rest,
+      verifyApiKey: createApiKeyResolver(auth, database.db),
+    }),
     resolveClientIp: (context) => getConnInfo(context).remote.address,
   });
 

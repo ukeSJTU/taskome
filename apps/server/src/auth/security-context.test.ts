@@ -14,6 +14,13 @@ describe("REST Security Context", () => {
           id: "key-1",
           ownerUserId: "user-1",
           permissions: { taskome: ["access"] },
+          user: {
+            email: "user@example.com",
+            emailVerified: true,
+            id: "user-1",
+            image: null,
+            name: "User",
+          },
         }),
     });
 
@@ -27,7 +34,13 @@ describe("REST Security Context", () => {
       credential: { id: "key-1", type: "api_key" },
       resource,
       scopes: ["taskome:access"],
-      user: { emailVerified: true, id: "user-1" },
+      user: {
+        email: "user@example.com",
+        emailVerified: true,
+        id: "user-1",
+        image: null,
+        name: "User",
+      },
     });
     expect(context).not.toHaveProperty("accessChannel");
     expect(context && hasRequiredScope(context, "taskome:access")).toBe(true);
@@ -59,7 +72,13 @@ describe("REST Security Context", () => {
           credential: { id: "key-1", type: "api_key" },
           resource,
           scopes: [],
-          user: { emailVerified: true, id: "user-1" },
+          user: {
+            email: "user@example.com",
+            emailVerified: true,
+            id: "user-1",
+            image: null,
+            name: "User",
+          },
         },
         "taskome:access",
       ),
