@@ -146,4 +146,4 @@ This page sets no numeric product-level guarantee for queue wait time, execution
 - [`vision.md`](./vision.md) — the product direction and launch boundary behind these requirements.
 - [`roadmap.md`](./roadmap.md) — delivery sequence and concrete launch milestones.
 - [`CONTEXT.md`](../../CONTEXT.md) — Taskome's canonical domain vocabulary.
-- [`docs/README.md`](../README.md) — documentation status and rewrite order.
+- [`docs/README.md`](../README.md) — internal project documentation map.

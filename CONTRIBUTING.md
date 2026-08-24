@@ -28,8 +28,8 @@ local environment files, and installs the Git hooks. A successful setup ends
 with `mise run doctor` reporting no errors.
 
 Use `mise run dev` to start the support services, server, and authenticated
-console. See the repository [`README.md`](README.md) for local URLs and commands
-for the public sites.
+console. See each application's README for its local URL and standalone run
+command.
 
 ## Create a focused branch
 

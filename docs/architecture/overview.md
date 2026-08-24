@@ -228,5 +228,4 @@ or needs durable rationale beyond the architecture page.
 - [`data.md`](./data.md) — data ownership, lifecycle, and consistency.
 - [`security.md`](./security.md) — identity, authorization, trust boundaries,
   and least-authority rules.
-- [`docs/README.md`](../README.md) — document status and source-of-truth rules
-  during the architecture rewrite.
+- [`docs/README.md`](../README.md) — internal project documentation map.

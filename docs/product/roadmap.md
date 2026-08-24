@@ -263,4 +263,4 @@ The following material belongs elsewhere:
 - [`requirements.md`](./requirements.md) — checkable launch behavior and
   acceptance criteria.
 - [`CONTEXT.md`](../../CONTEXT.md) — canonical domain vocabulary.
-- [`docs/README.md`](../README.md) — documentation status and rewrite order.
+- [`docs/README.md`](../README.md) — internal project documentation map.

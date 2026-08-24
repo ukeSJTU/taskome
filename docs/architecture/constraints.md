@@ -93,10 +93,10 @@ options. When that happens:
    an ADR.
 
 Record product outcomes in product requirements, implemented behavior in code
-and application READMEs, engineering rules in `AGENTS.md` or engineering docs,
-and solution choices in architecture pages. Keeping those categories separate
-prevents a temporary implementation detail from becoming an accidental
-long-term restriction.
+and application READMEs, engineering rules in engineering docs, and solution
+choices in architecture pages. Keeping those categories separate prevents a
+temporary implementation detail from becoming an accidental long-term
+restriction.
 
 ## Related docs
 
@@ -108,7 +108,4 @@ long-term restriction.
   that every solution must satisfy.
 - [`roadmap.md`](../product/roadmap.md) — milestone-specific Legal and Compliance
   gates for launch Tools.
-- [`AGENTS.md`](../../AGENTS.md) — repository-wide engineering and licensing
-  principles.
-- [`docs/README.md`](../README.md) — document status and source-of-truth rules
-  during the architecture rewrite.
+- [`docs/README.md`](../README.md) — internal project documentation map.

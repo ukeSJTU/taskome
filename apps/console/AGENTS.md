@@ -7,7 +7,9 @@
   the Web App responsibility in
   [`docs/architecture/containers.md`](../../docs/architecture/containers.md).
 - **Routes and UI:** Before adding routes or deciding whether a component is
-  local or shared, read [`README.md`](README.md#work-in-the-application).
+  local or shared, read [`README.md`](README.md#work-with-routes-and-ui).
+- **Application API:** Before consuming or regenerating the application API
+  client, read [`README.md`](README.md#use-the-server-api).
 
 ## Invariants
 

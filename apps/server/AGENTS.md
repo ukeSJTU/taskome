@@ -3,13 +3,13 @@
 ## Read by change type
 
 - **Feature boundaries:** Before changing module responsibilities, read the
-  source layout in [`README.md`](README.md) and the module rules in
+  [source layout](README.md#understand-the-source-layout) and the module rules in
   [`docs/engineering/coding-standards.md`](../../docs/engineering/coding-standards.md).
 - **HTTP behavior:** Before changing routes, schemas, or errors, read the HTTP
-  surface in [`README.md`](README.md) and the API contract rules in
+  [API contract workflow](README.md#change-the-api-contract) and the API rules in
   [`docs/engineering/coding-standards.md`](../../docs/engineering/coding-standards.md).
 - **Persistence or authentication:** Follow the generation and migration order
-  in [`README.md`](README.md).
+  in [`README.md`](README.md#change-the-database).
 - **Logging:** Before adding fields or events, read
   [`docs/engineering/observability.md`](../../docs/engineering/observability.md).
 

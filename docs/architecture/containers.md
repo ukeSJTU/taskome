@@ -242,5 +242,4 @@ and remain unresolved:
   mapping, and open deployment choices.
 - [`components/tool-runtime.md`](./components/tool-runtime.md) — Runtime
   repository layout, dependency planes, source tracking, and image contract.
-- [`docs/README.md`](../README.md) — documentation status and source-of-truth
-  rules during the architecture rewrite.
+- [`docs/README.md`](../README.md) — internal project documentation map.

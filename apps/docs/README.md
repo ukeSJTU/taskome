@@ -1,8 +1,8 @@
 # Taskome documentation site
 
 `apps/docs` is the public documentation site for people who use Taskome. It is
-a Next.js application backed by Fumadocs and MDX. It is separate from the
-internal product, architecture, and engineering documents under the repository
+a Next.js application backed by Fumadocs and MDX. Internal product,
+architecture, and engineering documents live separately under the repository
 [`docs/`](../../docs/README.md) directory.
 
 The current site still contains starter content. Treat pages under
@@ -11,10 +11,10 @@ replace them.
 
 ## Run the site locally
 
-From the repository root:
+Complete the repository setup in [`CONTRIBUTING.md`](../../CONTRIBUTING.md)
+first. Then start the site from the repository root:
 
 ```bash
-mise run setup
 mise run //apps/docs:dev
 ```
 
@@ -29,8 +29,8 @@ for at least its title and description:
 
 ```mdx
 ---
-title: Submit a job
-description: Configure and submit a Taskome Tool from the web app.
+title: Sign in to Taskome
+description: Access the authenticated Taskome console.
 ---
 ```
 
@@ -39,34 +39,13 @@ and external reference material. Keep internal design rationale, target
 architecture, engineering conventions, and planning documents under the root
 `docs/` directory.
 
-The application routes include:
+## Understand the site structure
 
-| Route                              | Purpose                               |
-| ---------------------------------- | ------------------------------------- |
-| `/`                                | Documentation landing page            |
-| `/docs`                            | Fumadocs page collection              |
-| `/api/search`                      | Documentation search index            |
-| `/llms.txt` and `/llms-full.txt`   | Text views for language-model clients |
-| `/llms.mdx/docs/<slug>/content.md` | Processed Markdown for one page       |
+- `content/docs/` contains the public MDX collection.
+- `src/lib/source.ts` configures the Fumadocs source and processed Markdown.
+- `src/components/mdx.tsx` defines reusable MDX rendering components.
+- `src/app/` contains the documentation layouts, routes, search endpoint, and
+  text views for language-model clients.
 
-Fumadocs source configuration lives in `src/lib/source.ts`. Layout and route
-code belongs under `src/app`; reusable MDX rendering components belong in
-`src/components/mdx.tsx`.
-
-## Verify a change
-
-```bash
-mise run //apps/docs:check
-mise run //apps/docs:build
-```
-
-The production build is the strongest local verification for MDX imports,
-generated routes, and page rendering.
-
-## Related documentation
-
-- The repository [`docs/README.md`](../../docs/README.md) routes internal
-  product and engineering documentation.
-- [`docs/product/vision.md`](../../docs/product/vision.md) defines the launch
-  boundary that public documentation must represent accurately.
-- [`AGENTS.md`](AGENTS.md) contains generated Next.js instructions for AI agents.
+Fumadocs renders the collection under `/docs` and derives search and
+language-model-friendly views from the same source pages.

@@ -1,6 +1,8 @@
 # Coding standards
 
-This page covers conventions that tooling can't enforce. `mise run check` already runs the configured Go, TypeScript, and Python checks across the whole repo — if a rule can be automated, it belongs in tooling rather than a paragraph here. What's left is judgment: naming, where things depend on each other, and how APIs and schemas take shape.
+This page covers conventions that tooling cannot enforce. Automated rules
+belong in the repository checks rather than in prose. The standards below cover
+judgment: naming, dependency boundaries, and API and schema design.
 
 ## Naming
 
@@ -19,15 +21,16 @@ operation's programmatic name.
 
 ## Module and import boundaries
 
-- A workspace package (`packages/*`) is imported by its package name (`@taskome/ui`, `@taskome/db`), never by a relative path that reaches across package boundaries (`../../../packages/ui/src/...`).
+- A workspace package (`packages/*`) is imported by its package name, such as
+  `@taskome/ui` or `@taskome/config`, never by a relative path that reaches
+  across package boundaries (`../../../packages/ui/src/...`).
 - Within an app, prefer path aliases over long relative chains once an import crosses more than one directory level.
 - `apps/server` uses vertical feature slices under `src/features/<feature>/`.
   Follow its README's route → handler → module → repository dependency direction
   rather than growing a shared controller or generic repository layer.
 - Frontend ownership differs between `apps/web` and `apps/console`. Before
   moving a route, component, or integration between them, read each app's
-  README and scoped `AGENTS.md`; do not infer one app's conventions from the
-  other.
+  README; do not infer one app's conventions from the other.
 
 ## API and schema design
 
@@ -55,12 +58,10 @@ the implementation cannot make that reason clear on its own.
   convention. `runtime_toolkit`'s Attempt `failure_kind` classification
   doesn't exist yet — see [`architecture/components/tool-runtime.md`](../architecture/components/tool-runtime.md)
   for its target design, and add a convention here once that package exists.
-- **Where a component file lives** — the owning app's README and `AGENTS.md`,
-  together with `packages/AGENTS.md`, define the local ownership boundary. This
-  page keeps only the cross-application rule.
-- **Development workflow** — the repository [`README.md`](../../README.md)
-  covers human setup and verification; [`AGENTS.md`](../../AGENTS.md) owns the
-  AI workflow.
+- **Where a component file lives** — the owning app's README defines the local
+  ownership boundary. This page keeps only the cross-application rule.
+- **Development workflow** — [`CONTRIBUTING.md`](../../CONTRIBUTING.md) covers
+  repository setup, verification, commits, and pull requests.
 
 ## Related docs
 

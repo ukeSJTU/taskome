@@ -7,9 +7,8 @@
   Now/Future boundary.
 - **Domain language:** When naming or modeling Taskome concepts, use the
   vocabulary in [`CONTEXT.md`](CONTEXT.md).
-- **Documentation map:** When current implementation and target architecture
-  may differ, use [`docs/README.md`](docs/README.md) to select the authoritative
-  source.
+- **Documentation map:** When locating product, architecture, or engineering
+  context, start with [`docs/README.md`](docs/README.md).
 
 ## AI development
 
