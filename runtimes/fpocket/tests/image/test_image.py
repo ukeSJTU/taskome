@@ -86,6 +86,32 @@ def fpocket_image() -> str:
     return _IMAGE
 
 
+def test_image_fails_closed_without_attempt_entrypoint(fpocket_image: str) -> None:
+    docker = shutil.which("docker")
+    assert docker is not None
+
+    completed = subprocess.run(  # noqa: S603
+        [
+            docker,
+            "run",
+            "--rm",
+            "--platform",
+            "linux/amd64",
+            "--network",
+            "none",
+            fpocket_image,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode != 0
+    assert completed.stdout == ""
+    assert completed.stderr == ""
+
+
 def test_image_runs_real_fpocket_as_non_root(fpocket_image: str) -> None:
     docker = shutil.which("docker")
     assert docker is not None

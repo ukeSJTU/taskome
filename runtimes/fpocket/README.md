@@ -14,12 +14,14 @@ for the target image, Attempt, and publication contracts.
 
 | Plane              | Owner                                       | Current contents                                                    |
 | ------------------ | ------------------------------------------- | ------------------------------------------------------------------- |
-| Taskome adapter    | Root uv workspace                           | `fpocket_runtime` and `runtime_toolkit`                             |
+| Taskome adapter    | Root uv workspace                           | `fpocket_runtime`                                                   |
 | Scientific compute | `compute/pixi.toml` and `compute/pixi.lock` | fpocket 4.2.3 and its native dependencies for `linux-64`            |
 | Upstream identity  | `compute/upstream.toml`                     | Discngine/fpocket commit `4bb0d8447f62fee77e2c3c29f54b5fcaf5e2c066` |
 
 The adapter invokes fpocket as a subprocess. It does not import packages from
-the Pixi prefix.
+the Pixi prefix. `packages/toolkit` remains an empty root-workspace scaffold;
+fpocket does not depend on or install it until a shared Runtime capability
+exists.
 
 ## Run the fast Runtime tests
 
@@ -42,17 +44,19 @@ from the repository root:
 uv run --all-packages --frozen pytest runtimes/fpocket/tests/image
 ```
 
-The test builds `taskome/fpocket-runtime:test` from
-`runtimes/fpocket/Dockerfile`, then runs the real fpocket fixture through the
-public `run_fpocket` interface. A successful run ends with `1 passed`.
+The tests build `taskome/fpocket-runtime:test` from
+`runtimes/fpocket/Dockerfile`. One test verifies that the undefined Attempt
+entrypoint fails closed. The other runs the real fpocket fixture through the
+public `run_fpocket` interface inside the assembled image. A successful run
+ends with `2 passed`.
 
 The multi-stage build produces this final layout:
 
-| Path                   | Contents                                                               |
-| ---------------------- | ---------------------------------------------------------------------- |
-| `/opt/taskome/adapter` | CPython environment containing `fpocket_runtime` and `runtime_toolkit` |
-| `/opt/taskome/compute` | Locked fpocket compute prefix installed directly from `pixi.lock`      |
-| `/work`                | Writable workspace owned by UID and GID 10001                          |
+| Path                   | Contents                                                          |
+| ---------------------- | ----------------------------------------------------------------- |
+| `/opt/taskome/adapter` | CPython environment containing `fpocket_runtime`                  |
+| `/opt/taskome/compute` | Locked fpocket compute prefix installed directly from `pixi.lock` |
+| `/work`                | Writable workspace owned by UID and GID 10001                     |
 
 The final stage uses the pinned `linux/amd64` Python 3.14.7 slim image. It runs
 as UID and GID 10001 and excludes uv, `pixi-install-to-prefix`, pip, build
@@ -60,7 +64,7 @@ caches, and compilers. The default command is `/bin/false`: the image fails
 closed until the Attempt Invocation interface and final entrypoint are
 designed.
 
-The image test applies these runtime constraints:
+The real-compute image test applies these runtime constraints:
 
 - no network;
 - a read-only root filesystem;
@@ -73,6 +77,18 @@ is read-only and no writable temporary directory is available. The fixture is
 copied from upstream `data/sample/1UYD.pdb` at the commit in `upstream.toml` and
 has SHA-256
 `923e978e1d570f854d0d5f96d515f70d6fdac25216de586fe8c97a266e803b0c`.
+
+### Observed image test result
+
+The image tests passed on 2026-08-24 with Docker Engine 29.4.0. The engine ran
+on Linux `arm64` and executed the image as `linux/amd64`.
+
+| Observation        | Result                                     |
+| ------------------ | ------------------------------------------ |
+| Pytest result      | `2 passed`                                 |
+| Default invocation | Non-zero exit with empty stdout and stderr |
+| Real fixture       | Three required non-empty outputs validated |
+| Container identity | UID 10001                                  |
 
 ## Locked upstream characterization
 
@@ -157,10 +173,10 @@ The characterization ran on 2026-08-24 in the same disposable
 read-only. The test copied the minimum uv workspace, compute manifest, locks,
 and `1UYD.pdb` fixture into container `tmpfs` before installation and execution.
 
-| Plane              | Installation                                                                                        | Observed contents                                        |
-| ------------------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Taskome adapter    | uv 0.12.1: `uv sync --frozen --no-dev --package fpocket-runtime` from the root `uv.lock`            | CPython 3.14.6, `fpocket-runtime`, and `runtime-toolkit` |
-| Scientific compute | Pixi 0.77.0: `pixi install --locked --no-config` from `compute/pixi.toml` and committed `pixi.lock` | fpocket 4.2.3 and its locked native dependencies         |
+| Plane              | Installation                                                                                        | Observed contents                                |
+| ------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Taskome adapter    | uv 0.12.1: `uv sync --frozen --no-dev --package fpocket-runtime` from the root `uv.lock`            | CPython 3.14.6 and `fpocket-runtime`             |
+| Scientific compute | Pixi 0.77.0: `pixi install --locked --no-config` from `compute/pixi.toml` and committed `pixi.lock` | fpocket 4.2.3 and its locked native dependencies |
 
 The test placed the Pixi environment's `bin` directory first on `PATH`, then
 called the public Python interface:

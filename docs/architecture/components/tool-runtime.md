@@ -9,10 +9,13 @@ See [`runtime.md`](../runtime.md) for the Kubernetes Job lifecycle around a
 Runtime invocation. See [`containers.md`](../containers.md) for the surrounding
 container responsibilities and trust boundaries.
 
-> **Accepted target architecture, not shipped behavior.** The repository has
-> an empty `runtimes/` directory and a scaffold at `packages/toolkit`, but no
-> implemented Tool Runtime. The scaffold still uses its original package name
-> and does not yet implement the design on this page.
+> **Target architecture with a partial fpocket skeleton.**
+> `runtimes/fpocket` now locks the upstream compute environment, exposes a
+> process-level Python interface, and assembles both dependency planes into a
+> hardened image. The image still fails closed because the Attempt Invocation,
+> Result, publication flow, and final entrypoint are not implemented.
+> `packages/toolkit` now uses the `runtime-toolkit` package name but remains an
+> empty workspace scaffold rather than a dependency of the fpocket Runtime.
 
 ## Package one Upstream Software as one release unit
 
@@ -318,6 +321,11 @@ paths remain read-only, mock mode needs no network access, and the entrypoint
 produces the expected output contract. Real execution still uses the adapter's
 Attempt-scoped Object Storage access; the Upstream Software must not perform
 undeclared downloads.
+
+Until a Runtime implements its final Attempt entrypoint, its image tests verify
+that the default command fails closed and may invoke the public Python Runtime
+interface inside the container to qualify image assembly. This is partial
+coverage of the image seam, not a substitute for the final entrypoint test.
 
 CI uses three levels:
 

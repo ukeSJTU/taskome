@@ -63,6 +63,12 @@ also checks the non-root user, fixed filesystem contract, immutable Runtime
 paths, required executables and dynamic libraries, mock behavior, and output
 contract.
 
+The fpocket skeleton has not implemented that entrypoint yet. Its current image
+tests verify the fail-closed default command and qualify the assembled image
+through the public Python Runtime interface inside the container. They become
+full image-seam tests when the Attempt entrypoint replaces that temporary
+qualification path.
+
 Runtime CI uses three levels:
 
 1. Every pull request runs Ruff, ty, and the fast Runtime tests.

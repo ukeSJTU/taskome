@@ -186,23 +186,24 @@ retention, and promotion mechanisms remain unresolved; see
 
 ## Map target containers to the repository
 
-| Target container     | Current repository mapping                                                   |
-| -------------------- | ---------------------------------------------------------------------------- |
-| Web App              | `apps/console`                                                               |
-| CLI                  | `apps/cli`                                                                   |
-| Control Plane Server | `apps/server`                                                                |
-| Application Database | PostgreSQL is the only supporting service in `compose.yml`.                  |
-| Execution Service    | Not present in the current repository; its source layout remains unresolved. |
-| Temporal Service     | Not present in the current repository.                                       |
-| Kubernetes Cluster   | Not present in the current repository.                                       |
-| Object Storage       | Not present in the current repository.                                       |
-| Tool Runtimes        | Target location `runtimes/<upstream>`; no Runtime is implemented yet.        |
+| Target container     | Current repository mapping                                                                      |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| Web App              | `apps/console`                                                                                  |
+| CLI                  | `apps/cli`                                                                                      |
+| Control Plane Server | `apps/server`                                                                                   |
+| Application Database | PostgreSQL is the only supporting service in `compose.yml`.                                     |
+| Execution Service    | Not present in the current repository; its source layout remains unresolved.                    |
+| Temporal Service     | Not present in the current repository.                                                          |
+| Kubernetes Cluster   | Not present in the current repository.                                                          |
+| Object Storage       | Not present in the current repository.                                                          |
+| Tool Runtimes        | `runtimes/fpocket` contains a locked image skeleton; its Attempt entrypoint is not implemented. |
 
 Shared packages such as `@taskome/config`, `@taskome/env`, and `@taskome/ui`
 are not containers because they are not deployed or executed independently.
 The `packages/toolkit` scaffold similarly targets the shared
-`runtime_toolkit` Python library that Runtime images embed; it is not an
-independently deployed container.
+`runtime_toolkit` Python library that future Runtime images embed; it is not an
+independently deployed container or a dependency of the current fpocket
+skeleton.
 
 The following repository applications also stay outside the Taskome Container
 diagram:

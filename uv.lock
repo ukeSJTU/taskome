@@ -220,12 +220,6 @@ wheels = [
 name = "fpocket-runtime"
 version = "0.0.0"
 source = { editable = "runtimes/fpocket" }
-dependencies = [
-    { name = "runtime-toolkit" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "runtime-toolkit", editable = "packages/toolkit" }]
 
 [[package]]
 name = "idna"

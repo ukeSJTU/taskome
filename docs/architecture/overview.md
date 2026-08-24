@@ -177,15 +177,15 @@ Control Plane Server, Temporal, or Kubernetes into a binary-file transport.
 
 ## Current implementation and target architecture
 
-| Area                        | Current repository state                                               | Accepted launch target                                                                                             |
-| --------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **Web experience**          | `apps/console` implements the authenticated Web App foundation.        | Web App provides the launch browser journeys, Utilities, and Agent Assistant UI.                                   |
-| **Control plane**           | `apps/server` provides a Hono API, Better Auth, and PostgreSQL access. | Server owns domain operations, authorization, REST, MCP, Tool catalog, file grants, and Assistant backend.         |
-| **Domain persistence**      | PostgreSQL and Drizzle migrations support the current server.          | PostgreSQL stores authoritative authentication, domain, provenance, outbox, and usage records.                     |
-| **Execution coordination**  | Execution Service and Temporal are not present.                        | Execution Service dispatches the outbox and durably coordinates one Temporal Workflow per Attempt.                 |
-| **Resource scheduling**     | Kubernetes is not present.                                             | Kubernetes schedules every Attempt against its Tool's declared resources as a Kubernetes Job.                      |
-| **Scientific execution**    | `runtimes/` is empty; no Tool Runtime is implemented.                  | One immutable OCI Runtime from `runtimes/<upstream>` performs the scientific execution for an Attempt.             |
-| **Scientific-file storage** | Object Storage is not present.                                         | Object Storage holds saved scientific files, immutable Job inputs, and Job Outputs; the product remains undecided. |
+| Area                        | Current repository state                                                           | Accepted launch target                                                                                             |
+| --------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Web experience**          | `apps/console` implements the authenticated Web App foundation.                    | Web App provides the launch browser journeys, Utilities, and Agent Assistant UI.                                   |
+| **Control plane**           | `apps/server` provides a Hono API, Better Auth, and PostgreSQL access.             | Server owns domain operations, authorization, REST, MCP, Tool catalog, file grants, and Assistant backend.         |
+| **Domain persistence**      | PostgreSQL and Drizzle migrations support the current server.                      | PostgreSQL stores authoritative authentication, domain, provenance, outbox, and usage records.                     |
+| **Execution coordination**  | Execution Service and Temporal are not present.                                    | Execution Service dispatches the outbox and durably coordinates one Temporal Workflow per Attempt.                 |
+| **Resource scheduling**     | Kubernetes is not present.                                                         | Kubernetes schedules every Attempt against its Tool's declared resources as a Kubernetes Job.                      |
+| **Scientific execution**    | `runtimes/fpocket` provides a locked image skeleton without an Attempt entrypoint. | One immutable OCI Runtime from `runtimes/<upstream>` performs the scientific execution for an Attempt.             |
+| **Scientific-file storage** | Object Storage is not present.                                                     | Object Storage holds saved scientific files, immutable Job inputs, and Job Outputs; the product remains undecided. |
 
 The target column records accepted responsibilities, not a claim that the
 components already run. New implementation must preserve these boundaries;
