@@ -45,6 +45,14 @@ run = [
   "printf 'Generated src/db/schema/auth.ts; review the schema diff before generating a migration.\\n'",
 ]
 
+[tasks."oauth:register-client"]
+description = "Pre-register a native public OAuth client that uses S256 PKCE"
+usage = '''
+arg "<name>" help="Human-readable OAuth client name"
+arg "<redirect_uri>" help="Registered callback URI"
+'''
+run = "pnpm run oauth:register-client -- \"$usage_name\" \"$usage_redirect_uri\""
+
 [tasks."db:generate"]
 description = "Generate a named Drizzle migration from schema changes"
 usage = '''

@@ -3,8 +3,8 @@
 This page defines Taskome's launch security architecture. It is the design
 contract for engineers and agents implementing identity, authorization,
 credential handling, scientific execution, and external integrations. It does
-not document current behavior or prescribe exact token lifetimes, scope names,
-network products, or secret-delivery mechanisms.
+not document every current route or secret-delivery mechanism. Values that
+implementation has settled are recorded alongside their owning rules.
 
 ## Protect ownership before adding capabilities
 
@@ -186,9 +186,10 @@ Programmatic authorization follows these rules:
   authorization still summarizes the requested access;
 - adding a scope requires a new authorization decision and never silently
   expands an existing grant;
-- OAuth access tokens are short-lived and refresh tokens rotate;
-- API keys expire, although their default and maximum lifetime remain
-  unresolved; and
+- OAuth access tokens live for 10 minutes; rotating refresh tokens live for 30
+  days and retain a 30-second recoverable duplicate-request interval;
+- OAuth Grants live for 90 days;
+- API keys expire after 90 days by default and cannot exceed 365 days; and
 - a newly introduced scope is never granted to an existing credential by
   default.
 
@@ -340,7 +341,7 @@ authority.
 
 ## Record security facts and bound abuse
 
-Taskome records durable security events for:
+Taskome stores append-only security events in PostgreSQL for:
 
 - successful and failed login, verification, and session revocation;
 - password, email, and other account-security changes;
@@ -352,8 +353,8 @@ Taskome records durable security events for:
 
 An event records time, actor user, credential or grant identity, operation,
 target identity, result, and request correlation ID. It never records a secret,
-credential value, request body, scientific content, or Assistant prompt. The
-audit schema, storage, retention, alerts, and operator views remain unresolved.
+credential value, request body, scientific content, or Assistant prompt.
+Retention, alerts, and operator views remain unresolved.
 
 Launch also defines explicit abuse controls instead of relying on framework
 defaults. Registration, login, verification, recovery, OAuth, API-key
@@ -370,14 +371,13 @@ the corresponding feature or deployment design has enough evidence:
 
 - account methods beyond email and password, including social login,
   passkeys, magic links, and multi-factor authentication;
-- exact scope names and granularity;
-- session, access-token, refresh-token, API-key, verification-token, and
-  reset-token lifetimes;
-- OAuth and MCP client compatibility, and whether a real Device Authorization
-  Grant journey emerges;
-- API-key maximum lifetime and rotation experience;
+- the launch scope names and granularity beyond the temporary
+  `taskome:access` development scope;
+- browser-session, verification-token, and reset-token lifetimes;
+- whether a real Device Authorization Grant journey emerges;
+- API-key rotation experience;
 - rate-limit and quota values, dimensions, and state storage;
-- audit schema, storage, retention, alerts, and review experience;
+- audit retention, alerts, and review experience;
 - secret manager, key rotation, encryption-key management, ingress, TLS
   termination, internal networks, and break-glass implementation;
 - Runtime sandbox, egress allowlist, artifact signing, software bill of

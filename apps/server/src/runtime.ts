@@ -5,13 +5,22 @@ import { createDrainPipeline } from "evlog/pipeline";
 
 import { createApp } from "@/app";
 import { auth } from "@/auth";
+import { createTaskomeMcpHandler } from "@/auth/mcp";
+import { createOAuthGrantService } from "@/auth/oauth-grants";
+import { createApiKeyResolver } from "@/auth/api-key-resolver";
+import { createRestSecurityContextResolver } from "@/auth/security-context";
 import { createSessionResolver } from "@/auth/session";
+import { protectedResources } from "@/auth/resources";
+import { withAuthRequestCorrelation } from "@/auth/request-correlation";
 import { database } from "@/db";
+import { createApiKeyService } from "@/features/api-keys";
+import { createOAuthGrantManagementService } from "@/features/oauth-grants";
 import { createProjectsModule } from "@/features/projects";
 
 export type RuntimeConfig = {
   corsOrigin: string;
   environment: "development" | "production" | "test";
+  serverOrigin: string;
 };
 
 export function createRuntime(config: RuntimeConfig) {
@@ -29,12 +38,25 @@ export function createRuntime(config: RuntimeConfig) {
     pretty: config.environment === "development",
   });
 
+  const getSession = createSessionResolver(auth);
   const app = createApp({
-    authHandler: (request) => auth.handler(request),
+    apiKeyService: createApiKeyService(auth, database.db),
+    authHandler: (request) => withAuthRequestCorrelation(request, () => auth.handler(request)),
     checkReadiness: database.check,
     corsOrigin: config.corsOrigin,
-    getSession: createSessionResolver(auth),
+    getSession,
+    mcpHandler: createTaskomeMcpHandler(
+      auth,
+      createOAuthGrantService(database.db),
+      config.serverOrigin,
+    ),
+    oauthGrantService: createOAuthGrantManagementService(database.db),
     projects: createProjectsModule(database.db),
+    resolveSecurityContext: createRestSecurityContextResolver({
+      getSession,
+      resource: protectedResources(config.serverOrigin).rest,
+      verifyApiKey: createApiKeyResolver(auth, database.db),
+    }),
     resolveClientIp: (context) => getConnInfo(context).remote.address,
   });
 

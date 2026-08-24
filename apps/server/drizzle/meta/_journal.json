@@ -15,6 +15,13 @@
       "when": 1787557158168,
       "tag": "0001_add-projects",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787563268794,
+      "tag": "0002_programmatic-authorization",
+      "breakpoints": true
     }
   ]
 }

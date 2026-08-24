@@ -2,6 +2,7 @@ import type { Auth } from "@/auth";
 
 export interface SessionIdentity {
   session: {
+    createdAt: Date;
     id: string;
   };
   user: {
@@ -21,7 +22,7 @@ export function createSessionResolver(auth: Auth): GetSession {
     if (!result) return null;
 
     return {
-      session: { id: result.session.id },
+      session: { createdAt: result.session.createdAt, id: result.session.id },
       user: {
         email: result.user.email,
         emailVerified: result.user.emailVerified,

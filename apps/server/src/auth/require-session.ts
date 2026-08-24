@@ -6,6 +6,15 @@ import type { GetSession } from "./session";
 
 export function requireSession(getSession: GetSession) {
   return createMiddleware<AppEnv>(async (c, next) => {
+    if (c.req.header("authorization")) {
+      return problemResponse(c, {
+        code: "unauthorized",
+        detail: "Present exactly one credential type.",
+        status: 401,
+        title: "Unauthorized",
+      });
+    }
+
     const session = await getSession(c.req.raw.headers);
     if (!session) {
       return problemResponse(c, {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createApp } from "./app";
+import { createApp, type AppOptions } from "./app";
+import { createRestSecurityContextResolver } from "./auth/security-context";
 
 const corsOrigin = "http://localhost:3001";
 
@@ -8,15 +9,29 @@ function createTestApp(
   overrides: {
     authHandler?: () => Response;
     checkReadiness?: () => Promise<void>;
-    getSession?: () => Promise<null>;
+    getSession?: AppOptions["getSession"];
+    resolveSecurityContext?: AppOptions["resolveSecurityContext"];
   } = {},
 ) {
+  const getSession = overrides.getSession ?? (() => Promise.resolve(null));
   return createApp({
+    apiKeyService: {
+      create: () => Promise.reject(new Error("not used")),
+      get: () => Promise.resolve(null),
+      list: () => Promise.resolve([]),
+      revoke: () => Promise.resolve(false),
+      update: () => Promise.resolve(null),
+    },
     authHandler: overrides.authHandler ?? (() => new Response("auth handler")),
     checkReadiness: overrides.checkReadiness ?? (() => Promise.resolve()),
     corsOrigin,
     drain: () => undefined,
-    getSession: overrides.getSession ?? (() => Promise.resolve(null)),
+    getSession,
+    oauthGrantService: {
+      get: () => Promise.resolve(undefined),
+      list: () => Promise.resolve([]),
+      revoke: () => Promise.resolve(false),
+    },
     projects: {
       archiveProject: () => Promise.reject(new Error("unused test Project method")),
       createProject: () => Promise.reject(new Error("unused test Project method")),
@@ -26,6 +41,13 @@ function createTestApp(
       unarchiveProject: () => Promise.reject(new Error("unused test Project method")),
       updateProject: () => Promise.reject(new Error("unused test Project method")),
     },
+    resolveSecurityContext:
+      overrides.resolveSecurityContext ??
+      createRestSecurityContextResolver({
+        getSession,
+        resource: "http://localhost:3000/api/v1",
+        verifyApiKey: () => Promise.resolve(null),
+      }),
   });
 }
 
@@ -85,16 +107,19 @@ describe("server HTTP interface", () => {
       info: { title: "Taskome API" },
       openapi: "3.1.0",
     });
+    expect(document).toHaveProperty(["paths", "/api/v1/me"]);
+    expect(document).toHaveProperty(["paths", "/api/v1/api-keys"]);
+    expect(document).toHaveProperty(["paths", "/api/v1/oauth-grants"]);
     expect(document).toHaveProperty(["paths", "/api/v1/projects"]);
     expect(document).not.toHaveProperty(["paths", "/api/auth/{path}"]);
     expect(referenceResponse.status).toBe(200);
     expect(referenceResponse.headers.get("content-type")).toContain("text/html");
   });
 
-  it("requires a session for the Projects interface", async () => {
+  it("requires a session for the current-user interface", async () => {
     const app = createTestApp();
 
-    const response = await app.request("/api/v1/projects");
+    const response = await app.request("/api/v1/me");
 
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({
@@ -102,6 +127,109 @@ describe("server HTTP interface", () => {
       status: 401,
       title: "Unauthorized",
     });
+  });
+
+  it("rejects competing browser and bearer credentials", async () => {
+    const app = createTestApp();
+
+    const response = await app.request("/api/v1/me", {
+      headers: {
+        authorization: "Bearer sk-competing",
+        cookie: "better-auth.session_token=session",
+      },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({
+      code: "unauthorized",
+      detail: "Present exactly one credential type.",
+    });
+  });
+
+  it("shields Better Auth API-key management endpoints", async () => {
+    const app = createTestApp();
+
+    const response = await app.request("/api/auth/api-key/list");
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: "not_found" });
+  });
+
+  it("shields Better Auth OAuth management while retaining protocol routes", async () => {
+    const app = createTestApp();
+
+    const response = await app.request("/api/auth/oauth2/create-client", { method: "POST" });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: "not_found" });
+  });
+
+  it("requires verified email and a fresh session for API-key creation", async () => {
+    const session = {
+      session: { createdAt: new Date(), id: "session-1" },
+      user: {
+        email: "unverified@example.com",
+        emailVerified: false,
+        id: "user-1",
+        image: null,
+        name: "Unverified User",
+      },
+    };
+    const app = createTestApp({ getSession: () => Promise.resolve(session) });
+
+    const response = await app.request("/api/v1/api-keys", {
+      body: JSON.stringify({ name: "automation", scopes: ["taskome:access"] }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ code: "email_verification_required" });
+  });
+
+  it("requires reauthentication when the management session is stale", async () => {
+    const session = {
+      session: { createdAt: new Date(Date.now() - 16 * 60 * 1000), id: "session-1" },
+      user: {
+        email: "verified@example.com",
+        emailVerified: true,
+        id: "user-1",
+        image: null,
+        name: "Verified User",
+      },
+    };
+    const app = createTestApp({ getSession: () => Promise.resolve(session) });
+
+    const response = await app.request("/api/v1/oauth-grants");
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ code: "fresh_session_required" });
+  });
+
+  it("rejects an API key that lacks the operation scope", async () => {
+    const app = createTestApp({
+      resolveSecurityContext: () =>
+        Promise.resolve({
+          correlation: { requestId: "request-1" },
+          credential: { id: "key-1", type: "api_key" },
+          resource: "http://localhost:3000/api/v1",
+          scopes: [],
+          user: {
+            email: "developer@example.com",
+            emailVerified: true,
+            id: "user-1",
+            image: null,
+            name: "Developer",
+          },
+        }),
+    });
+
+    const response = await app.request("/api/v1/me", {
+      headers: { authorization: "Bearer sk-valid" },
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ code: "insufficient_scope" });
   });
 
   it("uses the configured credentialed CORS origin", async () => {

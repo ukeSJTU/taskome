@@ -6,6 +6,10 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 
 import type { SessionIdentity } from "@/auth/session";
+import type { RestSecurityContextResolver } from "@/auth/require-security-context";
+import { createApiKeyRouter, type ApiKeyService } from "@/features/api-keys";
+import { createOAuthGrantRouter, type OAuthGrantManagementService } from "@/features/oauth-grants";
+import { createMeRouter } from "@/features/me";
 import { createProjectsRouter, type ProjectsModule } from "@/features/projects";
 import { problemResponse, validationHook } from "@/http/errors/problem";
 import { registerHealthRoutes } from "@/http/health";
@@ -13,22 +17,43 @@ import { correlateRequest } from "@/http/middleware/correlate-request";
 import type { AppEnv } from "@/http/types";
 
 export interface AppOptions {
+  apiKeyService?: ApiKeyService;
   authHandler: (request: Request) => Promise<Response> | Response;
   checkReadiness: () => Promise<void>;
   corsOrigin: string;
   drain?: EvlogHonoOptions["drain"];
   getSession: (headers: Headers) => Promise<SessionIdentity | null>;
+  mcpHandler?: (request: Request) => Promise<Response> | Response;
+  oauthGrantService?: OAuthGrantManagementService;
   projects: ProjectsModule;
+  resolveSecurityContext: RestSecurityContextResolver;
   resolveClientIp?: (context: Context<AppEnv>) => string | undefined;
 }
 
+const blockedAuthManagementPaths = new Set([
+  "/api/auth/oauth2/client/rotate-secret",
+  "/api/auth/oauth2/create-client",
+  "/api/auth/oauth2/delete-client",
+  "/api/auth/oauth2/delete-consent",
+  "/api/auth/oauth2/get-client",
+  "/api/auth/oauth2/get-clients",
+  "/api/auth/oauth2/get-consent",
+  "/api/auth/oauth2/get-consents",
+  "/api/auth/oauth2/update-client",
+  "/api/auth/oauth2/update-consent",
+]);
+
 export function createApp({
+  apiKeyService,
   authHandler,
   checkReadiness,
   corsOrigin,
   drain,
   getSession,
+  mcpHandler,
+  oauthGrantService,
   projects,
+  resolveSecurityContext,
   resolveClientIp,
 }: AppOptions) {
   const app = new OpenAPIHono<AppEnv>({ defaultHook: validationHook });
@@ -50,22 +75,74 @@ export function createApp({
     }),
   );
 
-  app.all("/api/auth/*", (c) => {
+  const forwardAuth = (c: Context<AppEnv>) => {
     const clientIp = resolveClientIp?.(c);
     if (!clientIp) return authHandler(c.req.raw);
 
     const headers = new Headers(c.req.raw.headers);
     headers.set("x-forwarded-for", clientIp);
     return authHandler(new Request(c.req.raw, { headers }));
+  };
+
+  app.all("/api/auth/api-key/*", (c) =>
+    problemResponse(c, {
+      code: "not_found",
+      detail: "Use Taskome's programmatic-access operations.",
+      status: 404,
+      title: "Not found",
+    }),
+  );
+  app.all("/api/auth/admin/oauth2/*", (c) =>
+    problemResponse(c, {
+      code: "not_found",
+      detail: "Use Taskome's programmatic-access operations.",
+      status: 404,
+      title: "Not found",
+    }),
+  );
+  app.all("/api/auth/*", (c) => {
+    if (blockedAuthManagementPaths.has(c.req.path)) {
+      return problemResponse(c, {
+        code: "not_found",
+        detail: "Use Taskome's programmatic-access operations.",
+        status: 404,
+        title: "Not found",
+      });
+    }
+    return forwardAuth(c);
   });
+  app.all("/.well-known/*", forwardAuth);
+  if (mcpHandler) app.post("/mcp", (c) => mcpHandler(c.req.raw));
 
   registerHealthRoutes(app, checkReadiness);
+  app.route("/api/v1", createMeRouter({ resolveSecurityContext }));
+  if (apiKeyService) {
+    app.route("/api/v1", createApiKeyRouter({ getSession, service: apiKeyService }));
+  }
+  if (oauthGrantService) {
+    app.route("/api/v1", createOAuthGrantRouter({ getSession, service: oauthGrantService }));
+  }
   app.route("/api/v1", createProjectsRouter({ getSession, projects }));
 
   app.openAPIRegistry.registerComponent("securitySchemes", "cookieAuth", {
     in: "cookie",
     name: "better-auth.session_token",
     type: "apiKey",
+  });
+  app.openAPIRegistry.registerComponent("securitySchemes", "apiKeyBearer", {
+    bearerFormat: "Taskome API key (sk-…)",
+    scheme: "bearer",
+    type: "http",
+  });
+  app.openAPIRegistry.registerComponent("securitySchemes", "oauthBearer", {
+    flows: {
+      authorizationCode: {
+        authorizationUrl: "/api/auth/oauth2/authorize",
+        scopes: { "taskome:access": "Access the development Taskome resource" },
+        tokenUrl: "/api/auth/oauth2/token",
+      },
+    },
+    type: "oauth2",
   });
   app.doc31("/openapi.json", {
     info: {

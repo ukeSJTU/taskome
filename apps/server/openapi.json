@@ -11,52 +11,47 @@
         "in": "cookie",
         "name": "better-auth.session_token",
         "type": "apiKey"
+      },
+      "apiKeyBearer": {
+        "bearerFormat": "Taskome API key (sk-…)",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "oauthBearer": {
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "/api/auth/oauth2/authorize",
+            "scopes": {
+              "taskome:access": "Access the development Taskome resource"
+            },
+            "tokenUrl": "/api/auth/oauth2/token"
+          }
+        },
+        "type": "oauth2"
       }
     },
     "schemas": {
-      "Project": {
+      "CurrentUser": {
         "type": "object",
         "properties": {
-          "archivedAt": {
-            "type": ["string", "null"],
-            "format": "date-time"
-          },
-          "createdAt": {
+          "email": {
             "type": "string",
-            "format": "date-time"
+            "format": "email"
           },
-          "description": {
-            "type": ["string", "null"]
+          "emailVerified": {
+            "type": "boolean"
           },
           "id": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
-          "isDefault": {
-            "type": "boolean"
+          "image": {
+            "type": ["string", "null"]
           },
           "name": {
             "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["active", "archived"]
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
           }
         },
-        "required": [
-          "archivedAt",
-          "createdAt",
-          "description",
-          "id",
-          "isDefault",
-          "name",
-          "status",
-          "updatedAt"
-        ]
+        "required": ["email", "emailVerified", "id", "image", "name"]
       },
       "ProblemDetails": {
         "type": "object",
@@ -102,6 +97,206 @@
           }
         },
         "required": ["code", "detail", "instance", "requestId", "status", "title", "type"]
+      },
+      "CreatedApiKey": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiKeyMetadata"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "secret": {
+                "type": "string"
+              }
+            },
+            "required": ["secret"]
+          }
+        ]
+      },
+      "ApiKeyMetadata": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["taskome:access"]
+            }
+          },
+          "state": {
+            "type": "string",
+            "enum": ["active", "expired", "revoked"]
+          }
+        },
+        "required": ["createdAt", "expiresAt", "id", "lastUsedAt", "name", "scopes", "state"]
+      },
+      "CreateApiKey": {
+        "type": "object",
+        "properties": {
+          "expiresIn": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 31536000
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["taskome:access"]
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["name", "scopes"]
+      },
+      "UpdateApiKey": {
+        "type": "object",
+        "properties": {
+          "expiresIn": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 31536000
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["taskome:access"]
+            },
+            "minItems": 1
+          }
+        }
+      },
+      "OAuthGrant": {
+        "type": "object",
+        "properties": {
+          "activatedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "resource": {
+            "type": "string",
+            "format": "uri"
+          },
+          "revokedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["taskome:access"]
+            }
+          },
+          "state": {
+            "type": "string",
+            "enum": ["pending", "active", "revoked"]
+          }
+        },
+        "required": [
+          "activatedAt",
+          "clientId",
+          "createdAt",
+          "expiresAt",
+          "id",
+          "lastUsedAt",
+          "resource",
+          "revokedAt",
+          "scopes",
+          "state"
+        ]
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "archivedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "archived"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "archivedAt",
+          "createdAt",
+          "description",
+          "id",
+          "isDefault",
+          "name",
+          "status",
+          "updatedAt"
+        ]
       },
       "ProjectList": {
         "type": "object",
@@ -151,6 +346,392 @@
     "parameters": {}
   },
   "paths": {
+    "/api/v1/me": {
+      "get": {
+        "description": "Return the signed-in Taskome user.",
+        "operationId": "getCurrentUser",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "apiKeyBearer": []
+          }
+        ],
+        "tags": ["Users"],
+        "responses": {
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/api-keys": {
+      "post": {
+        "description": "Create a scoped API key and return its secret once.",
+        "operationId": "createApiKey",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["Programmatic access"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKey"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedApiKey"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "description": "List the signed-in user's API-key history.",
+        "operationId": "listApiKeys",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["Programmatic access"],
+        "responses": {
+          "200": {
+            "description": "API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKeyMetadata"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/api-keys/{id}": {
+      "get": {
+        "description": "Inspect API-key metadata without exposing secret material.",
+        "operationId": "getApiKey",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["Programmatic access"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyMetadata"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "description": "Update an API key within Taskome's policy.",
+        "operationId": "updateApiKey",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["Programmatic access"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateApiKey"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyMetadata"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Revoke an API key while retaining its safe metadata.",
+        "operationId": "revokeApiKey",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["Programmatic access"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "API key revoked"
+          },
+          "404": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/oauth-grants": {
+      "get": {
+        "description": "List the signed-in user's OAuth Grant history.",
+        "operationId": "listOAuthGrants",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["Programmatic access"],
+        "responses": {
+          "200": {
+            "description": "OAuth Grants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OAuthGrant"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/oauth-grants/{id}": {
+      "get": {
+        "description": "Inspect one OAuth Grant.",
+        "operationId": "getOAuthGrant",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["Programmatic access"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth Grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthGrant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Revoke a Grant and its complete OAuth token family.",
+        "operationId": "revokeOAuthGrant",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["Programmatic access"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OAuth Grant revoked"
+          },
+          "404": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{projectId}/archive": {
       "post": {
         "description": "Archive a regular Project without changing its contents.",
