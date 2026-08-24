@@ -32,6 +32,14 @@ type MainNavItemData = {
   children?: { title: string; url: string }[];
 };
 
+function NavigationLink({ url }: { url: string }) {
+  return url === "/utilities/structure-viewer" ? (
+    <Link to="/utilities/structure-viewer" />
+  ) : (
+    <a href={url} />
+  );
+}
+
 function MainNavItem({ item, pathname }: { item: MainNavItemData; pathname: string }) {
   const { isMobile, state } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
@@ -52,7 +60,7 @@ function MainNavItem({ item, pathname }: { item: MainNavItemData; pathname: stri
             className="min-w-44"
           >
             {item.children.map((child) => (
-              <DropdownMenuItem key={child.title} render={<a href={child.url} />}>
+              <DropdownMenuItem key={child.title} render={<NavigationLink url={child.url} />}>
                 {child.title}
               </DropdownMenuItem>
             ))}
@@ -75,7 +83,7 @@ function MainNavItem({ item, pathname }: { item: MainNavItemData; pathname: stri
             <SidebarMenuSub>
               {item.children.map((child) => (
                 <SidebarMenuSubItem key={child.title}>
-                  <SidebarMenuSubButton render={<a href={child.url} />}>
+                  <SidebarMenuSubButton render={<NavigationLink url={child.url} />}>
                     <span>{child.title}</span>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
