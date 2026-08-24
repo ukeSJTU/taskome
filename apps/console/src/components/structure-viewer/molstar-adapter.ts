@@ -51,6 +51,7 @@ export const molstarAdapter: StructureViewerAdapter = {
       import("molstar/lib/mol-plugin/commands"),
     ]);
     const plugin = new PluginContext(DefaultPluginSpec());
+    await plugin.init();
     const initialized = await plugin.mountAsync(container);
     if (!initialized) {
       plugin.dispose();
