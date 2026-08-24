@@ -5,10 +5,10 @@ authorization, the application REST surface, and Taskome domain records in
 PostgreSQL. Scientific compute runs outside this process.
 
 The current implementation provides browser sessions, scoped API keys, the
-OAuth and MCP authorization foundation, health and readiness checks, the
-current-user endpoint, OpenAPI generation, and PostgreSQL persistence. The
-product domain and compute-coordination APIs described by the target
-architecture are not implemented yet.
+OAuth and MCP authorization foundation, health and readiness checks, Project
+lifecycle APIs, the current-user endpoint, OpenAPI generation, and PostgreSQL
+persistence. The remaining product domain and compute-coordination APIs
+described by the target architecture are not implemented yet.
 
 ## Tech stack
 

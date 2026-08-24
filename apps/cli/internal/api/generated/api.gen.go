@@ -19,6 +19,129 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ApiKeyMetadataScopes.
+const (
+	ApiKeyMetadataScopesTaskomeAccess ApiKeyMetadataScopes = "taskome:access"
+)
+
+// Valid indicates whether the value is a known member of the ApiKeyMetadataScopes enum.
+func (e ApiKeyMetadataScopes) Valid() bool {
+	switch e {
+	case ApiKeyMetadataScopesTaskomeAccess:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ApiKeyMetadataState.
+const (
+	ApiKeyMetadataStateActive  ApiKeyMetadataState = "active"
+	ApiKeyMetadataStateExpired ApiKeyMetadataState = "expired"
+	ApiKeyMetadataStateRevoked ApiKeyMetadataState = "revoked"
+)
+
+// Valid indicates whether the value is a known member of the ApiKeyMetadataState enum.
+func (e ApiKeyMetadataState) Valid() bool {
+	switch e {
+	case ApiKeyMetadataStateActive:
+		return true
+	case ApiKeyMetadataStateExpired:
+		return true
+	case ApiKeyMetadataStateRevoked:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateApiKeyScopes.
+const (
+	CreateApiKeyScopesTaskomeAccess CreateApiKeyScopes = "taskome:access"
+)
+
+// Valid indicates whether the value is a known member of the CreateApiKeyScopes enum.
+func (e CreateApiKeyScopes) Valid() bool {
+	switch e {
+	case CreateApiKeyScopesTaskomeAccess:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreatedApiKeyScopes.
+const (
+	CreatedApiKeyScopesTaskomeAccess CreatedApiKeyScopes = "taskome:access"
+)
+
+// Valid indicates whether the value is a known member of the CreatedApiKeyScopes enum.
+func (e CreatedApiKeyScopes) Valid() bool {
+	switch e {
+	case CreatedApiKeyScopesTaskomeAccess:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreatedApiKeyState.
+const (
+	CreatedApiKeyStateActive  CreatedApiKeyState = "active"
+	CreatedApiKeyStateExpired CreatedApiKeyState = "expired"
+	CreatedApiKeyStateRevoked CreatedApiKeyState = "revoked"
+)
+
+// Valid indicates whether the value is a known member of the CreatedApiKeyState enum.
+func (e CreatedApiKeyState) Valid() bool {
+	switch e {
+	case CreatedApiKeyStateActive:
+		return true
+	case CreatedApiKeyStateExpired:
+		return true
+	case CreatedApiKeyStateRevoked:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OAuthGrantScopes.
+const (
+	OAuthGrantScopesTaskomeAccess OAuthGrantScopes = "taskome:access"
+)
+
+// Valid indicates whether the value is a known member of the OAuthGrantScopes enum.
+func (e OAuthGrantScopes) Valid() bool {
+	switch e {
+	case OAuthGrantScopesTaskomeAccess:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OAuthGrantState.
+const (
+	OAuthGrantStateActive  OAuthGrantState = "active"
+	OAuthGrantStatePending OAuthGrantState = "pending"
+	OAuthGrantStateRevoked OAuthGrantState = "revoked"
+)
+
+// Valid indicates whether the value is a known member of the OAuthGrantState enum.
+func (e OAuthGrantState) Valid() bool {
+	switch e {
+	case OAuthGrantStateActive:
+		return true
+	case OAuthGrantStatePending:
+		return true
+	case OAuthGrantStateRevoked:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProjectStatus.
 const (
 	ProjectStatusActive   ProjectStatus = "active"
@@ -31,6 +154,21 @@ func (e ProjectStatus) Valid() bool {
 	case ProjectStatusActive:
 		return true
 	case ProjectStatusArchived:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateApiKeyScopes.
+const (
+	UpdateApiKeyScopesTaskomeAccess UpdateApiKeyScopes = "taskome:access"
+)
+
+// Valid indicates whether the value is a known member of the UpdateApiKeyScopes enum.
+func (e UpdateApiKeyScopes) Valid() bool {
+	switch e {
+	case UpdateApiKeyScopesTaskomeAccess:
 		return true
 	default:
 		return false
@@ -58,11 +196,85 @@ func (e ListProjectsParamsStatus) Valid() bool {
 	}
 }
 
+// ApiKeyMetadata defines model for ApiKeyMetadata.
+type ApiKeyMetadata struct {
+	CreatedAt  time.Time                    `json:"createdAt"`
+	ExpiresAt  time.Time                    `json:"expiresAt"`
+	Id         string                       `json:"id"`
+	LastUsedAt nullable.Nullable[time.Time] `json:"lastUsedAt"`
+	Name       string                       `json:"name"`
+	Scopes     []ApiKeyMetadataScopes       `json:"scopes"`
+	State      ApiKeyMetadataState          `json:"state"`
+}
+
+// ApiKeyMetadataScopes defines model for ApiKeyMetadata.Scopes.
+type ApiKeyMetadataScopes string
+
+// ApiKeyMetadataState defines model for ApiKeyMetadata.State.
+type ApiKeyMetadataState string
+
+// CreateApiKey defines model for CreateApiKey.
+type CreateApiKey struct {
+	ExpiresIn *int                 `json:"expiresIn,omitempty"`
+	Name      string               `json:"name"`
+	Scopes    []CreateApiKeyScopes `json:"scopes"`
+}
+
+// CreateApiKeyScopes defines model for CreateApiKey.Scopes.
+type CreateApiKeyScopes string
+
 // CreateProject defines model for CreateProject.
 type CreateProject struct {
 	Description nullable.Nullable[string] `json:"description,omitempty"`
 	Name        string                    `json:"name"`
 }
+
+// CreatedApiKey defines model for CreatedApiKey.
+type CreatedApiKey struct {
+	CreatedAt  time.Time                    `json:"createdAt"`
+	ExpiresAt  time.Time                    `json:"expiresAt"`
+	Id         string                       `json:"id"`
+	LastUsedAt nullable.Nullable[time.Time] `json:"lastUsedAt"`
+	Name       string                       `json:"name"`
+	Scopes     []CreatedApiKeyScopes        `json:"scopes"`
+	Secret     string                       `json:"secret"`
+	State      CreatedApiKeyState           `json:"state"`
+}
+
+// CreatedApiKeyScopes defines model for CreatedApiKey.Scopes.
+type CreatedApiKeyScopes string
+
+// CreatedApiKeyState defines model for CreatedApiKey.State.
+type CreatedApiKeyState string
+
+// CurrentUser defines model for CurrentUser.
+type CurrentUser struct {
+	Email         openapi_types.Email       `json:"email"`
+	EmailVerified bool                      `json:"emailVerified"`
+	Id            string                    `json:"id"`
+	Image         nullable.Nullable[string] `json:"image"`
+	Name          string                    `json:"name"`
+}
+
+// OAuthGrant defines model for OAuthGrant.
+type OAuthGrant struct {
+	ActivatedAt nullable.Nullable[time.Time] `json:"activatedAt"`
+	ClientId    string                       `json:"clientId"`
+	CreatedAt   time.Time                    `json:"createdAt"`
+	ExpiresAt   time.Time                    `json:"expiresAt"`
+	Id          string                       `json:"id"`
+	LastUsedAt  nullable.Nullable[time.Time] `json:"lastUsedAt"`
+	Resource    string                       `json:"resource"`
+	RevokedAt   nullable.Nullable[time.Time] `json:"revokedAt"`
+	Scopes      []OAuthGrantScopes           `json:"scopes"`
+	State       OAuthGrantState              `json:"state"`
+}
+
+// OAuthGrantScopes defines model for OAuthGrant.Scopes.
+type OAuthGrantScopes string
+
+// OAuthGrantState defines model for OAuthGrant.State.
+type OAuthGrantState string
 
 // ProblemDetails defines model for ProblemDetails.
 type ProblemDetails struct {
@@ -101,6 +313,16 @@ type ProjectList struct {
 	NextCursor nullable.Nullable[string] `json:"nextCursor"`
 }
 
+// UpdateApiKey defines model for UpdateApiKey.
+type UpdateApiKey struct {
+	ExpiresIn *int                  `json:"expiresIn,omitempty"`
+	Name      *string               `json:"name,omitempty"`
+	Scopes    *[]UpdateApiKeyScopes `json:"scopes,omitempty"`
+}
+
+// UpdateApiKeyScopes defines model for UpdateApiKey.Scopes.
+type UpdateApiKeyScopes string
+
 // UpdateProject defines model for UpdateProject.
 type UpdateProject struct {
 	Description nullable.Nullable[string] `json:"description,omitempty"`
@@ -116,6 +338,12 @@ type ListProjectsParams struct {
 
 // ListProjectsParamsStatus defines parameters for ListProjects.
 type ListProjectsParamsStatus string
+
+// CreateApiKeyJSONRequestBody defines body for CreateApiKey for application/json ContentType.
+type CreateApiKeyJSONRequestBody = CreateApiKey
+
+// UpdateApiKeyJSONRequestBody defines body for UpdateApiKey for application/json ContentType.
+type UpdateApiKeyJSONRequestBody = UpdateApiKey
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = CreateProject
@@ -197,6 +425,65 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 
+	// ListApiKeys performs a GET /api/v1/api-keys (the `ListApiKeys` operationId) request.
+	//
+	// List the signed-in user's API-key history.
+	ListApiKeys(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateApiKeyWithBody performs a POST /api/v1/api-keys (the `CreateApiKey` operationId) request,
+	// with any type of body and a specified content type.
+	//
+	// Create a scoped API key and return its secret once.
+	CreateApiKeyWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateApiKey performs a POST /api/v1/api-keys (the `CreateApiKey` operationId) request.
+	// Takes a body of the `application/json` content type.
+	//
+	// Create a scoped API key and return its secret once.
+	CreateApiKey(ctx context.Context, body CreateApiKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeApiKey performs a DELETE /api/v1/api-keys/{id} (the `RevokeApiKey` operationId) request.
+	//
+	// Revoke an API key while retaining its safe metadata.
+	RevokeApiKey(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetApiKey performs a GET /api/v1/api-keys/{id} (the `GetApiKey` operationId) request.
+	//
+	// Inspect API-key metadata without exposing secret material.
+	GetApiKey(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateApiKeyWithBody performs a PATCH /api/v1/api-keys/{id} (the `UpdateApiKey` operationId) request,
+	// with any type of body and a specified content type.
+	//
+	// Update an API key within Taskome's policy.
+	UpdateApiKeyWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateApiKey performs a PATCH /api/v1/api-keys/{id} (the `UpdateApiKey` operationId) request.
+	// Takes a body of the `application/json` content type.
+	//
+	// Update an API key within Taskome's policy.
+	UpdateApiKey(ctx context.Context, id string, body UpdateApiKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetCurrentUser performs a GET /api/v1/me (the `GetCurrentUser` operationId) request.
+	//
+	// Return the signed-in Taskome user.
+	GetCurrentUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListOAuthGrants performs a GET /api/v1/oauth-grants (the `ListOAuthGrants` operationId) request.
+	//
+	// List the signed-in user's OAuth Grant history.
+	ListOAuthGrants(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeOAuthGrant performs a DELETE /api/v1/oauth-grants/{id} (the `RevokeOAuthGrant` operationId) request.
+	//
+	// Revoke a Grant and its complete OAuth token family.
+	RevokeOAuthGrant(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOAuthGrant performs a GET /api/v1/oauth-grants/{id} (the `GetOAuthGrant` operationId) request.
+	//
+	// Inspect one OAuth Grant.
+	GetOAuthGrant(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListProjects performs a GET /api/v1/projects (the `ListProjects` operationId) request.
 	//
 	// List the signed-in user's Projects, active by default.
@@ -245,6 +532,175 @@ type ClientInterface interface {
 	//
 	// Restore an archived Project to active use.
 	UnarchiveProject(ctx context.Context, projectId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// ListApiKeys performs a GET /api/v1/api-keys (the `ListApiKeys` operationId) request.
+//
+// List the signed-in user's API-key history.
+func (c *Client) ListApiKeys(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListApiKeysRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateApiKeyWithBody performs a POST /api/v1/api-keys (the `CreateApiKey` operationId) request,
+// with any type of body and a specified content type.
+//
+// Create a scoped API key and return its secret once.
+func (c *Client) CreateApiKeyWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateApiKeyRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateApiKey performs a POST /api/v1/api-keys (the `CreateApiKey` operationId) request.
+// Takes a body of the `application/json` content type.
+//
+// Create a scoped API key and return its secret once.
+func (c *Client) CreateApiKey(ctx context.Context, body CreateApiKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateApiKeyRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RevokeApiKey performs a DELETE /api/v1/api-keys/{id} (the `RevokeApiKey` operationId) request.
+//
+// Revoke an API key while retaining its safe metadata.
+func (c *Client) RevokeApiKey(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeApiKeyRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetApiKey performs a GET /api/v1/api-keys/{id} (the `GetApiKey` operationId) request.
+//
+// Inspect API-key metadata without exposing secret material.
+func (c *Client) GetApiKey(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiKeyRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateApiKeyWithBody performs a PATCH /api/v1/api-keys/{id} (the `UpdateApiKey` operationId) request,
+// with any type of body and a specified content type.
+//
+// Update an API key within Taskome's policy.
+func (c *Client) UpdateApiKeyWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateApiKeyRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateApiKey performs a PATCH /api/v1/api-keys/{id} (the `UpdateApiKey` operationId) request.
+// Takes a body of the `application/json` content type.
+//
+// Update an API key within Taskome's policy.
+func (c *Client) UpdateApiKey(ctx context.Context, id string, body UpdateApiKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateApiKeyRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetCurrentUser performs a GET /api/v1/me (the `GetCurrentUser` operationId) request.
+//
+// Return the signed-in Taskome user.
+func (c *Client) GetCurrentUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCurrentUserRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListOAuthGrants performs a GET /api/v1/oauth-grants (the `ListOAuthGrants` operationId) request.
+//
+// List the signed-in user's OAuth Grant history.
+func (c *Client) ListOAuthGrants(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOAuthGrantsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RevokeOAuthGrant performs a DELETE /api/v1/oauth-grants/{id} (the `RevokeOAuthGrant` operationId) request.
+//
+// Revoke a Grant and its complete OAuth token family.
+func (c *Client) RevokeOAuthGrant(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeOAuthGrantRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetOAuthGrant performs a GET /api/v1/oauth-grants/{id} (the `GetOAuthGrant` operationId) request.
+//
+// Inspect one OAuth Grant.
+func (c *Client) GetOAuthGrant(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOAuthGrantRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // ListProjects performs a GET /api/v1/projects (the `ListProjects` operationId) request.
@@ -384,6 +840,310 @@ func (c *Client) UnarchiveProject(ctx context.Context, projectId openapi_types.U
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewListApiKeysRequest constructs an http.Request for the ListApiKeys method
+func NewListApiKeysRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/api-keys")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateApiKeyRequest calls the generic CreateApiKey builder with application/json body
+func NewCreateApiKeyRequest(server string, body CreateApiKeyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateApiKeyRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateApiKeyRequestWithBody constructs an http.Request for the CreateApiKey method, with any body, and a specified content type
+func NewCreateApiKeyRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/api-keys")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRevokeApiKeyRequest constructs an http.Request for the RevokeApiKey method
+func NewRevokeApiKeyRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/api-keys/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetApiKeyRequest constructs an http.Request for the GetApiKey method
+func NewGetApiKeyRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/api-keys/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateApiKeyRequest calls the generic UpdateApiKey builder with application/json body
+func NewUpdateApiKeyRequest(server string, id string, body UpdateApiKeyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateApiKeyRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewUpdateApiKeyRequestWithBody constructs an http.Request for the UpdateApiKey method, with any body, and a specified content type
+func NewUpdateApiKeyRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/api-keys/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetCurrentUserRequest constructs an http.Request for the GetCurrentUser method
+func NewGetCurrentUserRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/me")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListOAuthGrantsRequest constructs an http.Request for the ListOAuthGrants method
+func NewListOAuthGrantsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/oauth-grants")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRevokeOAuthGrantRequest constructs an http.Request for the RevokeOAuthGrant method
+func NewRevokeOAuthGrantRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/oauth-grants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetOAuthGrantRequest constructs an http.Request for the GetOAuthGrant method
+func NewGetOAuthGrantRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/oauth-grants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewListProjectsRequest constructs an http.Request for the ListProjects method
@@ -731,6 +1491,83 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
+	// ListApiKeysWithResponse performs a GET /api/v1/api-keys (the `ListApiKeys` operationId) request.
+	//
+	// List the signed-in user's API-key history.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	ListApiKeysWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListApiKeysResponse, error)
+
+	// CreateApiKeyWithBodyWithResponse performs a POST /api/v1/api-keys (the `CreateApiKey` operationId) request,
+	// with any type of body and a specified content type.
+	//
+	// Create a scoped API key and return its secret once.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	CreateApiKeyWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateApiKeyResponse, error)
+
+	// CreateApiKeyWithResponse performs a POST /api/v1/api-keys (the `CreateApiKey` operationId) request.
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Create a scoped API key and return its secret once.
+	CreateApiKeyWithResponse(ctx context.Context, body CreateApiKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateApiKeyResponse, error)
+
+	// RevokeApiKeyWithResponse performs a DELETE /api/v1/api-keys/{id} (the `RevokeApiKey` operationId) request.
+	//
+	// Revoke an API key while retaining its safe metadata.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	RevokeApiKeyWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*RevokeApiKeyResponse, error)
+
+	// GetApiKeyWithResponse performs a GET /api/v1/api-keys/{id} (the `GetApiKey` operationId) request.
+	//
+	// Inspect API-key metadata without exposing secret material.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	GetApiKeyWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetApiKeyResponse, error)
+
+	// UpdateApiKeyWithBodyWithResponse performs a PATCH /api/v1/api-keys/{id} (the `UpdateApiKey` operationId) request,
+	// with any type of body and a specified content type.
+	//
+	// Update an API key within Taskome's policy.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	UpdateApiKeyWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateApiKeyResponse, error)
+
+	// UpdateApiKeyWithResponse performs a PATCH /api/v1/api-keys/{id} (the `UpdateApiKey` operationId) request.
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Update an API key within Taskome's policy.
+	UpdateApiKeyWithResponse(ctx context.Context, id string, body UpdateApiKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateApiKeyResponse, error)
+
+	// GetCurrentUserWithResponse performs a GET /api/v1/me (the `GetCurrentUser` operationId) request.
+	//
+	// Return the signed-in Taskome user.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	GetCurrentUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentUserResponse, error)
+
+	// ListOAuthGrantsWithResponse performs a GET /api/v1/oauth-grants (the `ListOAuthGrants` operationId) request.
+	//
+	// List the signed-in user's OAuth Grant history.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	ListOAuthGrantsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListOAuthGrantsResponse, error)
+
+	// RevokeOAuthGrantWithResponse performs a DELETE /api/v1/oauth-grants/{id} (the `RevokeOAuthGrant` operationId) request.
+	//
+	// Revoke a Grant and its complete OAuth token family.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	RevokeOAuthGrantWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*RevokeOAuthGrantResponse, error)
+
+	// GetOAuthGrantWithResponse performs a GET /api/v1/oauth-grants/{id} (the `GetOAuthGrant` operationId) request.
+	//
+	// Inspect one OAuth Grant.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	GetOAuthGrantWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetOAuthGrantResponse, error)
+
 	// ListProjectsWithResponse performs a GET /api/v1/projects (the `ListProjects` operationId) request.
 	//
 	// List the signed-in user's Projects, active by default.
@@ -793,6 +1630,438 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	UnarchiveProjectWithResponse(ctx context.Context, projectId openapi_types.UUID, reqEditors ...RequestEditorFn) (*UnarchiveProjectResponse, error)
+}
+
+type ListApiKeysResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ApiKeyMetadata
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListApiKeysResponse) GetJSON200() *[]ApiKeyMetadata {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r ListApiKeysResponse) GetApplicationproblemJSON403() *ProblemDetails {
+	return r.ApplicationproblemJSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListApiKeysResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListApiKeysResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListApiKeysResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListApiKeysResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateApiKeyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *CreatedApiKey
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *ProblemDetails
+	// ApplicationproblemJSON422 the response for an HTTP 422 `application/problem+json` response
+	ApplicationproblemJSON422 *ProblemDetails
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateApiKeyResponse) GetJSON201() *CreatedApiKey {
+	return r.JSON201
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r CreateApiKeyResponse) GetApplicationproblemJSON403() *ProblemDetails {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON422 returns the response for an HTTP 422 `application/problem+json` response
+func (r CreateApiKeyResponse) GetApplicationproblemJSON422() *ProblemDetails {
+	return r.ApplicationproblemJSON422
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateApiKeyResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateApiKeyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateApiKeyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateApiKeyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RevokeApiKeyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r RevokeApiKeyResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r RevokeApiKeyResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RevokeApiKeyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RevokeApiKeyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RevokeApiKeyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetApiKeyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ApiKeyMetadata
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiKeyResponse) GetJSON200() *ApiKeyMetadata {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r GetApiKeyResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetApiKeyResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiKeyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiKeyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetApiKeyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateApiKeyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ApiKeyMetadata
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+	// ApplicationproblemJSON422 the response for an HTTP 422 `application/problem+json` response
+	ApplicationproblemJSON422 *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateApiKeyResponse) GetJSON200() *ApiKeyMetadata {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r UpdateApiKeyResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON422 returns the response for an HTTP 422 `application/problem+json` response
+func (r UpdateApiKeyResponse) GetApplicationproblemJSON422() *ProblemDetails {
+	return r.ApplicationproblemJSON422
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateApiKeyResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateApiKeyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateApiKeyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateApiKeyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetCurrentUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CurrentUser
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetCurrentUserResponse) GetJSON200() *CurrentUser {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r GetCurrentUserResponse) GetApplicationproblemJSON401() *ProblemDetails {
+	return r.ApplicationproblemJSON401
+}
+
+// GetBody returns the raw response body bytes
+func (r GetCurrentUserResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetCurrentUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetCurrentUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetCurrentUserResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListOAuthGrantsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]OAuthGrant
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListOAuthGrantsResponse) GetJSON200() *[]OAuthGrant {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r ListOAuthGrantsResponse) GetApplicationproblemJSON403() *ProblemDetails {
+	return r.ApplicationproblemJSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListOAuthGrantsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListOAuthGrantsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListOAuthGrantsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListOAuthGrantsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RevokeOAuthGrantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r RevokeOAuthGrantResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r RevokeOAuthGrantResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RevokeOAuthGrantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RevokeOAuthGrantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RevokeOAuthGrantResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetOAuthGrantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OAuthGrant
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetOAuthGrantResponse) GetJSON200() *OAuthGrant {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r GetOAuthGrantResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetOAuthGrantResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOAuthGrantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOAuthGrantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOAuthGrantResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 type ListProjectsResponse struct {
@@ -1236,6 +2505,149 @@ func (r UnarchiveProjectResponse) ContentType() string {
 	return ""
 }
 
+// ListApiKeysWithResponse performs a GET /api/v1/api-keys (the `ListApiKeys` operationId) request.
+//
+// List the signed-in user's API-key history.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) ListApiKeysWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListApiKeysResponse, error) {
+	rsp, err := c.ListApiKeys(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListApiKeysResponse(rsp)
+}
+
+// CreateApiKeyWithBodyWithResponse performs a POST /api/v1/api-keys (the `CreateApiKey` operationId) request,
+// with any type of body and a specified content type.
+//
+// Create a scoped API key and return its secret once.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) CreateApiKeyWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateApiKeyResponse, error) {
+	rsp, err := c.CreateApiKeyWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateApiKeyResponse(rsp)
+}
+
+// CreateApiKeyWithResponse performs a POST /api/v1/api-keys (the `CreateApiKey` operationId) request.
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Create a scoped API key and return its secret once.
+func (c *ClientWithResponses) CreateApiKeyWithResponse(ctx context.Context, body CreateApiKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateApiKeyResponse, error) {
+	rsp, err := c.CreateApiKey(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateApiKeyResponse(rsp)
+}
+
+// RevokeApiKeyWithResponse performs a DELETE /api/v1/api-keys/{id} (the `RevokeApiKey` operationId) request.
+//
+// Revoke an API key while retaining its safe metadata.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) RevokeApiKeyWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*RevokeApiKeyResponse, error) {
+	rsp, err := c.RevokeApiKey(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeApiKeyResponse(rsp)
+}
+
+// GetApiKeyWithResponse performs a GET /api/v1/api-keys/{id} (the `GetApiKey` operationId) request.
+//
+// Inspect API-key metadata without exposing secret material.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) GetApiKeyWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetApiKeyResponse, error) {
+	rsp, err := c.GetApiKey(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiKeyResponse(rsp)
+}
+
+// UpdateApiKeyWithBodyWithResponse performs a PATCH /api/v1/api-keys/{id} (the `UpdateApiKey` operationId) request,
+// with any type of body and a specified content type.
+//
+// Update an API key within Taskome's policy.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) UpdateApiKeyWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateApiKeyResponse, error) {
+	rsp, err := c.UpdateApiKeyWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateApiKeyResponse(rsp)
+}
+
+// UpdateApiKeyWithResponse performs a PATCH /api/v1/api-keys/{id} (the `UpdateApiKey` operationId) request.
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Update an API key within Taskome's policy.
+func (c *ClientWithResponses) UpdateApiKeyWithResponse(ctx context.Context, id string, body UpdateApiKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateApiKeyResponse, error) {
+	rsp, err := c.UpdateApiKey(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateApiKeyResponse(rsp)
+}
+
+// GetCurrentUserWithResponse performs a GET /api/v1/me (the `GetCurrentUser` operationId) request.
+//
+// Return the signed-in Taskome user.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) GetCurrentUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentUserResponse, error) {
+	rsp, err := c.GetCurrentUser(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetCurrentUserResponse(rsp)
+}
+
+// ListOAuthGrantsWithResponse performs a GET /api/v1/oauth-grants (the `ListOAuthGrants` operationId) request.
+//
+// List the signed-in user's OAuth Grant history.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) ListOAuthGrantsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListOAuthGrantsResponse, error) {
+	rsp, err := c.ListOAuthGrants(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListOAuthGrantsResponse(rsp)
+}
+
+// RevokeOAuthGrantWithResponse performs a DELETE /api/v1/oauth-grants/{id} (the `RevokeOAuthGrant` operationId) request.
+//
+// Revoke a Grant and its complete OAuth token family.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) RevokeOAuthGrantWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*RevokeOAuthGrantResponse, error) {
+	rsp, err := c.RevokeOAuthGrant(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeOAuthGrantResponse(rsp)
+}
+
+// GetOAuthGrantWithResponse performs a GET /api/v1/oauth-grants/{id} (the `GetOAuthGrant` operationId) request.
+//
+// Inspect one OAuth Grant.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) GetOAuthGrantWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetOAuthGrantResponse, error) {
+	rsp, err := c.GetOAuthGrant(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOAuthGrantResponse(rsp)
+}
+
 // ListProjectsWithResponse performs a GET /api/v1/projects (the `ListProjects` operationId) request.
 //
 // List the signed-in user's Projects, active by default.
@@ -1351,6 +2763,309 @@ func (c *ClientWithResponses) UnarchiveProjectWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseUnarchiveProjectResponse(rsp)
+}
+
+// ParseListApiKeysResponse parses an HTTP response from a ListApiKeysWithResponse call
+func ParseListApiKeysResponse(rsp *http.Response) (*ListApiKeysResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListApiKeysResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ApiKeyMetadata
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateApiKeyResponse parses an HTTP response from a CreateApiKeyWithResponse call
+func ParseCreateApiKeyResponse(rsp *http.Response) (*CreateApiKeyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateApiKeyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest CreatedApiKey
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON422 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRevokeApiKeyResponse parses an HTTP response from a RevokeApiKeyWithResponse call
+func ParseRevokeApiKeyResponse(rsp *http.Response) (*RevokeApiKeyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RevokeApiKeyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetApiKeyResponse parses an HTTP response from a GetApiKeyWithResponse call
+func ParseGetApiKeyResponse(rsp *http.Response) (*GetApiKeyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiKeyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ApiKeyMetadata
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateApiKeyResponse parses an HTTP response from a UpdateApiKeyWithResponse call
+func ParseUpdateApiKeyResponse(rsp *http.Response) (*UpdateApiKeyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateApiKeyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ApiKeyMetadata
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON422 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetCurrentUserResponse parses an HTTP response from a GetCurrentUserWithResponse call
+func ParseGetCurrentUserResponse(rsp *http.Response) (*GetCurrentUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetCurrentUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CurrentUser
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListOAuthGrantsResponse parses an HTTP response from a ListOAuthGrantsWithResponse call
+func ParseListOAuthGrantsResponse(rsp *http.Response) (*ListOAuthGrantsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListOAuthGrantsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []OAuthGrant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRevokeOAuthGrantResponse parses an HTTP response from a RevokeOAuthGrantWithResponse call
+func ParseRevokeOAuthGrantResponse(rsp *http.Response) (*RevokeOAuthGrantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RevokeOAuthGrantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOAuthGrantResponse parses an HTTP response from a GetOAuthGrantWithResponse call
+func ParseGetOAuthGrantResponse(rsp *http.Response) (*GetOAuthGrantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOAuthGrantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OAuthGrant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseListProjectsResponse parses an HTTP response from a ListProjectsWithResponse call
