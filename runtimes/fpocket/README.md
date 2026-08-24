@@ -2,8 +2,9 @@
 
 This project packages fpocket as the Runtime for Taskome's Pocket Detection
 Tool. The Runtime is under construction. It currently locks the upstream
-compute environment and exposes only the process-level Python seam needed to
-characterize and validate fpocket execution.
+compute environment, exposes the process-level Python seam needed to validate
+fpocket execution, and assembles both dependency planes into an image skeleton.
+It does not yet define the final Attempt entrypoint.
 
 See the
 [Tool Runtime architecture](../../docs/architecture/components/tool-runtime.md)
@@ -31,6 +32,47 @@ uv run --all-packages --frozen pytest runtimes/fpocket/tests/runtime
 
 The tests exercise the Runtime Python interface and verify the subprocess
 contract, failure reporting, and minimum technical output validation.
+
+## Build and test the image skeleton
+
+The image test requires Docker with `linux/amd64` execution support. Run it
+from the repository root:
+
+```bash
+uv run --all-packages --frozen pytest runtimes/fpocket/tests/image
+```
+
+The test builds `taskome/fpocket-runtime:test` from
+`runtimes/fpocket/Dockerfile`, then runs the real fpocket fixture through the
+public `run_fpocket` interface. A successful run ends with `1 passed`.
+
+The multi-stage build produces this final layout:
+
+| Path                   | Contents                                                               |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `/opt/taskome/adapter` | CPython environment containing `fpocket_runtime` and `runtime_toolkit` |
+| `/opt/taskome/compute` | Locked fpocket compute prefix installed directly from `pixi.lock`      |
+| `/work`                | Writable workspace owned by UID and GID 10001                          |
+
+The final stage uses the pinned `linux/amd64` Python 3.14.7 slim image. It runs
+as UID and GID 10001 and excludes uv, `pixi-install-to-prefix`, pip, build
+caches, and compilers. The default command is `/bin/false`: the image fails
+closed until the Attempt Invocation interface and final entrypoint are
+designed.
+
+The image test applies these runtime constraints:
+
+- no network;
+- a read-only root filesystem;
+- all Linux capabilities dropped;
+- `no-new-privileges`; and
+- explicit writable `tmpfs` mounts for `/work` and `/tmp`.
+
+The `/tmp` mount is required. fpocket 4.2.3 segfaults when the root filesystem
+is read-only and no writable temporary directory is available. The fixture is
+copied from upstream `data/sample/1UYD.pdb` at the commit in `upstream.toml` and
+has SHA-256
+`923e978e1d570f854d0d5f96d515f70d6fdac25216de586fe8c97a266e803b0c`.
 
 ## Locked upstream characterization
 

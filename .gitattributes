@@ -8,6 +8,7 @@
 # Bioinformatics structure files are text and should produce readable diffs.
 *.cif text eol=lf
 *.pdb text eol=lf
+runtimes/fpocket/tests/fixtures/*.pdb -whitespace
 
 # Binary assets must never be line-ending normalized or text-diffed.
 *.gif binary
