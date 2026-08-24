@@ -90,7 +90,7 @@ const data = {
           title: "Utilities",
           icon: <PanelsTopLeftIcon />,
           children: [
-            { title: "Structure Viewer", url: "#" },
+            { title: "Structure Viewer", url: "/utilities/structure-viewer" },
             { title: "MSA Viewer", url: "#" },
             { title: "Molecule Drawer", url: "#" },
           ],

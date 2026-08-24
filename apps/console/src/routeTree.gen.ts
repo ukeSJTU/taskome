@@ -19,6 +19,7 @@ import { Route as AuthSettingsIndexRouteImport } from './routes/_auth/settings/i
 import { Route as AuthSettingsApiKeysRouteImport } from './routes/_auth/settings/api-keys'
 import { Route as AuthSettingsProfileRouteImport } from './routes/_auth/settings/profile'
 import { Route as AuthSettingsSecurityRouteImport } from './routes/_auth/settings/security'
+import { Route as AuthUtilitiesStructureViewerRouteImport } from './routes/_auth/utilities/structure-viewer'
 
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/_auth',
@@ -69,6 +70,12 @@ const AuthSettingsSecurityRoute = AuthSettingsSecurityRouteImport.update({
   path: '/security',
   getParentRoute: () => AuthSettingsRouteRoute,
 } as any)
+const AuthUtilitiesStructureViewerRoute =
+  AuthUtilitiesStructureViewerRouteImport.update({
+    id: '/utilities/structure-viewer',
+    path: '/utilities/structure-viewer',
+    getParentRoute: () => AuthRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthIndexRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/settings/api-keys': typeof AuthSettingsApiKeysRoute
   '/settings/profile': typeof AuthSettingsProfileRoute
   '/settings/security': typeof AuthSettingsSecurityRoute
+  '/utilities/structure-viewer': typeof AuthUtilitiesStructureViewerRoute
   '/settings/': typeof AuthSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -89,6 +97,7 @@ export interface FileRoutesByTo {
   '/settings/api-keys': typeof AuthSettingsApiKeysRoute
   '/settings/profile': typeof AuthSettingsProfileRoute
   '/settings/security': typeof AuthSettingsSecurityRoute
+  '/utilities/structure-viewer': typeof AuthUtilitiesStructureViewerRoute
   '/settings': typeof AuthSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -102,6 +111,7 @@ export interface FileRoutesById {
   '/_auth/settings/api-keys': typeof AuthSettingsApiKeysRoute
   '/_auth/settings/profile': typeof AuthSettingsProfileRoute
   '/_auth/settings/security': typeof AuthSettingsSecurityRoute
+  '/_auth/utilities/structure-viewer': typeof AuthUtilitiesStructureViewerRoute
   '/_auth/settings/': typeof AuthSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/settings/api-keys'
     | '/settings/profile'
     | '/settings/security'
+    | '/utilities/structure-viewer'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/settings/api-keys'
     | '/settings/profile'
     | '/settings/security'
+    | '/utilities/structure-viewer'
     | '/settings'
   id:
     | '__root__'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
     | '/_auth/settings/api-keys'
     | '/_auth/settings/profile'
     | '/_auth/settings/security'
+    | '/_auth/utilities/structure-viewer'
     | '/_auth/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -218,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSettingsSecurityRouteImport
       parentRoute: typeof AuthSettingsRouteRoute
     }
+    '/_auth/utilities/structure-viewer': {
+      id: '/_auth/utilities/structure-viewer'
+      path: '/utilities/structure-viewer'
+      fullPath: '/utilities/structure-viewer'
+      preLoaderRoute: typeof AuthUtilitiesStructureViewerRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
   }
 }
 
@@ -242,12 +262,14 @@ interface AuthRouteRouteChildren {
   AuthSettingsRouteRoute: typeof AuthSettingsRouteRouteWithChildren
   AuthProjectsRoute: typeof AuthProjectsRoute
   AuthIndexRoute: typeof AuthIndexRoute
+  AuthUtilitiesStructureViewerRoute: typeof AuthUtilitiesStructureViewerRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthSettingsRouteRoute: AuthSettingsRouteRouteWithChildren,
   AuthProjectsRoute: AuthProjectsRoute,
   AuthIndexRoute: AuthIndexRoute,
+  AuthUtilitiesStructureViewerRoute: AuthUtilitiesStructureViewerRoute,
 }
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
