@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Uppy from "@uppy/core";
 import { Button } from "@taskome/ui/components/button";
 import { Input } from "@taskome/ui/components/input";
 import { Label } from "@taskome/ui/components/label";
@@ -36,6 +37,8 @@ export function FilesPage() {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = React.useState(allProjects);
   const [uploading, setUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState<number>();
+  const [failedFile, setFailedFile] = React.useState<File>();
   const projects = useQuery({
     queryKey: ["projects", "all"],
     queryFn: () => listProjects({ status: "all" }),
@@ -52,25 +55,44 @@ export function FilesPage() {
       return;
     }
     setUploading(true);
+    setUploadProgress(0);
+    setFailedFile(undefined);
+    const uppy = new Uppy({ autoProceed: false });
     try {
-      const created = await createSavedFileUpload({
-        filename: file.name,
-        projectId,
-        sizeBytes: file.size,
-        ...(file.type ? { contentType: file.type } : {}),
+      uppy.addUploader(async (fileIds) => {
+        await Promise.all(
+          fileIds.map(async (fileId) => {
+            const queued = uppy.getFile(fileId);
+            const data = queued.data;
+            if (!(data instanceof File)) throw new Error("Selected upload is no longer available.");
+            const created = await createSavedFileUpload({
+              filename: data.name,
+              projectId,
+              sizeBytes: data.size,
+              ...(data.type ? { contentType: data.type } : {}),
+            });
+            const response = await fetch(created.uploadUrl, {
+              body: data,
+              ...(data.type ? { headers: { "content-type": data.type } } : {}),
+              method: "PUT",
+            });
+            if (!response.ok) throw new Error("The object store rejected the upload.");
+            setUploadProgress(100);
+            await confirmSavedFileUpload({ savedFileId: created.id });
+          }),
+        );
       });
-      const response = await fetch(created.uploadUrl, {
-        body: file,
-        ...(file.type ? { headers: { "content-type": file.type } } : {}),
-        method: "PUT",
-      });
-      if (!response.ok) throw new Error("The object store rejected the upload.");
-      await confirmSavedFileUpload({ savedFileId: created.id });
+      uppy.addFile({ data: file, name: file.name, type: file.type });
+      const result = await uppy.upload();
+      if (!result || (result.failed?.length ?? 0) > 0)
+        throw new Error("The object store rejected the upload.");
       await refresh();
       toast.success(`${file.name} uploaded.`);
     } catch (error) {
+      setFailedFile(file);
       toast.error(error instanceof Error ? error.message : "Upload failed.");
     } finally {
+      uppy.destroy();
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
@@ -132,8 +154,15 @@ export function FilesPage() {
           onClick={() => inputRef.current?.click()}
         >
           <UploadIcon />
-          {uploading ? "Uploading…" : "Upload file"}
+          {uploading
+            ? `Uploading${uploadProgress === undefined ? "" : ` ${uploadProgress}%`}…`
+            : "Upload file"}
         </Button>
+        {failedFile ? (
+          <Button variant="outline" onClick={() => void upload(failedFile)}>
+            Retry {failedFile.name}
+          </Button>
+        ) : null}
       </div>
       <div className="rounded-lg border">
         <div className="grid grid-cols-[1fr_auto_auto] gap-4 border-b px-4 py-3 text-sm font-medium">
