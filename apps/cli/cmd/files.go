@@ -15,6 +15,12 @@ import (
 
 const defaultServer = "http://localhost:3000"
 
+type httpDoer interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+var fileHTTPClient httpDoer = http.DefaultClient
+
 type cliConfig struct {
 	APIKey string `json:"apiKey"`
 	Server string `json:"server"`
@@ -85,7 +91,7 @@ func request(ctx context.Context, config cliConfig, method, path string, body io
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	return http.DefaultClient.Do(req)
+	return fileHTTPClient.Do(req)
 }
 func apiError(response *http.Response) error {
 	body, _ := io.ReadAll(io.LimitReader(response.Body, 8192))
