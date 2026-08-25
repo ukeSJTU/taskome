@@ -46,7 +46,12 @@ export function createS3ObjectStorage(config: {
     issueUploadUrl: (key, sizeBytes) =>
       getSignedUrl(
         client,
-        new PutObjectCommand({ Bucket: config.bucket, Key: key, ContentLength: sizeBytes }),
+        new PutObjectCommand({
+          Bucket: config.bucket,
+          ContentLength: sizeBytes,
+          IfNoneMatch: "*",
+          Key: key,
+        }),
         { expiresIn: 60 * 5 },
       ),
   };

@@ -212,7 +212,7 @@ describe("server with PostgreSQL and Better Auth", () => {
     expect(upload.status).toBe(201);
     const uploaded = await fetch(issued.uploadUrl, {
       body: "ATOM\nEND\n",
-      headers: { "content-length": "9" },
+      headers: { "content-length": "9", "if-none-match": "*" },
       method: "PUT",
     });
     expect(uploaded.ok).toBe(true);

@@ -25,6 +25,7 @@ import {
 } from "@/api/generated/saved-files/saved-files";
 
 const allProjects = "all";
+const maximumSavedFileSize = 2 * 1024 * 1024 * 1024;
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -54,6 +55,10 @@ export function FilesPage() {
       toast.error("Choose a Project before uploading.");
       return;
     }
+    if (file.size > maximumSavedFileSize) {
+      toast.error("Saved Files must be 2 GiB or smaller.");
+      return;
+    }
     setUploading(true);
     setUploadProgress(0);
     setFailedFile(undefined);
@@ -73,7 +78,10 @@ export function FilesPage() {
             });
             const response = await fetch(created.uploadUrl, {
               body: data,
-              ...(data.type ? { headers: { "content-type": data.type } } : {}),
+              headers: {
+                ...(data.type ? { "content-type": data.type } : {}),
+                "if-none-match": "*",
+              },
               method: "PUT",
             });
             if (!response.ok) throw new Error("The object store rejected the upload.");
