@@ -31,6 +31,7 @@ import { createApiKeyService } from "@/features/api-keys";
 import { CreatedApiKeySchema } from "@/features/api-keys/api-key.schemas";
 import { createOAuthGrantManagementService } from "@/features/oauth-grants";
 import { createProjectsModule } from "@/features/projects";
+import { createSavedFilesModule } from "@/features/saved-files";
 
 const serverOrigin = "http://127.0.0.1:31042";
 const webOrigin = "http://localhost:3001";
@@ -103,6 +104,12 @@ describe("server with PostgreSQL and Better Auth", () => {
       mcpHandler: createTaskomeMcpHandler(auth, createOAuthGrantService(database.db), serverOrigin),
       oauthGrantService: createOAuthGrantManagementService(database.db),
       projects: createProjectsModule(database.db),
+      savedFiles: createSavedFilesModule(database.db, {
+        deleteObject: () => Promise.resolve(),
+        exists: () => Promise.resolve(false),
+        issueDownloadUrl: () => Promise.resolve("https://storage.example/download"),
+        issueUploadUrl: () => Promise.resolve("https://storage.example/upload"),
+      }),
       resolveSecurityContext: createRestSecurityContextResolver({
         getSession,
         resource: protectedResources(serverOrigin).rest,

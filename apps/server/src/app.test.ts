@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createApp, type AppOptions } from "./app";
 import { createRestSecurityContextResolver } from "./auth/security-context";
+import type { SavedFilesModule } from "./features/saved-files";
 
 const corsOrigin = "http://localhost:3001";
 
@@ -11,6 +12,7 @@ function createTestApp(
     checkReadiness?: () => Promise<void>;
     getSession?: AppOptions["getSession"];
     resolveSecurityContext?: AppOptions["resolveSecurityContext"];
+    savedFiles?: SavedFilesModule;
   } = {},
 ) {
   const getSession = overrides.getSession ?? (() => Promise.resolve(null));
@@ -41,6 +43,15 @@ function createTestApp(
       unarchiveProject: () => Promise.reject(new Error("unused test Project method")),
       updateProject: () => Promise.reject(new Error("unused test Project method")),
     },
+    savedFiles:
+      overrides.savedFiles ??
+      ({
+        confirmUpload: () => Promise.reject(new Error("unused test Saved File method")),
+        createUpload: () => Promise.reject(new Error("unused test Saved File method")),
+        deleteSavedFile: () => Promise.reject(new Error("unused test Saved File method")),
+        getDownload: () => Promise.reject(new Error("unused test Saved File method")),
+        listSavedFiles: () => Promise.resolve({ items: [], nextCursor: null }),
+      } satisfies SavedFilesModule),
     resolveSecurityContext:
       overrides.resolveSecurityContext ??
       createRestSecurityContextResolver({
@@ -126,6 +137,56 @@ describe("server HTTP interface", () => {
       code: "unauthorized",
       status: 401,
       title: "Unauthorized",
+    });
+  });
+
+  it("issues an upload URL only for a Project owned by the caller", async () => {
+    const app = createTestApp({
+      resolveSecurityContext: () =>
+        Promise.resolve({
+          correlation: { requestId: "request-1" },
+          credential: { id: "key-1", type: "api_key" },
+          resource: "http://localhost:3000/api/v1",
+          scopes: ["taskome:access"],
+          user: {
+            email: "developer@example.com",
+            emailVerified: true,
+            id: "user-1",
+            image: null,
+            name: "Developer",
+          },
+        }),
+      savedFiles: {
+        confirmUpload: () => Promise.reject(new Error("unused")),
+        createUpload: (_owner, input) =>
+          Promise.resolve({
+            ...input,
+            contentType: null,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            id: "00000000-0000-4000-8000-000000000002",
+            status: "pending",
+            uploadUrl: "https://storage.example/upload",
+          }),
+        deleteSavedFile: () => Promise.reject(new Error("unused")),
+        getDownload: () => Promise.reject(new Error("unused")),
+        listSavedFiles: () => Promise.resolve({ items: [], nextCursor: null }),
+      },
+    });
+
+    const response = await app.request("/api/v1/saved-files/uploads", {
+      body: JSON.stringify({
+        filename: "protein.pdb",
+        projectId: "00000000-0000-4000-8000-000000000001",
+        sizeBytes: 12,
+      }),
+      headers: { authorization: "Bearer sk-valid", "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      filename: "protein.pdb",
+      uploadUrl: "https://storage.example/upload",
     });
   });
 

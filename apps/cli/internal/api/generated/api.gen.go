@@ -160,6 +160,24 @@ func (e ProjectStatus) Valid() bool {
 	}
 }
 
+// Defines values for SavedFileStatus.
+const (
+	SavedFileStatusPending  SavedFileStatus = "pending"
+	SavedFileStatusUploaded SavedFileStatus = "uploaded"
+)
+
+// Valid indicates whether the value is a known member of the SavedFileStatus enum.
+func (e SavedFileStatus) Valid() bool {
+	switch e {
+	case SavedFileStatusPending:
+		return true
+	case SavedFileStatusUploaded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateApiKeyScopes.
 const (
 	UpdateApiKeyScopesTaskomeAccess UpdateApiKeyScopes = "taskome:access"
@@ -190,6 +208,42 @@ func (e ListProjectsParamsStatus) Valid() bool {
 	case ListProjectsParamsStatusAll:
 		return true
 	case ListProjectsParamsStatusArchived:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateSavedFileUpload201JSONResponseBodyStatus.
+const (
+	CreateSavedFileUpload201JSONResponseBodyStatusPending  CreateSavedFileUpload201JSONResponseBodyStatus = "pending"
+	CreateSavedFileUpload201JSONResponseBodyStatusUploaded CreateSavedFileUpload201JSONResponseBodyStatus = "uploaded"
+)
+
+// Valid indicates whether the value is a known member of the CreateSavedFileUpload201JSONResponseBodyStatus enum.
+func (e CreateSavedFileUpload201JSONResponseBodyStatus) Valid() bool {
+	switch e {
+	case CreateSavedFileUpload201JSONResponseBodyStatusPending:
+		return true
+	case CreateSavedFileUpload201JSONResponseBodyStatusUploaded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSavedFileDownload200JSONResponseBodyStatus.
+const (
+	GetSavedFileDownload200JSONResponseBodyStatusPending  GetSavedFileDownload200JSONResponseBodyStatus = "pending"
+	GetSavedFileDownload200JSONResponseBodyStatusUploaded GetSavedFileDownload200JSONResponseBodyStatus = "uploaded"
+)
+
+// Valid indicates whether the value is a known member of the GetSavedFileDownload200JSONResponseBodyStatus enum.
+func (e GetSavedFileDownload200JSONResponseBodyStatus) Valid() bool {
+	switch e {
+	case GetSavedFileDownload200JSONResponseBodyStatusPending:
+		return true
+	case GetSavedFileDownload200JSONResponseBodyStatusUploaded:
 		return true
 	default:
 		return false
@@ -227,6 +281,14 @@ type CreateApiKeyScopes string
 type CreateProject struct {
 	Description nullable.Nullable[string] `json:"description,omitempty"`
 	Name        string                    `json:"name"`
+}
+
+// CreateSavedFileUpload defines model for CreateSavedFileUpload.
+type CreateSavedFileUpload struct {
+	ContentType *string            `json:"contentType,omitempty"`
+	Filename    string             `json:"filename"`
+	ProjectId   openapi_types.UUID `json:"projectId"`
+	SizeBytes   int                `json:"sizeBytes"`
 }
 
 // CreatedApiKey defines model for CreatedApiKey.
@@ -313,6 +375,20 @@ type ProjectList struct {
 	NextCursor nullable.Nullable[string] `json:"nextCursor"`
 }
 
+// SavedFile defines model for SavedFile.
+type SavedFile struct {
+	ContentType nullable.Nullable[string] `json:"contentType"`
+	CreatedAt   time.Time                 `json:"createdAt"`
+	Filename    string                    `json:"filename"`
+	Id          openapi_types.UUID        `json:"id"`
+	ProjectId   openapi_types.UUID        `json:"projectId"`
+	SizeBytes   int                       `json:"sizeBytes"`
+	Status      SavedFileStatus           `json:"status"`
+}
+
+// SavedFileStatus defines model for SavedFile.Status.
+type SavedFileStatus string
+
 // UpdateApiKey defines model for UpdateApiKey.
 type UpdateApiKey struct {
 	ExpiresIn *int                  `json:"expiresIn,omitempty"`
@@ -339,6 +415,17 @@ type ListProjectsParams struct {
 // ListProjectsParamsStatus defines parameters for ListProjects.
 type ListProjectsParamsStatus string
 
+// ListSavedFilesParams defines parameters for ListSavedFiles.
+type ListSavedFilesParams struct {
+	ProjectId *openapi_types.UUID `form:"projectId,omitempty" json:"projectId,omitempty"`
+}
+
+// CreateSavedFileUpload201JSONResponseBodyStatus defines parameters for CreateSavedFileUpload.
+type CreateSavedFileUpload201JSONResponseBodyStatus string
+
+// GetSavedFileDownload200JSONResponseBodyStatus defines parameters for GetSavedFileDownload.
+type GetSavedFileDownload200JSONResponseBodyStatus string
+
 // CreateApiKeyJSONRequestBody defines body for CreateApiKey for application/json ContentType.
 type CreateApiKeyJSONRequestBody = CreateApiKey
 
@@ -350,6 +437,9 @@ type CreateProjectJSONRequestBody = CreateProject
 
 // UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
 type UpdateProjectJSONRequestBody = UpdateProject
+
+// CreateSavedFileUploadJSONRequestBody defines body for CreateSavedFileUpload for application/json ContentType.
+type CreateSavedFileUploadJSONRequestBody = CreateSavedFileUpload
 
 // RequestEditorFn is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -532,6 +622,26 @@ type ClientInterface interface {
 	//
 	// Restore an archived Project to active use.
 	UnarchiveProject(ctx context.Context, projectId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListSavedFiles performs a GET /api/v1/saved-files (the `ListSavedFiles` operationId) request.
+	ListSavedFiles(ctx context.Context, params *ListSavedFilesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSavedFileUploadWithBody performs a POST /api/v1/saved-files/uploads (the `CreateSavedFileUpload` operationId) request,
+	// with any type of body and a specified content type.
+	CreateSavedFileUploadWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSavedFileUpload performs a POST /api/v1/saved-files/uploads (the `CreateSavedFileUpload` operationId) request.
+	// Takes a body of the `application/json` content type.
+	CreateSavedFileUpload(ctx context.Context, body CreateSavedFileUploadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteSavedFile performs a DELETE /api/v1/saved-files/{savedFileId} (the `DeleteSavedFile` operationId) request.
+	DeleteSavedFile(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfirmSavedFileUpload performs a POST /api/v1/saved-files/{savedFileId}/confirm (the `ConfirmSavedFileUpload` operationId) request.
+	ConfirmSavedFileUpload(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSavedFileDownload performs a POST /api/v1/saved-files/{savedFileId}/download (the `GetSavedFileDownload` operationId) request.
+	GetSavedFileDownload(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // ListApiKeys performs a GET /api/v1/api-keys (the `ListApiKeys` operationId) request.
@@ -832,6 +942,86 @@ func (c *Client) ArchiveProject(ctx context.Context, projectId openapi_types.UUI
 // Restore an archived Project to active use.
 func (c *Client) UnarchiveProject(ctx context.Context, projectId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUnarchiveProjectRequest(c.Server, projectId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListSavedFiles performs a GET /api/v1/saved-files (the `ListSavedFiles` operationId) request.
+func (c *Client) ListSavedFiles(ctx context.Context, params *ListSavedFilesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListSavedFilesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSavedFileUploadWithBody performs a POST /api/v1/saved-files/uploads (the `CreateSavedFileUpload` operationId) request,
+// with any type of body and a specified content type.
+func (c *Client) CreateSavedFileUploadWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSavedFileUploadRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSavedFileUpload performs a POST /api/v1/saved-files/uploads (the `CreateSavedFileUpload` operationId) request.
+// Takes a body of the `application/json` content type.
+func (c *Client) CreateSavedFileUpload(ctx context.Context, body CreateSavedFileUploadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSavedFileUploadRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteSavedFile performs a DELETE /api/v1/saved-files/{savedFileId} (the `DeleteSavedFile` operationId) request.
+func (c *Client) DeleteSavedFile(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteSavedFileRequest(c.Server, savedFileId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ConfirmSavedFileUpload performs a POST /api/v1/saved-files/{savedFileId}/confirm (the `ConfirmSavedFileUpload` operationId) request.
+func (c *Client) ConfirmSavedFileUpload(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfirmSavedFileUploadRequest(c.Server, savedFileId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSavedFileDownload performs a POST /api/v1/saved-files/{savedFileId}/download (the `GetSavedFileDownload` operationId) request.
+func (c *Client) GetSavedFileDownload(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSavedFileDownloadRequest(c.Server, savedFileId)
 	if err != nil {
 		return nil, err
 	}
@@ -1447,6 +1637,202 @@ func NewUnarchiveProjectRequest(server string, projectId openapi_types.UUID) (*h
 	return req, nil
 }
 
+// NewListSavedFilesRequest constructs an http.Request for the ListSavedFiles method
+func NewListSavedFilesRequest(server string, params *ListSavedFilesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/saved-files")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.ProjectId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "projectId", *params.ProjectId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateSavedFileUploadRequest calls the generic CreateSavedFileUpload builder with application/json body
+func NewCreateSavedFileUploadRequest(server string, body CreateSavedFileUploadJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateSavedFileUploadRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateSavedFileUploadRequestWithBody constructs an http.Request for the CreateSavedFileUpload method, with any body, and a specified content type
+func NewCreateSavedFileUploadRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/saved-files/uploads")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteSavedFileRequest constructs an http.Request for the DeleteSavedFile method
+func NewDeleteSavedFileRequest(server string, savedFileId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "savedFileId", savedFileId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/saved-files/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewConfirmSavedFileUploadRequest constructs an http.Request for the ConfirmSavedFileUpload method
+func NewConfirmSavedFileUploadRequest(server string, savedFileId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "savedFileId", savedFileId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/saved-files/%s/confirm", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetSavedFileDownloadRequest constructs an http.Request for the GetSavedFileDownload method
+func NewGetSavedFileDownloadRequest(server string, savedFileId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "savedFileId", savedFileId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/saved-files/%s/download", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -1630,6 +2016,36 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	UnarchiveProjectWithResponse(ctx context.Context, projectId openapi_types.UUID, reqEditors ...RequestEditorFn) (*UnarchiveProjectResponse, error)
+
+	// ListSavedFilesWithResponse performs a GET /api/v1/saved-files (the `ListSavedFiles` operationId) request.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	ListSavedFilesWithResponse(ctx context.Context, params *ListSavedFilesParams, reqEditors ...RequestEditorFn) (*ListSavedFilesResponse, error)
+
+	// CreateSavedFileUploadWithBodyWithResponse performs a POST /api/v1/saved-files/uploads (the `CreateSavedFileUpload` operationId) request,
+	// with any type of body and a specified content type.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	CreateSavedFileUploadWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSavedFileUploadResponse, error)
+
+	// CreateSavedFileUploadWithResponse performs a POST /api/v1/saved-files/uploads (the `CreateSavedFileUpload` operationId) request.
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	CreateSavedFileUploadWithResponse(ctx context.Context, body CreateSavedFileUploadJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSavedFileUploadResponse, error)
+
+	// DeleteSavedFileWithResponse performs a DELETE /api/v1/saved-files/{savedFileId} (the `DeleteSavedFile` operationId) request.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	DeleteSavedFileWithResponse(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteSavedFileResponse, error)
+
+	// ConfirmSavedFileUploadWithResponse performs a POST /api/v1/saved-files/{savedFileId}/confirm (the `ConfirmSavedFileUpload` operationId) request.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	ConfirmSavedFileUploadWithResponse(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ConfirmSavedFileUploadResponse, error)
+
+	// GetSavedFileDownloadWithResponse performs a POST /api/v1/saved-files/{savedFileId}/download (the `GetSavedFileDownload` operationId) request.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	GetSavedFileDownloadWithResponse(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetSavedFileDownloadResponse, error)
 }
 
 type ListApiKeysResponse struct {
@@ -2505,6 +2921,295 @@ func (r UnarchiveProjectResponse) ContentType() string {
 	return ""
 }
 
+type ListSavedFilesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *struct {
+		Items      []SavedFile            `json:"items"`
+		NextCursor nullable.Nullable[any] `json:"nextCursor"`
+	}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListSavedFilesResponse) GetJSON200() *struct {
+	Items      []SavedFile            `json:"items"`
+	NextCursor nullable.Nullable[any] `json:"nextCursor"`
+} {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r ListSavedFilesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListSavedFilesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListSavedFilesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListSavedFilesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateSavedFileUploadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *struct {
+		ContentType nullable.Nullable[string]                      `json:"contentType"`
+		CreatedAt   time.Time                                      `json:"createdAt"`
+		Filename    string                                         `json:"filename"`
+		Id          openapi_types.UUID                             `json:"id"`
+		ProjectId   openapi_types.UUID                             `json:"projectId"`
+		SizeBytes   int                                            `json:"sizeBytes"`
+		Status      CreateSavedFileUpload201JSONResponseBodyStatus `json:"status"`
+		UploadUrl   string                                         `json:"uploadUrl"`
+	}
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+	// ApplicationproblemJSON422 the response for an HTTP 422 `application/problem+json` response
+	ApplicationproblemJSON422 *ProblemDetails
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateSavedFileUploadResponse) GetJSON201() *struct {
+	ContentType nullable.Nullable[string]                      `json:"contentType"`
+	CreatedAt   time.Time                                      `json:"createdAt"`
+	Filename    string                                         `json:"filename"`
+	Id          openapi_types.UUID                             `json:"id"`
+	ProjectId   openapi_types.UUID                             `json:"projectId"`
+	SizeBytes   int                                            `json:"sizeBytes"`
+	Status      CreateSavedFileUpload201JSONResponseBodyStatus `json:"status"`
+	UploadUrl   string                                         `json:"uploadUrl"`
+} {
+	return r.JSON201
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r CreateSavedFileUploadResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON422 returns the response for an HTTP 422 `application/problem+json` response
+func (r CreateSavedFileUploadResponse) GetApplicationproblemJSON422() *ProblemDetails {
+	return r.ApplicationproblemJSON422
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateSavedFileUploadResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateSavedFileUploadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateSavedFileUploadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateSavedFileUploadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteSavedFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r DeleteSavedFileResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteSavedFileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteSavedFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteSavedFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteSavedFileResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ConfirmSavedFileUploadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SavedFile
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+	// ApplicationproblemJSON409 the response for an HTTP 409 `application/problem+json` response
+	ApplicationproblemJSON409 *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ConfirmSavedFileUploadResponse) GetJSON200() *SavedFile {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r ConfirmSavedFileUploadResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON409 returns the response for an HTTP 409 `application/problem+json` response
+func (r ConfirmSavedFileUploadResponse) GetApplicationproblemJSON409() *ProblemDetails {
+	return r.ApplicationproblemJSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r ConfirmSavedFileUploadResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfirmSavedFileUploadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfirmSavedFileUploadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfirmSavedFileUploadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSavedFileDownloadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *struct {
+		ContentType nullable.Nullable[string]                     `json:"contentType"`
+		CreatedAt   time.Time                                     `json:"createdAt"`
+		DownloadUrl string                                        `json:"downloadUrl"`
+		Filename    string                                        `json:"filename"`
+		Id          openapi_types.UUID                            `json:"id"`
+		ProjectId   openapi_types.UUID                            `json:"projectId"`
+		SizeBytes   int                                           `json:"sizeBytes"`
+		Status      GetSavedFileDownload200JSONResponseBodyStatus `json:"status"`
+	}
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *ProblemDetails
+	// ApplicationproblemJSON409 the response for an HTTP 409 `application/problem+json` response
+	ApplicationproblemJSON409 *ProblemDetails
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSavedFileDownloadResponse) GetJSON200() *struct {
+	ContentType nullable.Nullable[string]                     `json:"contentType"`
+	CreatedAt   time.Time                                     `json:"createdAt"`
+	DownloadUrl string                                        `json:"downloadUrl"`
+	Filename    string                                        `json:"filename"`
+	Id          openapi_types.UUID                            `json:"id"`
+	ProjectId   openapi_types.UUID                            `json:"projectId"`
+	SizeBytes   int                                           `json:"sizeBytes"`
+	Status      GetSavedFileDownload200JSONResponseBodyStatus `json:"status"`
+} {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r GetSavedFileDownloadResponse) GetApplicationproblemJSON404() *ProblemDetails {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON409 returns the response for an HTTP 409 `application/problem+json` response
+func (r GetSavedFileDownloadResponse) GetApplicationproblemJSON409() *ProblemDetails {
+	return r.ApplicationproblemJSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSavedFileDownloadResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSavedFileDownloadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSavedFileDownloadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSavedFileDownloadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // ListApiKeysWithResponse performs a GET /api/v1/api-keys (the `ListApiKeys` operationId) request.
 //
 // List the signed-in user's API-key history.
@@ -2763,6 +3468,72 @@ func (c *ClientWithResponses) UnarchiveProjectWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseUnarchiveProjectResponse(rsp)
+}
+
+// ListSavedFilesWithResponse performs a GET /api/v1/saved-files (the `ListSavedFiles` operationId) request.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) ListSavedFilesWithResponse(ctx context.Context, params *ListSavedFilesParams, reqEditors ...RequestEditorFn) (*ListSavedFilesResponse, error) {
+	rsp, err := c.ListSavedFiles(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListSavedFilesResponse(rsp)
+}
+
+// CreateSavedFileUploadWithBodyWithResponse performs a POST /api/v1/saved-files/uploads (the `CreateSavedFileUpload` operationId) request,
+// with any type of body and a specified content type.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) CreateSavedFileUploadWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSavedFileUploadResponse, error) {
+	rsp, err := c.CreateSavedFileUploadWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSavedFileUploadResponse(rsp)
+}
+
+// CreateSavedFileUploadWithResponse performs a POST /api/v1/saved-files/uploads (the `CreateSavedFileUpload` operationId) request.
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) CreateSavedFileUploadWithResponse(ctx context.Context, body CreateSavedFileUploadJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSavedFileUploadResponse, error) {
+	rsp, err := c.CreateSavedFileUpload(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSavedFileUploadResponse(rsp)
+}
+
+// DeleteSavedFileWithResponse performs a DELETE /api/v1/saved-files/{savedFileId} (the `DeleteSavedFile` operationId) request.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) DeleteSavedFileWithResponse(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteSavedFileResponse, error) {
+	rsp, err := c.DeleteSavedFile(ctx, savedFileId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteSavedFileResponse(rsp)
+}
+
+// ConfirmSavedFileUploadWithResponse performs a POST /api/v1/saved-files/{savedFileId}/confirm (the `ConfirmSavedFileUpload` operationId) request.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) ConfirmSavedFileUploadWithResponse(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ConfirmSavedFileUploadResponse, error) {
+	rsp, err := c.ConfirmSavedFileUpload(ctx, savedFileId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfirmSavedFileUploadResponse(rsp)
+}
+
+// GetSavedFileDownloadWithResponse performs a POST /api/v1/saved-files/{savedFileId}/download (the `GetSavedFileDownload` operationId) request.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) GetSavedFileDownloadWithResponse(ctx context.Context, savedFileId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetSavedFileDownloadResponse, error) {
+	rsp, err := c.GetSavedFileDownload(ctx, savedFileId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSavedFileDownloadResponse(rsp)
 }
 
 // ParseListApiKeysResponse parses an HTTP response from a ListApiKeysWithResponse call
@@ -3401,6 +4172,202 @@ func ParseUnarchiveProjectResponse(rsp *http.Response) (*UnarchiveProjectRespons
 			return nil, err
 		}
 		response.ApplicationproblemJSON422 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListSavedFilesResponse parses an HTTP response from a ListSavedFilesWithResponse call
+func ParseListSavedFilesResponse(rsp *http.Response) (*ListSavedFilesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListSavedFilesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Items      []SavedFile            `json:"items"`
+			NextCursor nullable.Nullable[any] `json:"nextCursor"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateSavedFileUploadResponse parses an HTTP response from a CreateSavedFileUploadWithResponse call
+func ParseCreateSavedFileUploadResponse(rsp *http.Response) (*CreateSavedFileUploadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateSavedFileUploadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest struct {
+			ContentType nullable.Nullable[string]                      `json:"contentType"`
+			CreatedAt   time.Time                                      `json:"createdAt"`
+			Filename    string                                         `json:"filename"`
+			Id          openapi_types.UUID                             `json:"id"`
+			ProjectId   openapi_types.UUID                             `json:"projectId"`
+			SizeBytes   int                                            `json:"sizeBytes"`
+			Status      CreateSavedFileUpload201JSONResponseBodyStatus `json:"status"`
+			UploadUrl   string                                         `json:"uploadUrl"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON422 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteSavedFileResponse parses an HTTP response from a DeleteSavedFileWithResponse call
+func ParseDeleteSavedFileResponse(rsp *http.Response) (*DeleteSavedFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteSavedFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConfirmSavedFileUploadResponse parses an HTTP response from a ConfirmSavedFileUploadWithResponse call
+func ParseConfirmSavedFileUploadResponse(rsp *http.Response) (*ConfirmSavedFileUploadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfirmSavedFileUploadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SavedFile
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSavedFileDownloadResponse parses an HTTP response from a GetSavedFileDownloadWithResponse call
+func ParseGetSavedFileDownloadResponse(rsp *http.Response) (*GetSavedFileDownloadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSavedFileDownloadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ContentType nullable.Nullable[string]                     `json:"contentType"`
+			CreatedAt   time.Time                                     `json:"createdAt"`
+			DownloadUrl string                                        `json:"downloadUrl"`
+			Filename    string                                        `json:"filename"`
+			Id          openapi_types.UUID                            `json:"id"`
+			ProjectId   openapi_types.UUID                            `json:"projectId"`
+			SizeBytes   int                                           `json:"sizeBytes"`
+			Status      GetSavedFileDownload200JSONResponseBodyStatus `json:"status"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON409 = &dest
 
 	}
 

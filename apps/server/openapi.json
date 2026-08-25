@@ -254,6 +254,70 @@
           "state"
         ]
       },
+      "SavedFile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": ["string", "null"]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "uploaded"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "filename",
+          "contentType",
+          "sizeBytes",
+          "status",
+          "createdAt"
+        ]
+      },
+      "CreateSavedFileUpload": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "contentType": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 2147483648
+          }
+        },
+        "required": ["projectId", "filename", "sizeBytes"]
+      },
       "Project": {
         "type": "object",
         "properties": {
@@ -721,6 +785,308 @@
           },
           "404": {
             "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/saved-files/uploads": {
+      "post": {
+        "operationId": "createSavedFileUpload",
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "oauthBearer": ["taskome:access"]
+          }
+        ],
+        "tags": ["Saved Files"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSavedFileUpload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Saved File upload URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SavedFile"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "uploadUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": ["uploadUrl"]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/saved-files": {
+      "get": {
+        "operationId": "listSavedFiles",
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "oauthBearer": ["taskome:access"]
+          }
+        ],
+        "tags": ["Saved Files"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "projectId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved Files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SavedFile"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "null"
+                    }
+                  },
+                  "required": ["items", "nextCursor"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/saved-files/{savedFileId}/confirm": {
+      "post": {
+        "operationId": "confirmSavedFileUpload",
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "oauthBearer": ["taskome:access"]
+          }
+        ],
+        "tags": ["Saved Files"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "savedFileId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uploaded Saved File",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedFile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/saved-files/{savedFileId}/download": {
+      "post": {
+        "operationId": "getSavedFileDownload",
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "oauthBearer": ["taskome:access"]
+          }
+        ],
+        "tags": ["Saved Files"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "savedFileId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved File download URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SavedFile"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "downloadUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": ["downloadUrl"]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/saved-files/{savedFileId}": {
+      "delete": {
+        "operationId": "deleteSavedFile",
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "oauthBearer": ["taskome:access"]
+          }
+        ],
+        "tags": ["Saved Files"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "savedFileId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Saved File deleted"
+          },
+          "404": {
+            "description": "Request could not be completed",
             "content": {
               "application/problem+json": {
                 "schema": {

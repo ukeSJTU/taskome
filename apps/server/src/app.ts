@@ -11,6 +11,7 @@ import { createApiKeyRouter, type ApiKeyService } from "@/features/api-keys";
 import { createOAuthGrantRouter, type OAuthGrantManagementService } from "@/features/oauth-grants";
 import { createMeRouter } from "@/features/me";
 import { createProjectsRouter, type ProjectsModule } from "@/features/projects";
+import { createSavedFilesRouter, type SavedFilesModule } from "@/features/saved-files";
 import { problemResponse, validationHook } from "@/http/errors/problem";
 import { registerHealthRoutes } from "@/http/health";
 import { correlateRequest } from "@/http/middleware/correlate-request";
@@ -26,6 +27,7 @@ export interface AppOptions {
   mcpHandler?: (request: Request) => Promise<Response> | Response;
   oauthGrantService?: OAuthGrantManagementService;
   projects: ProjectsModule;
+  savedFiles: SavedFilesModule;
   resolveSecurityContext: RestSecurityContextResolver;
   resolveClientIp?: (context: Context<AppEnv>) => string | undefined;
 }
@@ -53,6 +55,7 @@ export function createApp({
   mcpHandler,
   oauthGrantService,
   projects,
+  savedFiles,
   resolveSecurityContext,
   resolveClientIp,
 }: AppOptions) {
@@ -122,6 +125,7 @@ export function createApp({
   if (oauthGrantService) {
     app.route("/api/v1", createOAuthGrantRouter({ getSession, service: oauthGrantService }));
   }
+  app.route("/api/v1", createSavedFilesRouter({ module: savedFiles, resolveSecurityContext }));
   app.route("/api/v1", createProjectsRouter({ getSession, projects }));
 
   app.openAPIRegistry.registerComponent("securitySchemes", "cookieAuth", {
