@@ -6,8 +6,8 @@ The token system implements one identity with two surface layers:
 
 | File                                        | Responsibility                                                                                       | Current adoption                                              |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `packages/ui/src/styles/tokens/base.css`    | Shared brand palette, type roles, spacing, layout, radius, shadow, motion, breakpoints, and stacking | Available to both surfaces                                    |
-| `packages/ui/src/styles/tokens/web.css`     | Editorial Web semantics and shadcn compatibility aliases                                             | Connect during Web implementation                             |
+| `packages/ui/src/styles/tokens/base.css`    | Shared brand palette, type roles, spacing, layout, radius, shadow, motion, breakpoints, and stacking | Imported by both surface token files                          |
+| `packages/ui/src/styles/tokens/web.css`     | Editorial Web semantics and shadcn compatibility aliases                                             | Imported by `apps/web`                                        |
 | `packages/ui/src/styles/tokens/console.css` | Console semantics, density, lifecycle status, charts, navigation, and light/dark themes              | Specification only; do not import in Console during this flow |
 
 Each surface file imports `base.css`. Components consume semantic names such as `--color-text-primary` and `--color-accent-primary`; they do not consume raw OKLCH values.
@@ -135,16 +135,76 @@ Both surface files map their semantic variables back to the current shadcn names
 
 Compatibility aliases do not mean the two surfaces use identical compositions. Web composes editorial sections. Console composes navigation, forms, tables, lifecycle states, charts, and Utility workspaces.
 
+## Console component behavior contract
+
+This section is the implementation contract for a later Console migration. It applies to both light and dark themes and does not authorize changes under `apps/console` in this flow. The migration should adopt one component family at a time and verify every state named below before replacing the current Console globals.
+
+### Application shell and navigation
+
+- The expanded sidebar uses `--console-sidebar-width`; the collapsed rail uses `--console-sidebar-width-collapsed`. Collapsing preserves every destination as an icon button with an accessible name and a tooltip.
+- Active navigation combines `--color-navigation-active-bg`, `--color-navigation-active-indicator`, an icon, and a text label. Color alone never identifies the current route.
+- The top bar uses `--console-header-height` and keeps global search, account controls, and page-level actions visually separate from sidebar destinations.
+- Breadcrumbs show hierarchy, not browser history. The final item is plain text with `aria-current="page"`; earlier items remain links.
+- Command search is available from the top-level shell, labels its keyboard shortcut, traps focus only while open, and returns focus to its trigger when closed.
+- Settings keep their own persistent secondary navigation. Product destinations do not move into settings merely because both use a sidebar pattern.
+
+### Density, forms, tables, lists, and panels
+
+- Forms and ordinary actions use the 36 px default control height. Primary touch layouts use the 44 px large control height and maintain a 44 by 44 CSS-pixel target.
+- Data tables and dense metadata lists use the 32 px compact row only on pointer-oriented layouts. Editable rows, touch layouts, and mixed-content lists use the 40 px comfortable row.
+- Tables keep column headers visible, align comparable numbers with tabular numerals, and move row actions into a stable final column. A responsive fallback preserves field labels instead of forcing horizontal clipping.
+- Panels use `--console-panel-gap` and the raised or sunken surface tokens. Borders separate related work; shadows are reserved for overlays and temporarily raised content.
+- Disabled controls use the disabled background, text, and border tokens plus `--console-disabled-opacity`. They retain a readable label, expose the reason when it is not evident, and never rely on reduced opacity alone.
+- Loading does not erase the previous stable layout. Skeletons match the final content shape; action-level pending states retain the action label and prevent duplicate submission only after the request starts.
+
+### Job and Attempt lifecycle
+
+- Every lifecycle treatment pairs the state label with a consistent icon or shape. Queued, running, cancelling, succeeded, failed, and cancelled use their dedicated foreground and background token pairs.
+- Attempt phases remain supporting text under their parent state. Do not assign phases separate colors or present a phase as another lifecycle state.
+- A Job view keeps the immutable request visually separate from its Attempt history. Retry creates or reveals another Attempt row rather than replacing the earlier record.
+- Terminal success, failure, and cancellation remain distinguishable in monochrome and high-contrast viewing through labels, icons, and placement.
+
+### Project and scientific-file organization
+
+- Project context appears in the page title or a stable selector before Job and file collections. `Default Project` is visually identifiable but not styled as a separate ownership class.
+- Job, Attempt, Job Output, saved-file, and Utility labels follow `CONTEXT.md`; UI copy does not collapse them into generic “runs” or “artifacts.”
+- File rows lead with name and format, then show Project, size, origin or provenance, and modified metadata. Preview, download, move, archive, and delete remain explicit actions.
+- Moving a Job or saved file between Projects is presented as organization, not transfer of ownership or provenance. Destructive copy never implies that deleting a Project cascades to its contents.
+
+### Empty, pending, error, not-found, destructive, and success feedback
+
+- Empty states name the missing object and offer one relevant next action when the user can resolve the state. They do not fill data workspaces with promotional illustration.
+- Page-level pending states reserve the final layout. Inline pending states stay adjacent to the control or record that initiated them.
+- Errors state what failed and the next safe action. Validation errors remain next to their field; request failures use the error token and an alert role without replacing still-valid page content.
+- Not-found states distinguish a missing route or record from an authorization failure. They provide a real navigation destination instead of a browser-back-only recovery path.
+- Destructive actions use the error semantic, name the affected object, and require confirmation or a recoverable undo window. Success feedback confirms the completed object or action without blocking continued work.
+
+### Charts and scientific data
+
+- Chart series use `--color-chart-1` through `--color-chart-5` consistently within one view. Series also differ by direct label, marker, or line treatment.
+- Grid lines use `--color-chart-grid`. Thresholds use `--color-chart-threshold`, a non-solid line treatment, and a text label; threshold meaning never depends on hue alone.
+- Legends remain visible when more than one series exists. Tooltips work with pointer, keyboard focus, and touch and repeat the series name, x value, y value, and unit.
+- Every decision-relevant chart provides the same values in an accessible table or downloadable data representation. Screen-reader users do not need to infer values from an SVG path.
+
+### Utility workspaces
+
+- A Utility makes its viewer or editor the primary region. Surrounding navigation uses the compact utility chrome height and recedes through the sunken surface token.
+- File identity, format, provenance, save or export state, and the return destination remain available without covering the scientific canvas.
+- Inspectors may collapse, but their trigger stays visible and restores focus. Full-screen modes preserve an obvious exit action and the browser's Escape behavior.
+- Unsupported or failed previews show the format, explain the limitation, and retain safe download or return actions. They never manufacture a Job or Attempt.
+
+### Theme selection and persistence
+
+- With no stored preference, Console follows `prefers-color-scheme`. The theme control exposes System, Light, and Dark as equal choices.
+- An explicit choice persists across sessions and applies before first paint to avoid a light/dark flash. System remains selected as a preference rather than being converted into the system's current color.
+- The root sets the matching `color-scheme` so native controls and scrollbars agree with the selected theme.
+- Migration review covers default, hover, active, focus-visible, selected, disabled, pending, destructive, and lifecycle states in both themes. Passing the light theme does not imply dark-theme acceptance.
+
 ## Adoption boundary
 
-This phase creates the token files but does not expose or import them through `@taskome/ui` yet. The Web implementation phase will:
+The token entry points are exported through `@taskome/ui`. The Web root imports `web.css`, declares `data-surface="web"`, and selects the explicit light theme. `web.css` imports the shared base layer, so consumers do not import both files separately.
 
-1. add stable package exports for the token entry points;
-2. mark the Web root with `data-surface="web"` and an explicit light theme;
-3. load the selected font families; and
-4. import the Web token layer after the existing Tailwind foundation.
-
-Do not import `console.css` from `apps/console` in this design flow. A later Console migration must validate every existing primitive and screen in both themes before replacing the current globals.
+`console.css` is available as a stable package export but remains unimported by `apps/console`. A later Console migration must validate every existing primitive and screen against the component contract above in both themes before replacing the current globals.
 
 ## Related design context
 

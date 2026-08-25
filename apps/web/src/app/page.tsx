@@ -16,9 +16,14 @@ const primaryNavigation = [
   { href: "#company", label: "Company" },
 ] as const;
 
+const footerNavigation = {
+  product: [primaryNavigation[0]],
+  company: [primaryNavigation[1], primaryNavigation[2]],
+} as const;
+
 export default function Home() {
   return (
-    <div className="marketing-page">
+    <div id="top" className="marketing-page">
       <StructuredData />
       <a className="skip-link" href="#main-content">
         Skip to content
@@ -37,7 +42,11 @@ export default function Home() {
         <CompanySection />
         <FinalPrompt signInHref={siteConfig.links.signIn} />
       </main>
-      <MarketingFooter docsHref={siteConfig.links.docs} signInHref={siteConfig.links.signIn} />
+      <MarketingFooter
+        docsHref={siteConfig.links.docs}
+        navigation={footerNavigation}
+        signInHref={siteConfig.links.signIn}
+      />
     </div>
   );
 }

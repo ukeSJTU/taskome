@@ -1,12 +1,10 @@
 # XDenovo marketing site
 
-`apps/web` is XDenovo's public marketing site. It introduces XDenovo and its
-products and links visitors to Taskome registration and sign-in. It does not
-share Taskome sessions, call Taskome domain APIs, or participate in scientific
-data and compute lifecycles.
-
-The current Next.js application is a minimal placeholder rather than a complete
-marketing site.
+`apps/web` is XDenovo's public marketing site. Its current English page
+introduces the company, explains Taskome's reproducible-compute model, presents
+XDenovo's scientific capabilities, and links visitors to Taskome documentation
+and sign in. It does not share Taskome sessions, call Taskome domain APIs, or
+participate in scientific data and compute lifecycles.
 
 ## Run the site locally
 

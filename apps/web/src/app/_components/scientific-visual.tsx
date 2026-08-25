@@ -57,7 +57,8 @@ export function ScientificVisual() {
 
       <figcaption id="scientific-visual-caption">
         <span>One scientific record</span>
-        A curated Tool receives an input, runs a traceable Job, and publishes reproducible outputs.
+        A curated Tool receives an immutable Job request. An Attempt executes it and, on success,
+        publishes traceable Job Outputs.
       </figcaption>
     </figure>
   );

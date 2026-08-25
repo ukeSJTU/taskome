@@ -33,7 +33,7 @@ const channels = [
 
 export function AccessSection() {
   return (
-    <section className="access-section" aria-labelledby="access-title">
+    <section id="access" className="access-section" aria-labelledby="access-title">
       <div className="section-shell">
         <SectionHeading
           index="04"

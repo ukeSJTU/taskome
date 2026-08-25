@@ -581,6 +581,7 @@ button {
 }
 
 .approach-section {
+  scroll-margin-top: calc(var(--web-header-height) + var(--space-5));
   padding-block: var(--web-section-space);
   background: var(--color-bg-inverse);
   color: var(--color-text-inverse);
@@ -751,6 +752,7 @@ button {
 }
 
 .access-section {
+  scroll-margin-top: calc(var(--web-header-height) + var(--space-5));
   padding-block: var(--web-section-space);
   background: var(--color-bg-primary);
 }
@@ -972,6 +974,7 @@ button {
 }
 
 .final-prompt {
+  scroll-margin-top: calc(var(--web-header-height) + var(--space-5));
   padding-block: clamp(5rem, 10vw, 9rem);
   background: var(--color-bg-inverse);
   color: var(--color-text-inverse);
@@ -1201,7 +1204,7 @@ button {
   }
 
   .marketing-footer__grid {
-    grid-template-columns: 1.6fr 0.7fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .marketing-footer__legal {
@@ -1210,6 +1213,10 @@ button {
 }
 
 @media (min-width: 64rem) {
+  .marketing-footer__grid {
+    grid-template-columns: minmax(18rem, 1.5fr) 0.6fr 0.6fr minmax(15rem, 1fr);
+  }
+
   .capability-list li {
     grid-template-columns: 3rem minmax(16rem, 0.9fr) minmax(18rem, 1.1fr) 10rem;
     align-items: baseline;

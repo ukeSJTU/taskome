@@ -23,7 +23,7 @@ const principles = [
 
 export function ApproachSection() {
   return (
-    <section className="approach-section" aria-labelledby="approach-title">
+    <section id="approach" className="approach-section" aria-labelledby="approach-title">
       <div className="section-shell">
         <SectionHeading
           index="02"

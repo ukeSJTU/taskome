@@ -1,17 +1,16 @@
 import { BrandMark } from "@/app/_components/brand-mark";
+import { siteConfig } from "@/lib/site-config";
 
 type MarketingFooterProps = {
   docsHref: string;
+  navigation: {
+    product: ReadonlyArray<{ href: string; label: string }>;
+    company: ReadonlyArray<{ href: string; label: string }>;
+  };
   signInHref: string;
 };
 
-const companyLinks = [
-  { href: "#taskome", label: "Taskome" },
-  { href: "#capabilities", label: "Capabilities" },
-  { href: "#company", label: "Company" },
-] as const;
-
-export function MarketingFooter({ docsHref, signInHref }: MarketingFooterProps) {
+export function MarketingFooter({ docsHref, navigation, signInHref }: MarketingFooterProps) {
   return (
     <footer className="marketing-footer">
       <div className="section-shell">
@@ -21,9 +20,9 @@ export function MarketingFooter({ docsHref, signInHref }: MarketingFooterProps) 
             <p>AI-native products and scientific capabilities for peptide and protein design.</p>
           </div>
 
-          <nav aria-label="Footer navigation">
-            <p>Navigate</p>
-            {companyLinks.map((link) => (
+          <nav aria-label="Product navigation">
+            <p>Product</p>
+            {navigation.product.map((link) => (
               <a href={link.href} key={link.href}>
                 {link.label}
               </a>
@@ -32,16 +31,25 @@ export function MarketingFooter({ docsHref, signInHref }: MarketingFooterProps) 
             <a href={signInHref}>Sign in</a>
           </nav>
 
+          <nav aria-label="Company navigation">
+            <p>Company</p>
+            {navigation.company.map((link) => (
+              <a href={link.href} key={link.href}>
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
           <address>
             <p>Contact</p>
-            <a href="mailto:contact@xdenovoai.com">contact@xdenovoai.com</a>
-            <a href="tel:+8618354858296">+86 183 5485 8296</a>
+            <a href={`mailto:${siteConfig.organization.email}`}>{siteConfig.organization.email}</a>
+            <a href={siteConfig.organization.phone.href}>{siteConfig.organization.phone.display}</a>
             <span>
-              Room 402, Building 5
+              {siteConfig.organization.address.line1}
               <br />
-              396 Lvzhou Ring Road
+              {siteConfig.organization.address.line2}
               <br />
-              Minhang, Shanghai, China
+              {siteConfig.organization.address.cityLine}
             </span>
           </address>
         </div>

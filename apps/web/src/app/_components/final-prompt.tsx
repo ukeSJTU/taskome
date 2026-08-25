@@ -4,7 +4,7 @@ type FinalPromptProps = {
 
 export function FinalPrompt({ signInHref }: FinalPromptProps) {
   return (
-    <section className="final-prompt" aria-labelledby="final-prompt-title">
+    <section id="sign-in" className="final-prompt" aria-labelledby="final-prompt-title">
       <div className="section-shell final-prompt__inner">
         <p className="editorial-label">Taskome / Ready when you are</p>
         <h2 id="final-prompt-title">Return to the work with the record intact.</h2>

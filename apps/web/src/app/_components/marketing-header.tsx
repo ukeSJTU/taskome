@@ -25,7 +25,7 @@ export function MarketingHeader({ docsHref, navigation, signInHref }: MarketingH
     <>
       <header className="marketing-header">
         <div className="marketing-header__inner">
-          <Link className="brand-link" href="/" aria-label="XDenovo home">
+          <Link className="brand-link" href="#top" aria-label="XDenovo home">
             <BrandMark />
           </Link>
 

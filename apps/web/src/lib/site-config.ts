@@ -30,6 +30,23 @@ const origins = {
 
 export const siteConfig = {
   name: "XDenovo",
+  organization: {
+    email: "contact@xdenovoai.com",
+    phone: {
+      display: "+86 183 5485 8296",
+      href: "tel:+8618354858296",
+      structuredValue: "+86-183-5485-8296",
+    },
+    address: {
+      line1: "Room 402, Building 5",
+      line2: "396 Lvzhou Ring Road",
+      cityLine: "Minhang, Shanghai, China",
+      streetAddress: "Room 402, Building 5, 396 Lvzhou Ring Road",
+      locality: "Shanghai",
+      region: "Minhang District",
+      country: "CN",
+    },
+  },
   origins,
   links: {
     docs: new URL("/", origins.docs).toString(),

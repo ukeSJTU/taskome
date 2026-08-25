@@ -32,6 +32,11 @@
   --color-accent-secondary-hover: light-dark(oklch(0.31 0.11 145), oklch(0.82 0.11 145));
   --color-accent-secondary-foreground: light-dark(oklch(0.99 0.003 100), var(--brand-ink));
   --color-selection: light-dark(oklch(0.9 0.06 145), oklch(0.34 0.08 145));
+  --color-control-disabled-bg: light-dark(oklch(0.94 0.01 145), oklch(0.23 0.018 155));
+  --color-control-disabled-text: light-dark(oklch(0.55 0.02 155), oklch(0.58 0.018 145));
+  --color-control-disabled-border: light-dark(oklch(0.88 0.012 145), oklch(0.9 0.01 145 / 0.12));
+  --color-navigation-active-bg: var(--color-selection);
+  --color-navigation-active-indicator: var(--color-accent-secondary);
 
   --color-status-success: light-dark(oklch(0.38 0.12 145), oklch(0.78 0.13 145));
   --color-status-warning: light-dark(oklch(0.48 0.13 78), oklch(0.8 0.13 82));
@@ -56,6 +61,8 @@
   --color-chart-3: light-dark(oklch(0.58 0.17 42), oklch(0.76 0.16 44));
   --color-chart-4: light-dark(oklch(0.48 0.12 290), oklch(0.73 0.11 290));
   --color-chart-5: light-dark(oklch(0.53 0.12 80), oklch(0.79 0.12 82));
+  --color-chart-grid: light-dark(oklch(0.84 0.018 145), oklch(0.9 0.012 145 / 0.16));
+  --color-chart-threshold: light-dark(oklch(0.42 0.03 155), oklch(0.78 0.025 145));
 
   --console-sidebar-width: 18rem;
   --console-sidebar-width-collapsed: 3rem;
@@ -69,6 +76,7 @@
   --console-page-gutter: clamp(1rem, 2.5vw, 2rem);
   --console-content-width: 90rem;
   --console-utility-chrome: 3rem;
+  --console-disabled-opacity: 0.64;
 
   --console-radius-control: var(--border-radius-md);
   --console-radius-panel: var(--border-radius-lg);
