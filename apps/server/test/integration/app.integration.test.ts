@@ -223,6 +223,12 @@ describe("server with PostgreSQL and Better Auth", () => {
     expect(download.status).toBe(200);
     const body = z.object({ downloadUrl: z.url() }).parse(await download.json());
     expect(await (await fetch(body.downloadUrl)).text()).toBe("ATOM\nEND\n");
+    const deleted = await app.request(`/api/v1/saved-files/${issued.id}`, {
+      headers: { cookie },
+      method: "DELETE",
+    });
+    expect(deleted.status).toBe(204);
+    expect((await fetch(body.downloadUrl)).status).toBe(404);
   });
 
   it("creates an API-key secret once, persists only its hash, and revokes immediately", async () => {

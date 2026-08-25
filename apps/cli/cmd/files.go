@@ -10,7 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/spf13/cobra"
+	generated "github.com/ukeSJTU/taskome/apps/cli/internal/api/generated"
 )
 
 const defaultServer = "http://localhost:3000"
@@ -19,7 +22,17 @@ type httpDoer interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-var fileHTTPClient httpDoer = http.DefaultClient
+type savedFilesAPI interface {
+	CreateSavedFileUpload(context.Context, generated.CreateSavedFileUploadJSONRequestBody, ...generated.RequestEditorFn) (*http.Response, error)
+	ConfirmSavedFileUpload(context.Context, openapi_types.UUID, ...generated.RequestEditorFn) (*http.Response, error)
+	GetSavedFileDownload(context.Context, openapi_types.UUID, ...generated.RequestEditorFn) (*http.Response, error)
+}
+
+type fileCommandDependencies struct {
+	loadConfig func() (cliConfig, error)
+	newAPI     func(cliConfig) (savedFilesAPI, error)
+	transport  httpDoer
+}
 
 type cliConfig struct {
 	APIKey string `json:"apiKey"`
@@ -69,8 +82,8 @@ func saveConfig(config cliConfig) error {
 	}
 	return os.WriteFile(path, data, 0600)
 }
-func requireConfig() (cliConfig, error) {
-	config, err := loadConfig()
+func requireConfig(load func() (cliConfig, error)) (cliConfig, error) {
+	config, err := load()
 	if err != nil {
 		return cliConfig{}, err
 	}
@@ -82,16 +95,16 @@ func requireConfig() (cliConfig, error) {
 	}
 	return config, nil
 }
-func request(ctx context.Context, config cliConfig, method, path string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, config.Server+path, body)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+config.APIKey)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	return fileHTTPClient.Do(req)
+
+func newSavedFilesAPI(config cliConfig, transport httpDoer) (savedFilesAPI, error) {
+	return generated.NewClient(
+		config.Server,
+		generated.WithHTTPClient(transport),
+		generated.WithRequestEditorFn(func(_ context.Context, request *http.Request) error {
+			request.Header.Set("Authorization", "Bearer "+config.APIKey)
+			return nil
+		}),
+	)
 }
 func apiError(response *http.Response) error {
 	body, _ := io.ReadAll(io.LimitReader(response.Body, 8192))
@@ -117,17 +130,30 @@ func newLoginCommand() *cobra.Command {
 	return command
 }
 func newFilesCommand() *cobra.Command {
+	return newFilesCommandWithDependencies(fileCommandDependencies{
+		loadConfig: loadConfig,
+		newAPI: func(config cliConfig) (savedFilesAPI, error) {
+			return newSavedFilesAPI(config, http.DefaultClient)
+		},
+		transport: http.DefaultClient,
+	})
+}
+func newFilesCommandWithDependencies(dependencies fileCommandDependencies) *cobra.Command {
 	command := &cobra.Command{Use: "files", Short: "Upload and download Saved Files"}
-	command.AddCommand(newFileUploadCommand(), newFileDownloadCommand())
+	command.AddCommand(newFileUploadCommand(dependencies), newFileDownloadCommand(dependencies))
 	return command
 }
-func newFileUploadCommand() *cobra.Command {
+func newFileUploadCommand(dependencies fileCommandDependencies) *cobra.Command {
 	var projectID string
 	command := &cobra.Command{Use: "upload <path>", Args: asUsageError(cobra.ExactArgs(1)), RunE: func(command *cobra.Command, args []string) error {
 		if projectID == "" {
 			return &usageError{fmt.Errorf("--project is required")}
 		}
-		config, err := requireConfig()
+		config, err := requireConfig(dependencies.loadConfig)
+		if err != nil {
+			return err
+		}
+		api, err := dependencies.newAPI(config)
 		if err != nil {
 			return err
 		}
@@ -140,8 +166,13 @@ func newFileUploadCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		body, _ := json.Marshal(map[string]any{"projectId": projectID, "filename": filepath.Base(args[0]), "sizeBytes": info.Size()})
-		response, err := request(command.Context(), config, http.MethodPost, "/api/v1/saved-files/uploads", bytes.NewReader(body))
+		parsedProjectID, err := uuid.Parse(projectID)
+		if err != nil {
+			return &usageError{fmt.Errorf("--project must be a UUID")}
+		}
+		response, err := api.CreateSavedFileUpload(command.Context(), generated.CreateSavedFileUpload{
+			Filename: filepath.Base(args[0]), ProjectId: parsedProjectID, SizeBytes: int(info.Size()),
+		})
 		if err != nil {
 			return err
 		}
@@ -159,7 +190,7 @@ func newFileUploadCommand() *cobra.Command {
 		}
 		put.ContentLength = info.Size()
 		put.Header.Set("If-None-Match", "*")
-		putResponse, err := http.DefaultClient.Do(put)
+		putResponse, err := dependencies.transport.Do(put)
 		if err != nil {
 			return err
 		}
@@ -167,7 +198,11 @@ func newFileUploadCommand() *cobra.Command {
 		if putResponse.StatusCode/100 != 2 {
 			return fmt.Errorf("object storage returned %s", putResponse.Status)
 		}
-		confirm, err := request(command.Context(), config, http.MethodPost, "/api/v1/saved-files/"+upload.ID+"/confirm", nil)
+		parsedUploadID, err := uuid.Parse(upload.ID)
+		if err != nil {
+			return fmt.Errorf("taskome API returned an invalid Saved File ID")
+		}
+		confirm, err := api.ConfirmSavedFileUpload(command.Context(), parsedUploadID)
 		if err != nil {
 			return err
 		}
@@ -181,13 +216,21 @@ func newFileUploadCommand() *cobra.Command {
 	command.Flags().StringVar(&projectID, "project", "", "Target Project ID")
 	return command
 }
-func newFileDownloadCommand() *cobra.Command {
+func newFileDownloadCommand(dependencies fileCommandDependencies) *cobra.Command {
 	return &cobra.Command{Use: "download <saved-file-id> <path>", Args: asUsageError(cobra.ExactArgs(2)), RunE: func(command *cobra.Command, args []string) error {
-		config, err := requireConfig()
+		config, err := requireConfig(dependencies.loadConfig)
 		if err != nil {
 			return err
 		}
-		response, err := request(command.Context(), config, http.MethodPost, "/api/v1/saved-files/"+args[0]+"/download", nil)
+		api, err := dependencies.newAPI(config)
+		if err != nil {
+			return err
+		}
+		parsedFileID, err := uuid.Parse(args[0])
+		if err != nil {
+			return &usageError{fmt.Errorf("saved-file-id must be a UUID")}
+		}
+		response, err := api.GetSavedFileDownload(command.Context(), parsedFileID)
 		if err != nil {
 			return err
 		}
@@ -199,7 +242,11 @@ func newFileDownloadCommand() *cobra.Command {
 		if err := json.NewDecoder(response.Body).Decode(&download); err != nil {
 			return err
 		}
-		source, err := http.Get(download.DownloadURL)
+		request, err := http.NewRequestWithContext(command.Context(), http.MethodGet, download.DownloadURL, nil)
+		if err != nil {
+			return err
+		}
+		source, err := dependencies.transport.Do(request)
 		if err != nil {
 			return err
 		}

@@ -27,6 +27,32 @@ import {
 const allProjects = "all";
 const maximumSavedFileSize = 2 * 1024 * 1024 * 1024;
 
+type UploadSession = {
+  id: string;
+  uploadUrl: string;
+};
+
+function uploadBody(file: File, reportProgress: (percentage: number) => void) {
+  if (typeof file.stream !== "function") return file;
+  const reader = file.stream().getReader();
+  let uploaded = 0;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const chunk = await reader.read();
+      if (chunk.done) {
+        controller.close();
+        return;
+      }
+      uploaded += chunk.value.byteLength;
+      reportProgress(Math.round((uploaded / file.size) * 100));
+      controller.enqueue(chunk.value);
+    },
+    cancel() {
+      void reader.cancel();
+    },
+  });
+}
+
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -39,7 +65,7 @@ export function FilesPage() {
   const [projectId, setProjectId] = React.useState(allProjects);
   const [uploading, setUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<number>();
-  const [failedFile, setFailedFile] = React.useState<File>();
+  const [failedUpload, setFailedUpload] = React.useState<{ file: File; session?: UploadSession }>();
   const projects = useQuery({
     queryKey: ["projects", "all"],
     queryFn: () => listProjects({ status: "all" }),
@@ -50,7 +76,7 @@ export function FilesPage() {
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["/api/v1/saved-files"] });
 
-  const upload = async (file: File) => {
+  const upload = async (file: File, existingSession?: UploadSession) => {
     if (projectId === allProjects) {
       toast.error("Choose a Project before uploading.");
       return;
@@ -61,8 +87,9 @@ export function FilesPage() {
     }
     setUploading(true);
     setUploadProgress(0);
-    setFailedFile(undefined);
+    setFailedUpload(undefined);
     const uppy = new Uppy({ autoProceed: false });
+    let session = existingSession;
     try {
       uppy.addUploader(async (fileIds) => {
         await Promise.all(
@@ -70,22 +97,30 @@ export function FilesPage() {
             const queued = uppy.getFile(fileId);
             const data = queued.data;
             if (!(data instanceof File)) throw new Error("Selected upload is no longer available.");
-            const created = await createSavedFileUpload({
-              filename: data.name,
-              projectId,
-              sizeBytes: data.size,
-              ...(data.type ? { contentType: data.type } : {}),
-            });
+            const created =
+              session ??
+              (await createSavedFileUpload({
+                filename: data.name,
+                projectId,
+                sizeBytes: data.size,
+                ...(data.type ? { contentType: data.type } : {}),
+              }));
+            session = created;
             const response = await fetch(created.uploadUrl, {
-              body: data,
+              body: uploadBody(data, setUploadProgress),
+              // Fetch requires this Chromium extension for a streaming request body.
+              duplex: "half",
               headers: {
                 ...(data.type ? { "content-type": data.type } : {}),
                 "if-none-match": "*",
               },
               method: "PUT",
-            });
-            if (!response.ok) throw new Error("The object store rejected the upload.");
-            setUploadProgress(100);
+            } as RequestInit & { duplex: "half" });
+            // A lost response after a successful conditional PUT leaves the object in place.
+            // Confirming on 412 lets the server self-heal the pending Saved File instead of
+            // creating another record or retrying an immutable object write.
+            if (!response.ok && response.status !== 412)
+              throw new Error("The object store rejected the upload.");
             await confirmSavedFileUpload({ savedFileId: created.id });
           }),
         );
@@ -97,7 +132,7 @@ export function FilesPage() {
       await refresh();
       toast.success(`${file.name} uploaded.`);
     } catch (error) {
-      setFailedFile(file);
+      setFailedUpload(session ? { file, session } : { file });
       toast.error(error instanceof Error ? error.message : "Upload failed.");
     } finally {
       uppy.destroy();
@@ -166,9 +201,12 @@ export function FilesPage() {
             ? `Uploading${uploadProgress === undefined ? "" : ` ${uploadProgress}%`}…`
             : "Upload file"}
         </Button>
-        {failedFile ? (
-          <Button variant="outline" onClick={() => void upload(failedFile)}>
-            Retry {failedFile.name}
+        {failedUpload ? (
+          <Button
+            variant="outline"
+            onClick={() => void upload(failedUpload.file, failedUpload.session)}
+          >
+            Retry {failedUpload.file.name}
           </Button>
         ) : null}
       </div>
