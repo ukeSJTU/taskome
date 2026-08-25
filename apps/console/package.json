@@ -27,6 +27,7 @@
     "@tanstack/react-table": "^9.1.2",
     "@taskome/env": "workspace:*",
     "@taskome/ui": "workspace:*",
+    "@uppy/core": "4.5.3",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "lucide-react": "catalog:",

@@ -16,6 +16,8 @@ import { database } from "@/db";
 import { createApiKeyService } from "@/features/api-keys";
 import { createOAuthGrantManagementService } from "@/features/oauth-grants";
 import { createProjectsModule } from "@/features/projects";
+import { createS3ObjectStorage, createSavedFilesModule } from "@/features/saved-files";
+import { env } from "@taskome/env/server";
 
 export type RuntimeConfig = {
   corsOrigin: string;
@@ -39,6 +41,15 @@ export function createRuntime(config: RuntimeConfig) {
   });
 
   const getSession = createSessionResolver(auth);
+  const savedFiles = createSavedFilesModule(
+    database.db,
+    createS3ObjectStorage({
+      accessKeyId: env.OBJECT_STORAGE_ACCESS_KEY_ID,
+      bucket: env.OBJECT_STORAGE_BUCKET,
+      endpoint: env.OBJECT_STORAGE_ENDPOINT,
+      secretAccessKey: env.OBJECT_STORAGE_SECRET_ACCESS_KEY,
+    }),
+  );
   const app = createApp({
     apiKeyService: createApiKeyService(auth, database.db),
     authHandler: (request) => withAuthRequestCorrelation(request, () => auth.handler(request)),
@@ -49,9 +60,11 @@ export function createRuntime(config: RuntimeConfig) {
       auth,
       createOAuthGrantService(database.db),
       config.serverOrigin,
+      savedFiles,
     ),
     oauthGrantService: createOAuthGrantManagementService(database.db),
     projects: createProjectsModule(database.db),
+    savedFiles,
     resolveSecurityContext: createRestSecurityContextResolver({
       getSession,
       resource: protectedResources(config.serverOrigin).rest,

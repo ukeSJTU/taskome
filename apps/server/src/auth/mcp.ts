@@ -6,6 +6,7 @@ import { oauthGrantClaim, type OAuthGrantService } from "./oauth-grants";
 import { protectedResources } from "./resources";
 import type { SecurityContext } from "./security-context";
 import { parseTaskomeScopes } from "./scopes";
+import { registerSavedFileTools, type SavedFilesModule } from "@/features/saved-files";
 
 function scopesFromClaim(scope: unknown) {
   if (typeof scope === "string") return scope.split(" ").filter(Boolean);
@@ -17,10 +18,15 @@ export function createTaskomeMcpHandler(
   auth: Auth,
   oauthGrants: OAuthGrantService,
   serverOrigin: string,
+  savedFiles: SavedFilesModule,
 ) {
   const resource = protectedResources(serverOrigin).mcp;
   const protocolHandler = createMcpHandler(
-    () => new McpServer({ name: "taskome", version: "0.0.0" }),
+    () => {
+      const server = new McpServer({ name: "taskome", version: "0.0.0" });
+      registerSavedFileTools(server, savedFiles);
+      return server;
+    },
     { legacy: "reject" },
   );
 
