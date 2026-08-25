@@ -1,0 +1,115 @@
+:root {
+  /* Shared brand palette. Surface files map these foundations to semantic roles. */
+  --brand-paper: oklch(0.985 0.007 115);
+  --brand-paper-deep: oklch(0.955 0.016 125);
+  --brand-ink: oklch(0.19 0.025 155);
+  --brand-ink-soft: oklch(0.31 0.03 155);
+  --brand-green-soft: oklch(0.93 0.045 145);
+  --brand-green: oklch(0.68 0.14 145);
+  --brand-green-strong: oklch(0.54 0.14 145);
+  --brand-green-deep: oklch(0.36 0.11 145);
+  --brand-signal: oklch(0.58 0.2 38);
+  --brand-signal-hover: oklch(0.53 0.2 36);
+  --brand-signal-active: oklch(0.48 0.18 34);
+
+  /* Shared type roles. Web keeps the serif display face; Console overrides it. */
+  --font-family-display: "Newsreader", "Noto Serif SC", Georgia, serif;
+  --font-family-body: "IBM Plex Sans", "Noto Sans SC", sans-serif;
+  --font-family-mono: "IBM Plex Mono", "Noto Sans Mono", monospace;
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-md: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-size-3xl: 3rem;
+  --font-size-4xl: 4rem;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-none: 1;
+  --line-height-tight: 1.08;
+  --line-height-snug: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  --letter-spacing-tight: -0.035em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.08em;
+  --letter-spacing-label: 0.14em;
+
+  /* Four-pixel foundations support both editorial spacing and Console density. */
+  --space-0: 0;
+  --space-1: 0.125rem;
+  --space-2: 0.25rem;
+  --space-3: 0.5rem;
+  --space-4: 0.75rem;
+  --space-5: 1rem;
+  --space-6: 1.5rem;
+  --space-7: 2rem;
+  --space-8: 3rem;
+  --space-9: 4rem;
+  --space-10: 6rem;
+  --space-11: 8rem;
+  --space-12: 12rem;
+  --space-13: 16rem;
+
+  --max-width-reading: 68ch;
+  --max-width-content: 72rem;
+  --max-width-wide: 88rem;
+  --max-width-page: 100rem;
+  --page-gutter: clamp(1rem, 4vw, 4rem);
+
+  --border-radius-xs: 0.125rem;
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
+  --border-radius-full: 9999px;
+
+  --border-width-hairline: 1px;
+  --border-width-strong: 2px;
+
+  --shadow-sm: 0 1px 2px oklch(0.19 0.025 155 / 0.06);
+  --shadow-md: 0 12px 30px -18px oklch(0.19 0.025 155 / 0.22);
+  --shadow-lg: 0 24px 70px -32px oklch(0.19 0.025 155 / 0.3);
+  --shadow-focus: 0 0 0 3px oklch(0.58 0.16 145 / 0.34);
+
+  --duration-instant: 50ms;
+  --duration-fast: 140ms;
+  --duration-normal: 240ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+
+  --easing-default: cubic-bezier(0.22, 1, 0.36, 1);
+  --easing-in: cubic-bezier(0.4, 0, 1, 1);
+  --easing-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* Reference values. CSS media queries still use literal lengths. */
+  --breakpoint-sm: 23.4375rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+
+  --z-index-base: 0;
+  --z-index-sticky: 20;
+  --z-index-menu: 40;
+  --z-index-modal: 60;
+  --z-index-toast: 80;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0.01ms;
+    --duration-fast: 0.01ms;
+    --duration-normal: 0.01ms;
+    --duration-slow: 0.01ms;
+    --duration-slower: 0.01ms;
+  }
+}

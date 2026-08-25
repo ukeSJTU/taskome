@@ -1,0 +1,97 @@
+@import "./base.css";
+
+:root[data-surface="web"] {
+  color-scheme: light;
+
+  /* Every semantic color carries an intentional light and dark value. */
+  --color-bg-primary: light-dark(var(--brand-paper), oklch(0.15 0.018 155));
+  --color-bg-secondary: light-dark(oklch(0.96 0.022 145), oklch(0.19 0.025 155));
+  --color-bg-tertiary: light-dark(oklch(0.935 0.012 115), oklch(0.235 0.025 155));
+  --color-bg-inverse: light-dark(var(--brand-ink), oklch(0.94 0.008 130));
+  --color-surface-raised: light-dark(oklch(0.997 0.003 110), oklch(0.205 0.02 155));
+  --color-surface-code: light-dark(oklch(0.925 0.025 145), oklch(0.12 0.018 155));
+  --color-surface-overlay: light-dark(oklch(0.12 0.02 155 / 0.58), oklch(0.05 0.01 155 / 0.72));
+
+  --color-text-primary: light-dark(var(--brand-ink), oklch(0.94 0.008 130));
+  --color-text-secondary: light-dark(oklch(0.43 0.035 155), oklch(0.74 0.025 145));
+  --color-text-tertiary: light-dark(oklch(0.55 0.025 155), oklch(0.62 0.02 145));
+  --color-text-inverse: light-dark(var(--brand-paper), var(--brand-ink));
+  --color-text-link: light-dark(var(--brand-green-deep), oklch(0.78 0.12 145));
+
+  --color-border-primary: light-dark(oklch(0.84 0.03 145), oklch(0.92 0.015 145 / 0.2));
+  --color-border-secondary: light-dark(oklch(0.91 0.018 135), oklch(0.92 0.015 145 / 0.11));
+  --color-border-strong: light-dark(var(--brand-ink), oklch(0.94 0.008 130));
+  --color-border-focus: light-dark(oklch(0.58 0.16 145), oklch(0.72 0.13 145));
+
+  --color-accent-primary: light-dark(var(--brand-signal), oklch(0.72 0.17 42));
+  --color-accent-primary-hover: light-dark(var(--brand-signal-hover), oklch(0.77 0.16 44));
+  --color-accent-primary-active: light-dark(var(--brand-signal-active), oklch(0.67 0.17 40));
+  --color-accent-primary-foreground: light-dark(oklch(0.99 0.003 100), var(--brand-ink));
+  --color-accent-secondary: light-dark(var(--brand-green-deep), oklch(0.76 0.13 145));
+  --color-accent-secondary-hover: light-dark(oklch(0.31 0.11 145), oklch(0.82 0.11 145));
+  --color-accent-secondary-foreground: light-dark(oklch(0.99 0.003 100), var(--brand-ink));
+  --color-accent-soft: light-dark(var(--brand-green-soft), oklch(0.29 0.07 145));
+
+  --color-status-success: light-dark(oklch(0.38 0.12 145), oklch(0.78 0.13 145));
+  --color-status-warning: light-dark(oklch(0.48 0.13 78), oklch(0.8 0.13 82));
+  --color-status-error: light-dark(oklch(0.5 0.18 25), oklch(0.74 0.16 25));
+  --color-status-info: light-dark(oklch(0.44 0.12 245), oklch(0.76 0.11 240));
+
+  --color-science-trace: light-dark(var(--brand-green), oklch(0.72 0.13 145));
+  --color-science-node: light-dark(var(--brand-signal), oklch(0.72 0.17 42));
+  --color-science-grid: light-dark(oklch(0.84 0.025 145 / 0.7), oklch(0.72 0.04 145 / 0.2));
+
+  --font-size-web-hero: clamp(3.4rem, 8.5vw, 8rem);
+  --font-size-web-section: clamp(2.4rem, 5.5vw, 5.5rem);
+  --font-size-web-deck: clamp(1.125rem, 1.8vw, 1.5rem);
+  --font-size-web-label: var(--font-size-xs);
+  --line-height-web-hero: 0.92;
+  --letter-spacing-web-hero: -0.055em;
+
+  --web-header-height: 4.5rem;
+  --web-section-space: clamp(6rem, 12vw, 12rem);
+  --web-grid-columns: 12;
+  --web-rule-width: 1px;
+  --web-visual-aspect: 4 / 5;
+
+  --web-radius-control: var(--border-radius-md);
+  --web-radius-panel: var(--border-radius-sm);
+  --web-shadow-raised: var(--shadow-md);
+
+  /* Compatibility aliases for the current shared shadcn vocabulary. */
+  --background: var(--color-bg-primary);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-surface-raised);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-surface-raised);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-primary);
+  --primary-foreground: var(--color-accent-primary-foreground);
+  --secondary: var(--color-bg-secondary);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-tertiary);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-accent-soft);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-status-error);
+  --border: var(--color-border-primary);
+  --input: var(--color-border-secondary);
+  --ring: var(--color-border-focus);
+  --radius: var(--web-radius-control);
+}
+
+:root[data-surface="web"][data-theme="dark"],
+:root[data-surface="web"].dark {
+  color-scheme: dark;
+}
+
+:root[data-surface="web"][data-theme="light"],
+:root[data-surface="web"].light {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-surface="web"]:not([data-theme="light"]):not(.light) {
+    color-scheme: dark;
+  }
+}

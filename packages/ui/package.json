@@ -5,6 +5,9 @@
   "type": "module",
   "exports": {
     "./globals.css": "./src/styles/globals.css",
+    "./tokens/base.css": "./src/styles/tokens/base.css",
+    "./tokens/console.css": "./src/styles/tokens/console.css",
+    "./tokens/web.css": "./src/styles/tokens/web.css",
     "./lib/*": "./src/lib/*.ts",
     "./components/*": "./src/components/*.tsx",
     "./hooks/*": "./src/hooks/*.ts",
