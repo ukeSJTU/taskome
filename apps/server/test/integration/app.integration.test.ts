@@ -231,6 +231,34 @@ describe("server with PostgreSQL and Better Auth", () => {
     expect((await fetch(body.downloadUrl)).status).toBe(404);
   });
 
+  it("does not expose a Saved File to another user", async () => {
+    const ownerCookie = await registerUser(app, "saved-file-owner@example.com");
+    const otherCookie = await registerUser(app, "saved-file-other@example.com");
+    const owner = z
+      .object({ id: z.string() })
+      .parse(await (await app.request("/api/v1/me", { headers: { cookie: ownerCookie } })).json());
+    const [defaultProject] = await database.db
+      .select()
+      .from(project)
+      .where(eq(project.ownerUserId, owner.id))
+      .limit(1);
+    const upload = await app.request("/api/v1/saved-files/uploads", {
+      body: JSON.stringify({
+        filename: "private.pdb",
+        projectId: defaultProject?.id,
+        sizeBytes: 1,
+      }),
+      headers: { "content-type": "application/json", cookie: ownerCookie },
+      method: "POST",
+    });
+    const { id } = z.object({ id: z.string() }).parse(await upload.json());
+    const response = await app.request(`/api/v1/saved-files/${id}/download`, {
+      headers: { cookie: otherCookie },
+      method: "POST",
+    });
+    expect(response.status).toBe(404);
+  });
+
   it("creates an API-key secret once, persists only its hash, and revokes immediately", async () => {
     const test = (await auth.$context).test;
     const user = await test.saveUser(
