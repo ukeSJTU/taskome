@@ -24,6 +24,7 @@ export function createS3ObjectStorage(config: {
     endpoint: config.endpoint,
     forcePathStyle: true,
     region: "us-east-1",
+    requestChecksumCalculation: "WHEN_REQUIRED",
   });
   return {
     async deleteObject(key) {

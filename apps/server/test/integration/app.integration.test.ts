@@ -1,3 +1,4 @@
+import { GenericContainer, Wait } from "testcontainers";
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { and, eq } from "drizzle-orm";
@@ -26,12 +27,13 @@ import {
   oauthGrant,
   oauthRefreshToken,
   securityEvent,
+  project,
 } from "@/db/schema";
 import { createApiKeyService } from "@/features/api-keys";
 import { CreatedApiKeySchema } from "@/features/api-keys/api-key.schemas";
 import { createOAuthGrantManagementService } from "@/features/oauth-grants";
 import { createProjectsModule } from "@/features/projects";
-import { createSavedFilesModule } from "@/features/saved-files";
+import { createS3ObjectStorage, createSavedFilesModule } from "@/features/saved-files";
 
 const serverOrigin = "http://127.0.0.1:31042";
 const webOrigin = "http://localhost:3001";
@@ -74,12 +76,23 @@ describe("server with PostgreSQL and Better Auth", () => {
   let database: DatabaseRuntime;
   let auth: (typeof import("@/auth.test-instance"))["testAuth"];
   let httpServer: ReturnType<typeof serve>;
+  let objectStorage: Awaited<ReturnType<GenericContainer["start"]>>;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer("postgres:18.4-alpine3.24")
       .withDatabase("taskome_test")
       .withPassword("taskome_test")
       .withUsername("taskome_test")
+      .start();
+    objectStorage = await new GenericContainer("chrislusf/seaweedfs:4.42")
+      .withEnvironment({
+        AWS_ACCESS_KEY_ID: "taskome-development",
+        AWS_SECRET_ACCESS_KEY: "taskome-development-only-secret",
+        S3_BUCKET: "taskome-dev",
+      })
+      .withCommand(["mini", "-dir=/data", "-ip.bind=0.0.0.0", "-s3.allowedOrigins=*"])
+      .withExposedPorts(8333)
+      .withWaitStrategy(Wait.forHttp("/healthz", 8333))
       .start();
     process.env.BETTER_AUTH_SECRET = "integration-test-secret-at-least-32-characters"; // gitleaks:allow
     process.env.BETTER_AUTH_URL = serverOrigin;
@@ -94,6 +107,15 @@ describe("server with PostgreSQL and Better Auth", () => {
 
     ({ testAuth: auth } = await import("@/auth.test-instance"));
     const getSession = createSessionResolver(auth);
+    const savedFiles = createSavedFilesModule(
+      database.db,
+      createS3ObjectStorage({
+        accessKeyId: "taskome-development",
+        bucket: "taskome-dev",
+        endpoint: `http://${objectStorage.getHost()}:${objectStorage.getMappedPort(8333)}`,
+        secretAccessKey: "taskome-development-only-secret",
+      }),
+    );
     app = createApp({
       apiKeyService: createApiKeyService(auth, database.db),
       authHandler: (request) => withAuthRequestCorrelation(request, () => auth.handler(request)),
@@ -105,21 +127,11 @@ describe("server with PostgreSQL and Better Auth", () => {
         auth,
         createOAuthGrantService(database.db),
         serverOrigin,
-        createSavedFilesModule(database.db, {
-          deleteObject: () => Promise.resolve(),
-          exists: () => Promise.resolve(false),
-          issueDownloadUrl: () => Promise.resolve("https://storage.example/download"),
-          issueUploadUrl: () => Promise.resolve("https://storage.example/upload"),
-        }),
+        savedFiles,
       ),
       oauthGrantService: createOAuthGrantManagementService(database.db),
       projects: createProjectsModule(database.db),
-      savedFiles: createSavedFilesModule(database.db, {
-        deleteObject: () => Promise.resolve(),
-        exists: () => Promise.resolve(false),
-        issueDownloadUrl: () => Promise.resolve("https://storage.example/download"),
-        issueUploadUrl: () => Promise.resolve("https://storage.example/upload"),
-      }),
+      savedFiles,
       resolveSecurityContext: createRestSecurityContextResolver({
         getSession,
         resource: protectedResources(serverOrigin).rest,
@@ -135,6 +147,7 @@ describe("server with PostgreSQL and Better Auth", () => {
     });
     await database?.close();
     await container?.stop();
+    await objectStorage?.stop();
   });
 
   it("migrates from empty, creates a session, and exposes the current user", async () => {
@@ -178,6 +191,38 @@ describe("server with PostgreSQL and Better Auth", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "ready" });
+  });
+
+  it("round-trips bytes through presigned Saved File URLs without confirmation", async () => {
+    const cookie = await registerUser(app, "saved-file-round-trip@example.com");
+    const me = await app.request("/api/v1/me", { headers: { cookie } });
+    const currentUser = z.object({ id: z.string() }).parse(await me.json());
+    const [defaultProject] = await database.db
+      .select()
+      .from(project)
+      .where(eq(project.ownerUserId, currentUser.id))
+      .limit(1);
+    expect(defaultProject).toBeDefined();
+    const upload = await app.request("/api/v1/saved-files/uploads", {
+      body: JSON.stringify({ filename: "input.pdb", projectId: defaultProject?.id, sizeBytes: 9 }),
+      headers: { "content-type": "application/json", cookie },
+      method: "POST",
+    });
+    const issued = z.object({ id: z.string(), uploadUrl: z.url() }).parse(await upload.json());
+    expect(upload.status).toBe(201);
+    const uploaded = await fetch(issued.uploadUrl, {
+      body: "ATOM\nEND\n",
+      headers: { "content-length": "9" },
+      method: "PUT",
+    });
+    expect(uploaded.ok).toBe(true);
+    const download = await app.request(`/api/v1/saved-files/${issued.id}/download`, {
+      headers: { cookie },
+      method: "POST",
+    });
+    expect(download.status).toBe(200);
+    const body = z.object({ downloadUrl: z.url() }).parse(await download.json());
+    expect(await (await fetch(body.downloadUrl)).text()).toBe("ATOM\nEND\n");
   });
 
   it("creates an API-key secret once, persists only its hash, and revokes immediately", async () => {

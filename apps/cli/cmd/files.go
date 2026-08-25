@@ -151,6 +151,7 @@ func newFileUploadCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
+		put.ContentLength = info.Size()
 		putResponse, err := http.DefaultClient.Do(put)
 		if err != nil {
 			return err

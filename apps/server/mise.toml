@@ -38,6 +38,11 @@ run = "pnpm run test:coverage"
 description = "Run server tests against a disposable PostgreSQL container"
 run = "pnpm run test:integration"
 
+[tasks."saved-files:smoke"]
+description = "Round-trip a Saved File through the running local server and object storage"
+depends = ["//:dev:up"]
+run = "pnpm exec tsx scripts/saved-file-smoke.ts"
+
 [tasks."auth:generate"]
 description = "Regenerate the Better Auth Drizzle schema"
 run = [
