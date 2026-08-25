@@ -60,11 +60,6 @@ coverage
 tmp
 temp
 
-# Impeccable ephemeral output (config.json/design.json/settings.json stay tracked)
-.impeccable/review/
-.impeccable/mocks/
-.impeccable/live/
-
 # Local scratch work (specs, tickets) not meant for version control
 .scratch/
 docs/research/
