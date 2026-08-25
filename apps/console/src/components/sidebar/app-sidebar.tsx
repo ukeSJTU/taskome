@@ -83,7 +83,7 @@ const data = {
         },
         {
           title: "Files",
-          url: "#",
+          url: "/files",
           icon: <FilesIcon />,
         },
         {

@@ -87,7 +87,7 @@ func newRootCommand(info buildInfo) *cobra.Command {
 	})
 
 	root.SetVersionTemplate("taskome {{.Version}}\n")
-	root.AddCommand(newCompletionCommand(), newVersionCommand(info))
+	root.AddCommand(newCompletionCommand(), newVersionCommand(info), newLoginCommand(), newFilesCommand())
 
 	return root
 }

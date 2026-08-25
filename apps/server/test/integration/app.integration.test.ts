@@ -101,7 +101,17 @@ describe("server with PostgreSQL and Better Auth", () => {
       corsOrigin: webOrigin,
       drain: () => undefined,
       getSession,
-      mcpHandler: createTaskomeMcpHandler(auth, createOAuthGrantService(database.db), serverOrigin),
+      mcpHandler: createTaskomeMcpHandler(
+        auth,
+        createOAuthGrantService(database.db),
+        serverOrigin,
+        createSavedFilesModule(database.db, {
+          deleteObject: () => Promise.resolve(),
+          exists: () => Promise.resolve(false),
+          issueDownloadUrl: () => Promise.resolve("https://storage.example/download"),
+          issueUploadUrl: () => Promise.resolve("https://storage.example/upload"),
+        }),
+      ),
       oauthGrantService: createOAuthGrantManagementService(database.db),
       projects: createProjectsModule(database.db),
       savedFiles: createSavedFilesModule(database.db, {

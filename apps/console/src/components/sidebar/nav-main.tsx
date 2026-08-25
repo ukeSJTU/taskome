@@ -104,8 +104,8 @@ function MainNavItem({ item, pathname }: { item: MainNavItemData; pathname: stri
         render={
           item.url === "/" ? (
             <Link to="/" activeOptions={{ exact: true }} />
-          ) : item.url === "/projects" ? (
-            <Link to="/projects" />
+          ) : item.url === "/projects" || item.url === "/files" ? (
+            <Link to={item.url} />
           ) : (
             <a href={item.url} />
           )

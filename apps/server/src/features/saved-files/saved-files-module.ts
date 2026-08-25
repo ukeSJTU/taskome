@@ -1,7 +1,14 @@
-import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "@/db/database";
-import { project, savedFile } from "@/db/schema";
+import { savedFile } from "@/db/schema";
 import type { ObjectStorage } from "./object-storage";
+import {
+  deleteSavedFileById,
+  findOwnedProject,
+  findOwnedSavedFile,
+  findSavedFiles,
+  insertSavedFile,
+  markSavedFileUploaded,
+} from "./saved-files-repository";
 
 export interface SavedFileView {
   id: string;
@@ -15,7 +22,12 @@ export interface SavedFileView {
 export interface SavedFilesModule {
   createUpload(
     ownerUserId: string,
-    input: { projectId: string; filename: string; contentType?: string; sizeBytes: number },
+    input: {
+      projectId: string;
+      filename: string;
+      contentType?: string | undefined;
+      sizeBytes: number;
+    },
   ): Promise<SavedFileView & { uploadUrl: string }>;
   confirmUpload(ownerUserId: string, id: string): Promise<SavedFileView>;
   getDownload(ownerUserId: string, id: string): Promise<SavedFileView & { downloadUrl: string }>;
@@ -46,40 +58,28 @@ export function createSavedFilesModule(
   storage: ObjectStorage,
 ): SavedFilesModule {
   async function owned(ownerUserId: string, id: string) {
-    const [file] = await database
-      .select()
-      .from(savedFile)
-      .where(and(eq(savedFile.id, id), eq(savedFile.ownerUserId, ownerUserId)))
-      .limit(1);
+    const file = await findOwnedSavedFile(database, ownerUserId, id);
     if (!file) throw missing();
     return file;
   }
   return {
     async createUpload(ownerUserId, input) {
-      const [ownedProject] = await database
-        .select({ id: project.id })
-        .from(project)
-        .where(and(eq(project.id, input.projectId), eq(project.ownerUserId, ownerUserId)))
-        .limit(1);
+      const ownedProject = await findOwnedProject(database, ownerUserId, input.projectId);
       if (!ownedProject)
         throw Object.assign(new Error("The Project does not exist."), {
           code: "project_not_found",
         });
       const id = crypto.randomUUID();
       const storageKey = `saved-files/${id}`;
-      const [file] = await database
-        .insert(savedFile)
-        .values({
-          id,
-          projectId: input.projectId,
-          ownerUserId,
-          filename: input.filename,
-          contentType: input.contentType ?? null,
-          sizeBytes: input.sizeBytes,
-          storageKey,
-        })
-        .returning();
-      if (!file) throw new Error("Saved File insert returned no row");
+      const file = await insertSavedFile(database, {
+        id,
+        projectId: input.projectId,
+        ownerUserId,
+        filename: input.filename,
+        contentType: input.contentType ?? null,
+        sizeBytes: input.sizeBytes,
+        storageKey,
+      });
       return {
         ...view(file),
         uploadUrl: await storage.issueUploadUrl(storageKey, input.sizeBytes),
@@ -88,44 +88,23 @@ export function createSavedFilesModule(
     async confirmUpload(ownerUserId, id) {
       const file = await owned(ownerUserId, id);
       if (!(await storage.exists(file.storageKey))) throw unavailable();
-      const [updated] = await database
-        .update(savedFile)
-        .set({ status: "uploaded", updatedAt: new Date() })
-        .where(eq(savedFile.id, id))
-        .returning();
+      const updated = await markSavedFileUploaded(database, id);
       return view(updated ?? file);
     },
     async getDownload(ownerUserId, id) {
       const file = await owned(ownerUserId, id);
       if (!(await storage.exists(file.storageKey))) throw unavailable();
       const available =
-        file.status === "uploaded"
-          ? file
-          : ((
-              await database
-                .update(savedFile)
-                .set({ status: "uploaded", updatedAt: new Date() })
-                .where(eq(savedFile.id, id))
-                .returning()
-            )[0] ?? file);
+        file.status === "uploaded" ? file : ((await markSavedFileUploaded(database, id)) ?? file);
       return { ...view(available), downloadUrl: await storage.issueDownloadUrl(file.storageKey) };
     },
     async deleteSavedFile(ownerUserId, id) {
       const file = await owned(ownerUserId, id);
       await storage.deleteObject(file.storageKey);
-      await database.delete(savedFile).where(eq(savedFile.id, id));
+      await deleteSavedFileById(database, id);
     },
     async listSavedFiles(ownerUserId, projectId) {
-      const files = await database
-        .select()
-        .from(savedFile)
-        .where(
-          and(
-            eq(savedFile.ownerUserId, ownerUserId),
-            projectId ? eq(savedFile.projectId, projectId) : undefined,
-          ),
-        )
-        .orderBy(asc(savedFile.createdAt));
+      const files = await findSavedFiles(database, ownerUserId, projectId);
       return { items: files.map(view), nextCursor: null };
     },
   };

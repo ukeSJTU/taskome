@@ -12,6 +12,7 @@ import type { SavedFilesModule } from "./saved-files-module";
 
 export { createSavedFilesModule, type SavedFilesModule } from "./saved-files-module";
 export { createS3ObjectStorage, type ObjectStorage } from "./object-storage";
+export { registerSavedFileTools } from "./mcp-tools";
 
 const savedFileSchema = z
   .object({

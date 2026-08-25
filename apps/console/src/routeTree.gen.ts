@@ -13,6 +13,7 @@ import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as AuthFilesRouteImport } from './routes/_auth/files'
 import { Route as AuthProjectsRouteImport } from './routes/_auth/projects'
 import { Route as AuthSettingsRouteRouteImport } from './routes/_auth/settings/route'
 import { Route as AuthSettingsIndexRouteImport } from './routes/_auth/settings/index'
@@ -38,6 +39,11 @@ const SignupRoute = SignupRouteImport.update({
 const AuthIndexRoute = AuthIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthFilesRoute = AuthFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
   getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthProjectsRoute = AuthProjectsRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/settings': typeof AuthSettingsRouteRouteWithChildren
+  '/files': typeof AuthFilesRoute
   '/projects': typeof AuthProjectsRoute
   '/settings/api-keys': typeof AuthSettingsApiKeysRoute
   '/settings/profile': typeof AuthSettingsProfileRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/files': typeof AuthFilesRoute
   '/projects': typeof AuthProjectsRoute
   '/': typeof AuthIndexRoute
   '/settings/api-keys': typeof AuthSettingsApiKeysRoute
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_auth/settings': typeof AuthSettingsRouteRouteWithChildren
+  '/_auth/files': typeof AuthFilesRoute
   '/_auth/projects': typeof AuthProjectsRoute
   '/_auth/': typeof AuthIndexRoute
   '/_auth/settings/api-keys': typeof AuthSettingsApiKeysRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/settings'
+    | '/files'
     | '/projects'
     | '/settings/api-keys'
     | '/settings/profile'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/signup'
+    | '/files'
     | '/projects'
     | '/'
     | '/settings/api-keys'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_auth/settings'
+    | '/_auth/files'
     | '/_auth/projects'
     | '/_auth/'
     | '/_auth/settings/api-keys'
@@ -187,6 +199,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/_auth/files': {
+      id: '/_auth/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof AuthFilesRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/_auth/projects': {
@@ -260,6 +279,7 @@ const AuthSettingsRouteRouteWithChildren =
 
 interface AuthRouteRouteChildren {
   AuthSettingsRouteRoute: typeof AuthSettingsRouteRouteWithChildren
+  AuthFilesRoute: typeof AuthFilesRoute
   AuthProjectsRoute: typeof AuthProjectsRoute
   AuthIndexRoute: typeof AuthIndexRoute
   AuthUtilitiesStructureViewerRoute: typeof AuthUtilitiesStructureViewerRoute
@@ -267,6 +287,7 @@ interface AuthRouteRouteChildren {
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthSettingsRouteRoute: AuthSettingsRouteRouteWithChildren,
+  AuthFilesRoute: AuthFilesRoute,
   AuthProjectsRoute: AuthProjectsRoute,
   AuthIndexRoute: AuthIndexRoute,
   AuthUtilitiesStructureViewerRoute: AuthUtilitiesStructureViewerRoute,
