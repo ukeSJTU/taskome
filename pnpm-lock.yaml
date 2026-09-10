@@ -291,16 +291,16 @@ importers:
         version: 1.7.1(@better-auth/core@1.7.1(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.9)(kysely@0.29.5)(nanostores@1.5.1))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-auth@1.7.1(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/pg@8.23.1)(kysely@0.29.5)(pg@8.23.0))(next@16.3.0(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11))(better-call@1.4.0(zod@4.4.3))
       '@hono/node-server':
         specifier: ^2.0.12
-        version: 2.1.1(hono@4.13.3)
+        version: 2.1.1(hono@4.13.5)
       '@hono/zod-openapi':
         specifier: ^1.6.1
-        version: 1.6.1(hono@4.13.3)(zod@4.4.3)
+        version: 1.6.1(hono@4.13.5)(zod@4.4.3)
       '@modelcontextprotocol/server':
         specifier: 2.0.0
         version: 2.0.0
       '@scalar/hono-api-reference':
         specifier: ^0.11.14
-        version: 0.11.14(hono@4.13.3)
+        version: 0.11.14(hono@4.13.5)
       '@taskome/env':
         specifier: workspace:*
         version: link:../../packages/env
@@ -312,16 +312,16 @@ importers:
         version: 0.45.2(@types/pg@8.23.1)(kysely@0.29.5)(pg@8.23.0)
       evlog:
         specifier: ^2.22.4
-        version: 2.26.0(express@5.2.1(supports-color@7.2.0))(hono@4.13.3)(next@16.3.0(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+        version: 2.26.0(express@5.2.1(supports-color@7.2.0))(hono@4.13.5)(next@16.3.0(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       hono:
-        specifier: ^4.12.32
-        version: 4.13.3
+        specifier: ^4.13.5
+        version: 4.13.5
       pg:
         specifier: ^8.22.0
         version: 8.23.0
       stoker:
         specifier: ^2.0.1
-        version: 2.0.1(@hono/zod-openapi@1.6.1(hono@4.13.3)(zod@4.4.3))(hono@4.13.3)(openapi3-ts@4.6.1)
+        version: 2.0.1(@hono/zod-openapi@1.6.1(hono@4.13.5)(zod@4.4.3))(hono@4.13.5)(openapi3-ts@4.6.1)
       unicode-case-folding:
         specifier: 1.1.1
         version: 1.1.1
@@ -4855,6 +4855,10 @@ packages:
     resolution: {integrity: sha512-r8AO2mYHoLxSHkgafNeC/BXyb2vWRxD3jem4Ts+ptav8oTG5FIRifAjuJEmZI4bSvvc2ns0GxmIYiZnHqN3mMw==}
     engines: {node: '>=16.9.0'}
 
+  hono@4.13.5:
+    resolution: {integrity: sha512-O6+/eCYRkzzzy0rPWwKLiGBR1nFuUPZynnwjxN1MBA62NNqbT0wQEzQyK2gSO5yDIDB336sXQleAhOHrzlYyKw==}
+    engines: {node: '>=16.9.0'}
+
   hookable@6.1.1:
     resolution: {integrity: sha512-U9LYDy1CwhMCnprUfeAZWZGByVbhd54hwepegYTK7Pi5NvqEj63ifz5z+xukznehT7i6NIZRu89Ay1AZmRsLEQ==}
 
@@ -8283,17 +8287,21 @@ snapshots:
     dependencies:
       hono: 4.13.3
 
-  '@hono/zod-openapi@1.6.1(hono@4.13.3)(zod@4.4.3)':
+  '@hono/node-server@2.1.1(hono@4.13.5)':
+    dependencies:
+      hono: 4.13.5
+
+  '@hono/zod-openapi@1.6.1(hono@4.13.5)(zod@4.4.3)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 9.1.0(zod@4.4.3)
-      '@hono/zod-validator': 0.9.0(hono@4.13.3)(zod@4.4.3)
-      hono: 4.13.3
+      '@hono/zod-validator': 0.9.0(hono@4.13.5)(zod@4.4.3)
+      hono: 4.13.5
       openapi3-ts: 4.6.1
       zod: 4.4.3
 
-  '@hono/zod-validator@0.9.0(hono@4.13.3)(zod@4.4.3)':
+  '@hono/zod-validator@0.9.0(hono@4.13.5)(zod@4.4.3)':
     dependencies:
-      hono: 4.13.3
+      hono: 4.13.5
       zod: 4.4.3
 
   '@img/colour@1.1.0':
@@ -9013,10 +9021,10 @@ snapshots:
 
   '@scalar/helpers@0.11.1': {}
 
-  '@scalar/hono-api-reference@0.11.14(hono@4.13.3)':
+  '@scalar/hono-api-reference@0.11.14(hono@4.13.5)':
     dependencies:
       '@scalar/client-side-rendering': 0.3.7
-      hono: 4.13.3
+      hono: 4.13.5
 
   '@scalar/json-magic@0.12.20':
     dependencies:
@@ -10766,10 +10774,10 @@ snapshots:
     dependencies:
       eventsource-parser: 3.1.1
 
-  evlog@2.26.0(express@5.2.1(supports-color@7.2.0))(hono@4.13.3)(next@16.3.0(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0)):
+  evlog@2.26.0(express@5.2.1(supports-color@7.2.0))(hono@4.13.5)(next@16.3.0(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0)):
     optionalDependencies:
       express: 5.2.1(supports-color@7.2.0)
-      hono: 4.13.3
+      hono: 4.13.5
       next: 16.3.0(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react: 19.2.8
       vite: 8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0)
@@ -11206,6 +11214,8 @@ snapshots:
       space-separated-tokens: 2.0.2
 
   hono@4.13.3: {}
+
+  hono@4.13.5: {}
 
   hookable@6.1.1: {}
 
@@ -13214,11 +13224,11 @@ snapshots:
 
   stdin-discarder@0.2.2: {}
 
-  stoker@2.0.1(@hono/zod-openapi@1.6.1(hono@4.13.3)(zod@4.4.3))(hono@4.13.3)(openapi3-ts@4.6.1):
+  stoker@2.0.1(@hono/zod-openapi@1.6.1(hono@4.13.5)(zod@4.4.3))(hono@4.13.5)(openapi3-ts@4.6.1):
     dependencies:
-      hono: 4.13.3
+      hono: 4.13.5
     optionalDependencies:
-      '@hono/zod-openapi': 1.6.1(hono@4.13.3)(zod@4.4.3)
+      '@hono/zod-openapi': 1.6.1(hono@4.13.5)(zod@4.4.3)
       openapi3-ts: 4.6.1
 
   streamx@2.28.0:

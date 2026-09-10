@@ -38,7 +38,7 @@
     "better-auth": "catalog:",
     "drizzle-orm": "^0.45.2",
     "evlog": "^2.22.4",
-    "hono": "^4.12.32",
+    "hono": "^4.13.5",
     "pg": "^8.22.0",
     "stoker": "^2.0.1",
     "unicode-case-folding": "1.1.1",
